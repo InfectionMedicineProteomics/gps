@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+import argparse
+
+from gscore.workflows import (
+    denoise
+)
+from gscore.utils.logger import Logger
+
+def denoising_args(parser):
+
+    parser.add_argument(
+        '-i',
+        '--input',
+        dest='input_osw_file',
+        help='OSW file archive to denoise target labels'
+    )
+
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        dest='output_osw_file',
+        help='Specify output directory',
+        default=''
+    )
+
+    parser.add_argument(
+        '-nc',
+        '--num-classifiers',
+        dest='num_classifiers',
+        help='The number of ensemble learners used to denoise each fold',
+        default=500,
+        type=int
+    )
+
+    parser.add_argument(
+        '-f',
+        '--num-folds',
+        dest='num_folds',
+        help='The number of folds used to denoise the target labels',
+        default=10,
+        type=int
+    )
+
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
+        ],
+        default='INFO'
+    )
+
+    return parser
+
+
+def get_args():
+
+    base_parser = argparse.ArgumentParser()
+    
+    subparsers = base_parser.add_subparsers(
+        dest='tool_name'
+    )
+
+    denoising_parser = subparsers.add_parser(
+        'denoise',
+        help='denoising help'
+    )
+
+    denoising_parser = denoising_args(denoising_parser)
+
+    args = base_parser.parse_args()
+
+    return args
+
+
+if __name__ == '__main__':
+    
+    args = get_args()
+
+    if args.tool_name == 'denoise':
+
+        logger = Logger(
+            name=args.input_osw_file,
+            level=args.verbosity_level
+        )
+
+        denoise.main(args, logger)
