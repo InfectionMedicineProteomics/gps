@@ -6,3 +6,5 @@ __pycache__/
 *sublime-*
 .vscode/
 .vscode*
+
+*code-workspace
