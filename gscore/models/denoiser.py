@@ -27,9 +27,7 @@ class DenoizingClassifier:
         self.label = target_label
         
         
-    def fit(self, data, num_classifiers=250, folds=10):
-        
-        self.data = data
+    def fit(self, data, num_classifiers=250, folds=10, match_index='transition_group_id'):
         
         self.denoizing_folds = list()
         
@@ -90,25 +88,25 @@ class DenoizingClassifier:
                 )
                 
                 classifiers.append(sgd_classifier)
-            
+
             self.denoizing_folds.append(
                 DenoizingFold(
-                    data_indices=fold_data.index,
+                    data_indices=fold_data,
                     classifiers=classifiers,
                     scaling_pipeline=full_pipeline
                 )
             )
             
-    def vote(self):
+    def vote(self, data, match_index):
         
         scored_data = list()
         
         for denoizing_fold in self.denoizing_folds:
-            
+
             classifier_columns = list()
             
-            subset = self.data.loc[
-                denoizing_fold.indices
+            subset = data.loc[
+                data[match_index].isin(denoizing_fold.indices[match_index])
             ]
             
             testing_prepared = subset.copy()
@@ -116,8 +114,6 @@ class DenoizingClassifier:
             testing_prepared[self.columns] = denoizing_fold.scaling_pipeline.transform(
                 testing_prepared[self.columns]
             )
-            
-            print(len(denoizing_fold.classifiers))
             
             for num_classifier, classifier in enumerate(denoizing_fold.classifiers):
                 
@@ -132,7 +128,6 @@ class DenoizingClassifier:
                 
             testing_prepared['target_vote_percentage'] = testing_prepared[classifier_columns].sum(axis=1) / len(classifier_columns)
 
-            
             scored_data.append(
                 testing_prepared[
                     ['transition_group_id', 'target_vote_percentage']
@@ -140,12 +135,13 @@ class DenoizingClassifier:
             )
             
         scored_data = pd.concat(
-            scored_data
+            scored_data,
+            ignore_index=True
         )
-        
+
         return scored_data['target_vote_percentage']
     
-    def predict_average_score(self):
+    def predict_average_score(self, data):
         
         scored_data = list()
         
@@ -153,7 +149,7 @@ class DenoizingClassifier:
             
             classifier_columns = list()
             
-            subset = self.data.loc[
+            subset = data.loc[
                 denoizing_fold.indices
             ]
             

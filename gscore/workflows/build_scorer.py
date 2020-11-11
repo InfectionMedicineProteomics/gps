@@ -150,22 +150,3 @@ def main(args, logger):
     logger.info("[INFO] Saving model")
 
     model.save(f"{args.output_directory}/{args.model_name}")
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-        

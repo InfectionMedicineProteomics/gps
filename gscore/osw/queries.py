@@ -177,6 +177,7 @@ CREATE_GHOSTSCORE_TABLE = """CREATE TABLE IF NOT EXISTS ghost_score_table (
     vote_percentage REAL,
     m_score REAL,
     d_score REAL,
+    alt_d_score REAL,
     FOREIGN KEY (feature_id)
         REFERENCES FEATURE (id)
 )

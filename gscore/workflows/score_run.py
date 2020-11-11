@@ -1,4 +1,9 @@
+import pickle
+
 import pandas as pd
+import numpy as np
+
+from tensorflow import keras
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
@@ -11,13 +16,18 @@ from gscore.osw.connection import (
     OSWConnection
 )
 
+from gscore.workflows.denoise import denoise
+from gscore.models.preprocess import preprocess_data
+
 
 def prepare_add_records(records):
 
     record_updates = records[
         [
             'feature_id',
-            'vote_percentage'
+            'vote_percentage',
+            'd_score',
+            'alt_d_score'
         ]
     ]
 
@@ -25,13 +35,19 @@ def prepare_add_records(records):
 
     votes = list(record_updates['vote_percentage'])
 
+    d_scores = list(record_updates['d_score'])
+
+    alt_d_scores = list(record_updates['alt_d_score'])
+
     record_updates = list()
 
-    for feature_id, vote in zip(feature_ids, votes):
+    for feature_id, vote, d_score, alt_d_score in zip(feature_ids, votes, d_scores, alt_d_scores):
 
         record_updates.append(
             {'feature_id': feature_id,
-            'vote_percentage': vote}
+            'vote_percentage': vote,
+            'd_score': d_score,
+            'alt_d_score': alt_d_score}
         )
     
     return record_updates
@@ -47,40 +63,30 @@ def add_vote_records(records, osw_path):
         )
 
 
-def denoise(training_data, peak_groups, columns, logger=None, num_folds=10, num_classifiers=500):
+def score(data, columns, logger=None, model_path='', scaler_path=''):
 
-    denoizing_classifier = DenoizingClassifier(
-        target_label='target', 
-        columns=columns
+    with open(scaler_path, 'rb') as pkl:
+        pipeline = pickle.load(pkl)
+
+    scoring_model = keras.models.load_model(
+        model_path
     )
 
-    if logger:
-        logger.debug(f'[DEBUG] Fitting denoising classifier {num_classifiers} for {num_folds}')
-
-    denoizing_classifier.fit(
-        data=training_data,
-        folds=num_folds,
-        num_classifiers=num_classifiers
+    all_peak_groups = preprocess_data(
+        pipeline=pipeline,
+        data=data.copy(),
+        columns=columns,
     )
 
-    if logger:
-        logger.debug(f'[DEBUG] Calculating vote percentage')
-
-    all_peak_groups = peak_groups.select_peak_group(
-        return_all=True
-    )
-
-    all_peak_groups['vote_percentage'] = denoizing_classifier.vote(
-        data=all_peak_groups,
-        match_index='transition_group_id'
-    )
+    all_peak_groups['d_score'] = scoring_model.predict(
+        all_peak_groups[columns]
+    ).ravel()
 
     return all_peak_groups
 
-
 def main(args, logger):
 
-    logger.info(f'[INFO] Beginning target label denoising for {args.input_osw_file}')
+    logger.info(f'[INFO] Beginning scoring for {args.input_osw_file}')
 
     logger.debug(f'[DEBUG] Extracting true targets and reranking')
 
@@ -125,6 +131,18 @@ def main(args, logger):
         num_folds=args.num_folds,
         num_classifiers=args.num_classifiers
     )
+
+    all_peak_groups = score(
+        data=all_peak_groups,
+        columns=peak_groups.ml_features,
+        logger=logger,
+        model_path=args.model_path,
+        scaler_path=args.scaler_path
+    )
+
+    all_peak_groups['alt_d_score'] = np.exp(
+        all_peak_groups['vote_percentage']
+    ) * all_peak_groups['d_score']
 
     record_updates = prepare_add_records(all_peak_groups)
 

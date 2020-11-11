@@ -3,10 +3,73 @@ import argparse
 
 from gscore.workflows import (
     denoise,
-    build_scorer
+    build_scorer,
+    score_run
 )
 from gscore.utils.logger import Logger
 
+
+def score_runs_args(parser):
+
+    parser.add_argument(
+        '-i',
+        '--input',
+        dest='input_osw_file',
+        help='OSW files for training scorer'
+    )
+
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        dest='output_osw_file',
+        help='Specify output directory',
+        default=''
+    )
+
+    parser.add_argument(
+        '-m',
+        '--model-path',
+        dest='model_path',
+        help='Specify model path',
+    )
+
+    parser.add_argument(
+        '-s',
+        '--scaler-path',
+        dest='scaler_path',
+        help='Specify scaler name',
+    )
+
+    parser.add_argument(
+        '-nc',
+        '--num-classifiers',
+        dest='num_classifiers',
+        help='The number of ensemble learners used to denoise each fold',
+        default=500,
+        type=int
+    )
+
+    parser.add_argument(
+        '-f',
+        '--num-folds',
+        dest='num_folds',
+        help='The number of folds used to denoise the target labels',
+        default=10,
+        type=int
+    )
+
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
+        ],
+        default='INFO'
+    )
+
+    return parser
 
 def build_scorer_args(parser):
 
@@ -53,6 +116,8 @@ def build_scorer_args(parser):
         ],
         default='INFO'
     )
+
+    return parser
     
 
 def denoising_args(parser):
@@ -126,6 +191,13 @@ def get_args():
 
     build_scorer_parser = build_scorer_args(build_scorer_parser)
 
+    score_run_parser = subparsers.add_parser(
+        'scorerun',
+        help='score individual run'
+    )
+
+    score_run_parser = score_runs_args(score_run_parser)
+
     args = base_parser.parse_args()
 
     return args
@@ -144,11 +216,20 @@ if __name__ == '__main__':
 
         denoise.main(args, logger)
 
-    if args.tool_name == 'buildscorer':
+    elif args.tool_name == 'buildscorer':
 
         logger = Logger(
             name="build_scorer",
             level=args.verbosity_level
         )
 
-        build_scorer.main(args, logger)        
+        build_scorer.main(args, logger)
+
+    elif args.tool_name == 'scorerun':
+
+        logger = Logger(
+            name="score_run",
+            level=args.verbosity_level
+        )
+
+        score_run.main(args, logger)
