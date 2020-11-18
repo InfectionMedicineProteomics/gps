@@ -102,13 +102,24 @@ def main(args, logger):
 
     logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
 
-    second_ranking = peak_groups.select_peak_group(
-        rank=2,
-        rerank_keys=['var_xcorr_shape'], 
-        ascending=False
-    )
+    low_ranking = list()
 
-    second_ranking['target'] = 0.0
+    for rank in range(3, 6):
+
+        lower_ranking = peak_groups.select_peak_group(
+            rank=rank,
+            rerank_keys=['var_xcorr_shape'], 
+            ascending=False
+        )
+
+        lower_ranking['target'] = 0.0
+
+        low_ranking.append(lower_ranking)
+    
+    lower_ranking = pd.concat(
+        low_ranking,
+        ignore_index=True
+    )
 
     highest_ranking = peak_groups.select_peak_group(
         rank=1,
@@ -119,8 +130,9 @@ def main(args, logger):
     noisey_target_labels = pd.concat(
         [
             highest_ranking,
-            second_ranking
-        ]
+            lower_ranking
+        ],
+        ignore_index=True
     )
 
     all_peak_groups = denoise(

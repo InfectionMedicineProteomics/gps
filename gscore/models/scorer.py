@@ -8,7 +8,7 @@ from tensorflow import keras
 ADAM_OPTIMIZER = keras.optimizers.Adam()
 
 EARLY_STOPPING_CB = keras.callbacks.EarlyStopping(
-    patience=2,
+    patience=10,
     restore_best_weights=True
 )
 

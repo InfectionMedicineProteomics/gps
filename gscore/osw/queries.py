@@ -243,3 +243,38 @@ inner join protein as protein on protein.id = pep_prot_map.protein_id
 where precursor.DECOY == 0
 order by transition_group_id;
 """
+
+FETCH_SCORED_DATA = """
+select
+    precursor.id transition_group_id,
+    feature.id feature_id,
+    feature.exp_rt exp_rt,
+    feature.norm_rt norm_rt,
+    feature.delta_rt delta_rt,
+    precursor.PRECURSOR_MZ mz,
+    precursor.CHARGE charge,
+    precursor.DECOY decoy,
+    peptide.UNMODIFIED_SEQUENCE peptide_sequence,
+    peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
+    protein.PROTEIN_ACCESSION protein_accession,
+    protein.decoy protein_decoy,
+    ms1.AREA_INTENSITY area_intensity,
+    ms1.APEX_INTENSITY apex_intensity,
+    ms2.AREA_INTENSITY ms2_area_intensity,
+    ms2.TOTAL_AREA_INTENSITY total_area_intensity,
+    ms2.VAR_XCORR_SHAPE var_xcorr_shape,
+    gst.vote_percentage,
+    gst.d_score,
+    gst.alt_d_score
+from precursor 
+inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
+inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
+inner join feature on feature.precursor_id = precursor.id
+left join ghost_score_table as gst on gst.feature_id = feature.id
+left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
+left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
+inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
+inner join protein as protein on protein.id = pep_prot_map.protein_id
+where precursor.DECOY == 0
+order by transition_group_id;
+"""

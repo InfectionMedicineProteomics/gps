@@ -4,7 +4,10 @@ import pandas as pd
 import tensorflow as tf
 
 from tensorflow import keras
+
+
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
@@ -25,7 +28,7 @@ from gscore.models.preprocess import (
 )
 
 
-def combine_peak_group_data(scored_files):
+def combine_peak_group_data(scored_files, cutoff):
 
     combined_peak_groups = list()
 
@@ -46,30 +49,62 @@ def combine_peak_group_data(scored_files):
             rerank_keys=['var_xcorr_shape'], 
             ascending=False
         )
+
+        low_ranking = list()
+
+        for rank in range(2, 3):
+
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
+                rerank_keys=['var_xcorr_shape'], 
+                ascending=False
+            )
+
+            lower_ranking['target'] = 0.0
+
+            low_ranking.append(lower_ranking)
+        
+        lower_ranking = pd.concat(
+            low_ranking,
+            ignore_index=True
+        )
+
+        target_data = denoise_target_labels(
+            highest_ranking, 
+            cutoff
+        )
+        
+        # decoys_downsampled = resample(
+        #     lower_ranking,
+        #     replace=False,
+        #     n_samples=len(target_data),
+        #     random_state=42
+        # )
+
+        denoised_target_labels = pd.concat(
+            [
+                target_data,
+                lower_ranking
+            ]
+        )
+
+        print(denoised_target_labels.target.value_counts())
         
         combined_peak_groups.append(
-            highest_ranking
+            denoised_target_labels
         )
-    return pd.concat(combined_peak_groups)
+
+    return pd.concat(combined_peak_groups, ignore_index=True)
 
 
-def denoise_labels(peak_groups, cutoff):
+def denoise_target_labels(peak_groups, cutoff):
 
     targets = peak_groups[
-        (peak_groups['vote_percentage'] >= cutoff)
+        (peak_groups['vote_percentage'] >= cutoff) &
+        (peak_groups['target'] == 1.0)
     ].copy()
 
-    decoys = peak_groups[
-        (peak_groups['vote_percentage'] < cutoff)
-    ].copy()
-
-    decoys['target'] = 0.0
-
-    targets['target'] = 1.0
-
-    target_data = pd.concat([targets, decoys])
-
-    return target_data
+    return targets
 
 
 def main(args, logger):
@@ -78,7 +113,10 @@ def main(args, logger):
 
     logger.info("[INFO] Combining datasets")
 
-    combined_peak_groups = combine_peak_group_data(scored_files)
+    combined_peak_groups = combine_peak_group_data(
+        scored_files, 
+        args.target_vote_cutoff
+    )
 
     ml_features = [
         col for col in combined_peak_groups.columns
@@ -87,17 +125,13 @@ def main(args, logger):
 
     logger.info("[INFO] Denoising target labels")
 
-    target_data = denoise_labels(
-        combined_peak_groups, 
-        args.target_vote_cutoff
-    )
-
     training_data, testing_data = train_test_split(
-        target_data, 
+        combined_peak_groups, 
         test_size=0.1, 
-        random_state=42,
-
+        random_state=42
     )
+
+    print(training_data.target.value_counts())
 
     scaling_pipeline = STANDARD_SCALAR_PIPELINE
 
@@ -109,7 +143,7 @@ def main(args, logger):
         return_scaler=True
     )
 
-    save_scaler_path = f"{args.output_directory}/scalers/standard_scaler.pkl"
+    save_scaler_path = f"{args.output_directory}/scalers/{args.model_name}.pkl"
 
     with open(save_scaler_path, 'wb') as pkl:
         pickle.dump(scaling_pipeline, pkl)
@@ -134,7 +168,7 @@ def main(args, logger):
     history = model.fit(
         training_processed[ml_features], 
         training_processed['target'],
-        epochs=20,
+        epochs=50,
         validation_split=0.10,
         callbacks=[EARLY_STOPPING_CB],
         batch_size=32

@@ -23,7 +23,7 @@ class PeakGroupList:
         
         self.peak_groups = list()
         
-        for key, group in peak_groups.items():
+        for _, group in peak_groups.items():
             self.peak_groups.append(PeakGroup(group))
             
         self.sort_key = None
@@ -46,7 +46,7 @@ class PeakGroupList:
         self.sort_key = rerank_keys
         
     
-    def select_peak_group(self, rank=0, rerank_keys=[], ascending=True, return_all=False):
+    def select_peak_group(self, rank=None, rerank_keys=[], ascending=True, return_all=False):
         
         if return_all:
             return pd.concat(
@@ -60,10 +60,13 @@ class PeakGroupList:
                 ascending=ascending
             )
         
-        rank = rank - 1
+        if isinstance(rank, list):
+            rank = [r - 1 for r in rank]
+        else:
+            rank = rank - 1
         
         highest_ranking = list()
-        
+
         for peak_group in self.peak_groups:
             
             try:
@@ -72,8 +75,53 @@ class PeakGroupList:
                 ) 
             except IndexError:
                 pass
-        
+
         return pd.DataFrame(highest_ranking)
+
+    def select_proteotypic_peptides(self, rerank_keys=[]):
+        
+        all_peptides = self.select_peak_group(
+            rank=1,
+            rerank_keys=rerank_keys,
+            ascending=False
+        )
+
+        all_peptides['peptide_sequence_charge'] = all_peptides.apply(
+            lambda row: '{}_{}'.format(row['peptide_sequence'], row['charge']),
+            axis=1
+        )
+
+        proteotypic_counts = pd.DataFrame(
+            all_peptides['peptide_sequence_charge'].value_counts(),
+        ).reset_index()
+
+        proteotypic_counts.columns = ['peptide_charge', 'count']
+
+        proteotypic_peptides = list(
+            proteotypic_counts[
+                proteotypic_counts['count'] == 1
+            ]['peptide_charge']
+        )
+
+        return proteotypic_peptides
+
+    def select_protein_groups(self, protein_group_column='protein_accession', rerank_keys=[]):
+
+        all_peptides = self.select_peak_group(
+            rank=1,
+            rerank_keys=rerank_keys,
+            ascending=False
+        )
+
+        protein_groups = all_peptides.groupby(
+            protein_group_column
+        )
+
+        protein_groups = [
+            group for _, group in protein_groups
+        ]
+
+        return protein_groups
 
 
 
