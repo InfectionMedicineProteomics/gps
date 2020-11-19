@@ -4,7 +4,8 @@ import argparse
 from gscore.workflows import (
     denoise,
     build_scorer,
-    score_run
+    score_run,
+    model_single_run
 )
 from gscore.utils.logger import Logger
 
@@ -56,6 +57,15 @@ def score_runs_args(parser):
         help='The number of folds used to denoise the target labels',
         default=10,
         type=int
+    )
+
+    parser.add_argument(
+        '-mr',
+        '--model-run',
+        dest='model_run',
+        help='Set to TRUE if you wish to calculate the q-values for single -run',
+        default=False,
+        action='store_true'
     )
 
     parser.add_argument(
@@ -233,3 +243,8 @@ if __name__ == '__main__':
         )
 
         score_run.main(args, logger)
+
+        if args.model_run:
+            
+            model_single_run.main(args, logger)
+            
