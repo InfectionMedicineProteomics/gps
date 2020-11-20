@@ -116,6 +116,8 @@ def denoise_false_target_labels(peak_groups):
         (peak_groups['target'] == 1.0)
     ].copy()
 
+    false_targets['target'] = 0.0
+
     return false_targets
 
 def main(args, logger):
