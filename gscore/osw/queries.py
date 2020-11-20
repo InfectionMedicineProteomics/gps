@@ -265,7 +265,8 @@ select
     ms2.VAR_XCORR_SHAPE var_xcorr_shape,
     gst.vote_percentage,
     gst.d_score,
-    gst.alt_d_score
+    gst.alt_d_score,
+    gst.ghost_score_id
 from precursor 
 inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
 inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id

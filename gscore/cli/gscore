@@ -10,6 +10,37 @@ from gscore.workflows import (
 from gscore.utils.logger import Logger
 
 
+def calc_q_value_args(parser):
+
+    parser.add_argument(
+        '-i',
+        '--input',
+        dest='input_osw_file',
+        help='Scored OSW files for q value calculation'
+    )
+
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        dest='output_osw_file',
+        help='Specify output directory',
+        default=''
+    )
+
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
+        ],
+        default='INFO'
+    )
+
+    return parser
+
+
 def score_runs_args(parser):
 
     parser.add_argument(
@@ -208,6 +239,13 @@ def get_args():
 
     score_run_parser = score_runs_args(score_run_parser)
 
+    calc_q_value_parser = subparsers.add_parser(
+        'calcqvalue',
+        help='calc q value for scored run'
+    )
+
+    calc_q_value_parser = calc_q_value_args(calc_q_value_parser)
+
     args = base_parser.parse_args()
 
     return args
@@ -246,5 +284,17 @@ if __name__ == '__main__':
 
         if args.model_run:
             
+            logger.info('[INFO] Starting q_value calculation for single run')
+
             model_single_run.main(args, logger)
+    
+    elif args.tool_name == 'calcqvalue':
+
+        logger = Logger(
+            name='calc_q_value',
+            level=args.verbosity_level
+        )
+
+        model_single_run.main(args, logger)
+
             

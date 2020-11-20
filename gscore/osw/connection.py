@@ -111,7 +111,7 @@ class OSWConnection:
 
         input_records = list()
 
-        for record_num, record_id, record in enumerate(records.items()):
+        for record_num, (record_id, record) in enumerate(records.items()):
 
             field_values = list()
             
@@ -123,15 +123,23 @@ class OSWConnection:
 
                 field_names.append(field_name)
 
+            field_values.append(record_id)
+
             input_records.append(
-                field_values.append(record_id)
+                field_values
             )
 
             if record_num % 1000 == 0 and record_num > 0:
 
-                formatted_update_string_holder = '=?, '.join(
-                    field_names
-                )
+                if len(field_names) == 1:
+
+                    formatted_update_string_holder = f"{field_names[0]}=?"
+
+                else:
+
+                    formatted_update_string_holder = '=?, '.join(
+                        field_names
+                    )
 
                 update_record_query = Queries.UPDATE_RECORD.format(
                     table_name=table_name,
@@ -142,10 +150,18 @@ class OSWConnection:
 
                 cursor = self.conn.cursor()
 
-                cursor.executemany(
-                    update_record_query,
-                    input_records
-                )
+                try:
+
+                    cursor.executemany(
+                        update_record_query,
+                        input_records
+                    )
+                
+                except sqlite3.OperationalError as e:
+
+                    print(update_record_query)
+                    print(input_records)
+                    raise e
 
                 self.conn.commit()
 
@@ -153,9 +169,15 @@ class OSWConnection:
 
         if input_records:
 
-            formatted_update_string_holder = '=?, '.join(
-                field_names
-            )
+            if len(field_names) == 1:
+
+                formatted_update_string_holder = f"{field_names[0]}=?"
+
+            else:
+
+                formatted_update_string_holder = '=?, '.join(
+                    field_names
+                )
 
             update_record_query = Queries.UPDATE_RECORD.format(
                 table_name=table_name,
@@ -166,10 +188,18 @@ class OSWConnection:
 
             cursor = self.conn.cursor()
 
-            cursor.executemany(
-                update_record_query,
-                input_records
-            )
+            try:
+
+                cursor.executemany(
+                    update_record_query,
+                    input_records
+                )
+            
+            except sqlite3.OperationalError as e:
+
+                print(update_record_query)
+                print(input_records)
+                raise e
 
             self.conn.commit()
 
