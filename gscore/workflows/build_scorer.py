@@ -50,41 +50,44 @@ def combine_peak_group_data(scored_files, cutoff):
             ascending=False
         )
 
-        low_ranking = list()
+        # low_ranking = list()
 
-        for rank in range(2, 3):
+        # for rank in range(2, 3):
 
-            lower_ranking = peak_groups.select_peak_group(
-                rank=rank,
-                rerank_keys=['var_xcorr_shape'], 
-                ascending=False
-            )
+        #     lower_ranking = peak_groups.select_peak_group(
+        #         rank=rank,
+        #         rerank_keys=['var_xcorr_shape'], 
+        #         ascending=False
+        #     )
 
-            lower_ranking['target'] = 0.0
+        #     lower_ranking['target'] = 0.0
 
-            low_ranking.append(lower_ranking)
+        #     low_ranking.append(lower_ranking)
         
-        lower_ranking = pd.concat(
-            low_ranking,
-            ignore_index=True
-        )
+        # lower_ranking = pd.concat(
+        #     low_ranking,
+        #     ignore_index=True
+        # )
 
         target_data = denoise_target_labels(
-            highest_ranking, 
-            cutoff
+            highest_ranking 
+        )
+
+        false_target_data = denoise_false_target_labels(
+            highest_ranking
         )
         
-        decoys_downsampled = resample(
-            lower_ranking,
-            replace=False,
-            n_samples=len(target_data),
-            random_state=42
-        )
+        # decoys_downsampled = resample(
+        #     lower_ranking,
+        #     replace=False,
+        #     n_samples=len(target_data),
+        #     random_state=42
+        # )
 
         denoised_target_labels = pd.concat(
             [
                 target_data,
-                decoys_downsampled
+                false_target_data
             ]
         )
 
@@ -97,15 +100,23 @@ def combine_peak_group_data(scored_files, cutoff):
     return pd.concat(combined_peak_groups, ignore_index=True)
 
 
-def denoise_target_labels(peak_groups, cutoff):
+def denoise_target_labels(peak_groups):
 
     targets = peak_groups[
-        (peak_groups['vote_percentage'] >= cutoff) &
+        (peak_groups['vote_percentage'] == 1.0) &
         (peak_groups['target'] == 1.0)
     ].copy()
 
     return targets
 
+def denoise_false_target_labels(peak_groups):
+
+    false_targets = peak_groups[
+        (peak_groups['vote_percentage'] == 0.0) &
+        (peak_groups['target'] == 1.0)
+    ].copy()
+
+    return false_targets
 
 def main(args, logger):
 

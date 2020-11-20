@@ -14,6 +14,16 @@ from gscore.models.preprocess import STANDARD_SCALAR_PIPELINE
 from gscore.models.distributions import build_false_target_protein_distributions, ScoreDistribution
 
 
+def prepare_update_records(records):
+
+    record_updates = records[
+        [
+            'feature'
+        ]
+    ]
+
+    return
+
 
 def format_model_distribution(data, proteotypic_peptides):
 
@@ -69,10 +79,6 @@ def main(args, logger):
     )
 
     proteotypic_peptides = peak_groups.select_proteotypic_peptides(
-        rerank_keys=['alt_d_score']
-    )
-
-    protein_groups = peak_groups.select_protein_groups(
         rerank_keys=['alt_d_score']
     )
 
