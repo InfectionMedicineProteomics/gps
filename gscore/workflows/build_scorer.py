@@ -56,7 +56,7 @@ def combine_peak_group_data(scored_files, cutoff):
 
             lower_ranking = peak_groups.select_peak_group(
                 rank=rank,
-                rerank_keys=['var_xcorr_shape'], 
+                rerank_keys=['var_xcorr_shape_weighted'], 
                 ascending=False
             )
 
