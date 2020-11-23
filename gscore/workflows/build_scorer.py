@@ -40,41 +40,41 @@ def combine_peak_group_data(scored_files, cutoff):
         )
         
         peak_groups.rerank_groups(
-            rerank_keys=['var_xcorr_shape'], 
+            rerank_keys=['var_xcorr_shape_weighted'], 
             ascending=False
         )
 
         highest_ranking = peak_groups.select_peak_group(
             rank=1,
-            rerank_keys=['var_xcorr_shape'], 
+            rerank_keys=['var_xcorr_shape_weighted'], 
             ascending=False
         )
 
-        # low_ranking = list()
+        low_ranking = list()
 
-        # for rank in range(2, 3):
+        for rank in range(2, 3):
 
-        #     lower_ranking = peak_groups.select_peak_group(
-        #         rank=rank,
-        #         rerank_keys=['var_xcorr_shape'], 
-        #         ascending=False
-        #     )
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
+                rerank_keys=['var_xcorr_shape'], 
+                ascending=False
+            )
 
-        #     lower_ranking['target'] = 0.0
+            lower_ranking['target'] = 0.0
 
-        #     low_ranking.append(lower_ranking)
+            low_ranking.append(lower_ranking)
         
-        # lower_ranking = pd.concat(
-        #     low_ranking,
-        #     ignore_index=True
-        # )
+        lower_ranking = pd.concat(
+            low_ranking,
+            ignore_index=True
+        )
 
         target_data = denoise_target_labels(
             highest_ranking 
         )
 
         false_target_data = denoise_false_target_labels(
-            highest_ranking
+            lower_ranking
         )
         
         # decoys_downsampled = resample(

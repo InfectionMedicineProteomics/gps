@@ -54,7 +54,8 @@ class DenoizingClassifier:
             n_samples = int(len(swath_training_prepared) * 0.05)
             
             print(
-                f'''Training for fold {idx} training size={len(swath_training_prepared)} testing_size={len(fold_data)} {n_samples} for bagging'''
+                f"Training for fold {idx} training size={len(swath_training_prepared)} "
+                f"testing_size={len(fold_data)} {n_samples} for bagging"
             )
             
             classifiers = list()

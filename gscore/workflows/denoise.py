@@ -30,8 +30,10 @@ def prepare_add_records(records):
     for feature_id, vote in zip(feature_ids, votes):
 
         record_updates.append(
-            {'feature_id': feature_id,
-            'vote_percentage': vote}
+            {
+                'feature_id': feature_id,
+                'vote_percentage': vote
+            }
         )
     
     return record_updates
@@ -90,7 +92,7 @@ def main(args, logger):
     )
 
     peak_groups.rerank_groups(
-        rerank_keys=['var_xcorr_shape'],
+        rerank_keys=['var_xcorr_shape_weighted'],
         ascending=False
     )
 
@@ -98,7 +100,7 @@ def main(args, logger):
 
     second_ranking = peak_groups.select_peak_group(
         rank=2,
-        rerank_keys=['var_xcorr_shape'], 
+        rerank_keys=['var_xcorr_shape_weighted'], 
         ascending=False
     )
 
@@ -106,7 +108,7 @@ def main(args, logger):
 
     highest_ranking = peak_groups.select_peak_group(
         rank=1,
-        rerank_keys=['var_xcorr_shape'], 
+        rerank_keys=['var_xcorr_shape_weighted'], 
         ascending=False
     )
 
