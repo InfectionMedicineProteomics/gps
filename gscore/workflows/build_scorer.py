@@ -60,8 +60,6 @@ def combine_peak_group_data(scored_files, cutoff):
                 ascending=False
             )
 
-            lower_ranking['target'] = 0.0
-
             low_ranking.append(lower_ranking)
         
         lower_ranking = pd.concat(
