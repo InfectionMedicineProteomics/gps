@@ -75,12 +75,12 @@ def combine_peak_group_data(scored_files, cutoff):
             lower_ranking
         )
         
-        # decoys_downsampled = resample(
-        #     lower_ranking,
-        #     replace=False,
-        #     n_samples=len(target_data),
-        #     random_state=42
-        # )
+        false_target_data = resample(
+            false_target_data,
+            replace=False,
+            n_samples=len(target_data),
+            random_state=42
+        )
 
         denoised_target_labels = pd.concat(
             [
