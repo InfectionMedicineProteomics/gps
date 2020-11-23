@@ -96,7 +96,7 @@ def main(args, logger):
     )
 
     peak_groups.rerank_groups(
-        rerank_keys=['var_xcorr_shape'],
+        rerank_keys=['var_xcorr_shape_weighted'],
         ascending=False
     )
 
@@ -108,7 +108,7 @@ def main(args, logger):
 
         lower_ranking = peak_groups.select_peak_group(
             rank=rank,
-            rerank_keys=['var_xcorr_shape'], 
+            rerank_keys=['var_xcorr_shape_weighted'], 
             ascending=False
         )
 
@@ -123,7 +123,7 @@ def main(args, logger):
 
     highest_ranking = peak_groups.select_peak_group(
         rank=1,
-        rerank_keys=['var_xcorr_shape'], 
+        rerank_keys=['var_xcorr_shape_weighted'], 
         ascending=False
     )
 
