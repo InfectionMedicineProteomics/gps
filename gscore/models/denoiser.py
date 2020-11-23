@@ -2,7 +2,11 @@ import numpy as np
 import pandas as pd
 
 from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import (
+    StandardScaler,
+    RobustScaler,
+    MinMaxScaler
+)
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
 
@@ -42,7 +46,8 @@ class DenoizingClassifier:
             )
             
             full_pipeline = Pipeline([
-                ('standard_scaler', StandardScaler()),
+                ('standard_scaler', RobustScaler()),
+                ('min_max_scaler', MinMaxScaler())
             ])
 
             swath_training_prepared = training_data.copy()

@@ -216,6 +216,10 @@ def create_table(host, query):
 
     with OSWConnection(host) as conn:
 
+        conn.run_raw_sql(
+            "drop table if exists ghost_score_table;"
+        )
+
         conn.run_raw_sql(query)
         
         

@@ -5,9 +5,51 @@ from gscore.workflows import (
     denoise,
     build_scorer,
     score_run,
-    model_single_run
+    model_single_run,
+    export
 )
 from gscore.utils.logger import Logger
+
+
+def export_parser_args(parser):
+
+    parser.add_argument(
+        '-i',
+        '--input',
+        dest='input_osw_file',
+        help='Scored OSW files to export'
+    )
+
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        dest='output_tsv_file',
+        help='Exported tsv file',
+        default=''
+    )
+
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
+        ],
+        default='INFO'
+    )
+
+    parser.add_argument(
+        '-m',
+        '--export-method',
+        dest='export_method',
+        choices=[
+            'tric-formatted', 'scored'
+        ],
+        help='Which format to export results'
+    )
+
+    return parser
 
 
 def calc_q_value_args(parser):
@@ -246,6 +288,13 @@ def get_args():
 
     calc_q_value_parser = calc_q_value_args(calc_q_value_parser)
 
+    export_parser = subparsers.add_parser(
+        'export',
+        help='Export SQLite to tsv'
+    )
+
+    export_parser = export_parser_args(export_parser)
+
     args = base_parser.parse_args()
 
     return args
@@ -296,5 +345,14 @@ if __name__ == '__main__':
         )
 
         model_single_run.main(args, logger)
+
+    elif args.tool_name == 'export':
+
+        logger = Logger(
+            name='export',
+            level=args.verbosity_level
+        )
+
+        export.main(args, logger)
 
             

@@ -75,8 +75,20 @@ def save_plot(score_distribution, args):
 
     import matplotlib.pyplot as plt
 
-    plt.plot(score_distribution.target_kde.x_axis, score_distribution.target_kde.values, lw=2, color='cornflowerblue', linestyle='-')
-    plt.plot(score_distribution.null_kde.x_axis, score_distribution.null_kde.values, lw=2, color='red', linestyle='-')
+    plt.plot(
+        score_distribution.combined_axis, 
+        score_distribution.target_values, 
+        lw=2, 
+        color='cornflowerblue', 
+        linestyle='-'
+    )
+    plt.plot(
+        score_distribution.combined_axis, 
+        score_distribution.null_values, 
+        lw=2, 
+        color='red', 
+        linestyle='-'
+    )
     plt.savefig(f'{args.input_osw_file}.scoring_model.pdf')
 
 
