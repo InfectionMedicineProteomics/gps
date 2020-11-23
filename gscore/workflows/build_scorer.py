@@ -110,7 +110,7 @@ def denoise_target_labels(peak_groups):
 def denoise_false_target_labels(peak_groups):
 
     false_targets = peak_groups[
-        (peak_groups['vote_percentage'] == 0.0) &
+        #(peak_groups['vote_percentage'] == 0.0) &
         (peak_groups['target'] == 1.0)
     ].copy()
 
