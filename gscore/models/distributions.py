@@ -39,7 +39,7 @@ class TempDistribution:
         self.data = data
         self.bins = self._set_axis(bins)
 
-        self.max_value = self.bins[-1]
+        self.max_value = data.max()
 
     def _set_axis(self, bins):
 
