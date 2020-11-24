@@ -106,8 +106,6 @@ class ScoreDistribution:
         self.bin_edges = np.histogram_bin_edges(
             data[distribution_type], bins='auto'
         )
-
-        self.combined_axis = self._set_axis()
         
         self.target_kde = TempDistribution(
             data=data[
