@@ -37,7 +37,11 @@ class TempDistribution:
     def __init__(self, data=None, bins=None, distribution_type='alt_d_score'):
 
         self.data = data
-        self.bins = self._set_axis(bins)
+        self.bins = self._set_axis(
+            np.histogram_bin_edges(
+                data[distribution_type], bins='auto'
+            )
+        )
 
         self.max_value = data.max()
 
@@ -48,6 +52,27 @@ class TempDistribution:
             stop=np.exp(1.0) * 1.0,
             num=len(bins)
         )[:, np.newaxis].ravel()
+
+
+    def _set_bin_means(self, bin_edges):
+
+        x_axis = list()
+
+        for edge_num, edge_value in enumerate(bin_edges):
+
+            if edge_num == 0:
+
+                x_axis.append(edge_value)
+
+            else:
+                interpolated_bin = (edge_value + bin_edges[edge_num - 1]) / 2.0
+
+                x_axis.append(interpolated_bin)
+
+        x_axis.append(edge_value)
+
+        return x_axis
+
 
     def estimate(self):
 
@@ -68,7 +93,9 @@ class TempDistribution:
 
         interpolate_values.append(0.0)
 
-        return interpolate_values
+        bins = self._set_bin_means(bins)
+
+        return interpolate_values, bins
 
 
 class ScoreDistribution:
@@ -86,7 +113,7 @@ class ScoreDistribution:
             data=data[
                 data['target'] == 1.0
             ][distribution_type],
-            bins=self.bin_edges,
+            #bins=self.bin_edges,
             distribution_type=distribution_type
         )
 
@@ -94,7 +121,7 @@ class ScoreDistribution:
             data=data[
                 data['target'] == 0.0
             ][distribution_type],
-            bins=self.bin_edges,
+            #bins=self.bin_edges,
             distribution_type=distribution_type
         )
 
@@ -127,49 +154,28 @@ class ScoreDistribution:
 
         
 
-        self.target_values = self.target_kde.estimate()
-        self.null_values = self.null_kde.estimate()
+        self.target_values, self.target_axis = self.target_kde.estimate()
+        self.null_values, self.null_axis = self.null_kde.estimate()
 
         self.target_distribution = InterpolatedUnivariateSpline(
-            self.combined_axis,
+            self.target_axis,
             self.target_values,
             ext=1
         )
 
         self.null_distribution = InterpolatedUnivariateSpline(
-            self.combined_axis,
+            self.null_axis,
             self.null_values,
             ext=1
         )
 
-
-    def _set_axis(self):
-
-        x_axis = list()
-
-        for edge_num, edge_value in enumerate(self.bin_edges):
-
-            if edge_num == 0:
-
-                x_axis.append(edge_value)
-
-            else:
-                interpolated_bin = (edge_value + self.bin_edges[edge_num - 1]) / 2.0
-
-                x_axis.append(interpolated_bin)
-
-        x_axis.append(edge_value)
-
-        return x_axis
-
-
     def calc_q_value(self, prob_score):
 
-        if prob_score <= self.combined_axis[0]:
+        if prob_score <= self.target_axis[0]:
 
             return 1.0
 
-        elif prob_score >= self.combined_axis[-1]:
+        elif prob_score >= self.null_axis[-1]:
 
             return 0.0
 
