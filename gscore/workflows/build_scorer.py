@@ -19,7 +19,6 @@ from gscore.models.scorer import (
     EARLY_STOPPING_CB
 )
 from gscore.osw.connection import (
-    create_table,
     OSWConnection
 )
 from gscore.models.preprocess import (

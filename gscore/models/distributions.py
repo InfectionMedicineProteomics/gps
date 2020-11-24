@@ -34,16 +34,18 @@ class LabelDistribution(KernelDensity):
 
 class TempDistribution:
 
-    def __init__(self, data=None, bins=None, distribution_type='alt_d_score'):
+    def __init__(self, data=None, bins=None):
 
         self.data = data
         self.bins = self._set_axis(
             np.histogram_bin_edges(
-                data[distribution_type], bins='auto'
+                data, bins='auto'
             )
         )
 
         self.max_value = data.max()
+
+        self.min_value = data.min()
 
     def _set_axis(self, bins):
 
@@ -111,16 +113,12 @@ class ScoreDistribution:
             data=data[
                 data['target'] == 1.0
             ][distribution_type],
-            #bins=self.bin_edges,
-            distribution_type=distribution_type
         )
 
         self.null_kde = TempDistribution(
             data=data[
                 data['target'] == 0.0
             ][distribution_type],
-            #bins=self.bin_edges,
-            distribution_type=distribution_type
         )
 
         # self.combined_axis = np.array(
@@ -169,11 +167,11 @@ class ScoreDistribution:
 
     def calc_q_value(self, prob_score):
 
-        if prob_score <= self.target_axis[0]:
+        if prob_score <= self.target_kde.min_value:
 
             return 1.0
 
-        elif prob_score >= self.null_axis[-1]:
+        elif prob_score >= self.null_kde.max_value:
 
             return 0.0
 
@@ -191,7 +189,9 @@ class ScoreDistribution:
 
             total_area = null_area + target_area
 
-            return null_area / total_area
+            q_value = null_area / total_area
+
+        return q_value
     
 
 def build_false_target_protein_distributions(

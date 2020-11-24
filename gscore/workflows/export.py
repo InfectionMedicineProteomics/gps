@@ -14,11 +14,13 @@ def main(args, logger):
             query=FETCH_EXPORT_DATA
         )
 
-    all_peak_groups = peak_groups.select_peak_group(
-        return_all=True
-    )   
+        highest_scoring = peak_groups.select_peak_group(
+            rank=1,
+            rerank_keys=['m_score'],
+            ascending=True
+        )   
 
-    all_peak_groups.to_csv(
-        args.output_tsv_file,
-        sep='\t'
-    )
+        highest_scoring.to_csv(
+            args.output_tsv_file,
+            sep='\t'
+        )

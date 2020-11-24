@@ -211,16 +211,17 @@ class OSWConnection:
         
         cursor.execute(sql)
 
-        
-def create_table(host, query):
+    def create_table(self, query):
 
-    with OSWConnection(host) as conn:
+        self.run_raw_sql(query)
 
-        conn.run_raw_sql(
-            "drop table if exists ghost_score_table;"
-        )
+    def drop_table(self, table_name):
 
-        conn.run_raw_sql(query)
+        query = f"drop table if exists {table_name};"
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(query)
         
         
 def connect(db_path):

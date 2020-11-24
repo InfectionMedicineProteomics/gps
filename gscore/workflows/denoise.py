@@ -7,7 +7,6 @@ from gscore.osw.queries import (
 )
 from gscore.models.denoiser import DenoizingClassifier
 from gscore.osw.connection import (
-    create_table,
     OSWConnection
 )
 
@@ -37,16 +36,6 @@ def prepare_add_records(records):
         )
     
     return record_updates
-
-
-def add_vote_records(records, osw_path):
-
-    with OSWConnection(osw_path) as conn:
-
-        conn.add_records(
-            table_name='ghost_score_table', 
-            records=records
-        )
 
 
 def denoise(training_data, peak_groups, columns, logger=None, num_folds=10, num_classifiers=500):
@@ -134,23 +123,17 @@ def main(args, logger):
 
     if args.output_osw_file:
 
-        create_table(
-            args.output_osw_file, 
-            CREATE_GHOSTSCORE_TABLE
-        )
+        pass
 
-        add_vote_records(
-            records=record_updates,
-            osw_path=args.output_osw_file
-        )
     else:
 
-        create_table(
-            args.input_osw_file, 
-            CREATE_GHOSTSCORE_TABLE
-        )
+        with OSWConnection(args.input_osw_file) as conn:
 
-        add_vote_records(
-            records=record_updates,
-            osw_path=args.input_osw_file
-        )
+            conn.create_table(
+                CREATE_GHOSTSCORE_TABLE
+            )
+
+            conn.add_records(
+                table_name='ghost_score_table', 
+                records=record_updates
+            )

@@ -76,14 +76,14 @@ def save_plot(score_distribution, args):
     import matplotlib.pyplot as plt
 
     plt.plot(
-        score_distribution.combined_axis, 
+        score_distribution.target_axis, 
         score_distribution.target_values, 
         lw=2, 
         color='cornflowerblue', 
         linestyle='-'
     )
     plt.plot(
-        score_distribution.combined_axis, 
+        score_distribution.null_axis, 
         score_distribution.null_values, 
         lw=2, 
         color='red', 

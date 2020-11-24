@@ -54,7 +54,7 @@ class PeakGroupList:
             )
         
         if rerank_keys != self.sort_key:
-            print('here')
+            
             self.rerank_groups(
                 rerank_keys=rerank_keys,
                 ascending=ascending
