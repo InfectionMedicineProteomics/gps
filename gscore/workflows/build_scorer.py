@@ -52,7 +52,7 @@ def combine_peak_group_data(scored_files, cutoff):
 
         low_ranking = list()
 
-        for rank in range(2, 3):
+        for rank in range(3, 6):
 
             lower_ranking = peak_groups.select_peak_group(
                 rank=rank,
