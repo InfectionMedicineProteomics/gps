@@ -280,29 +280,28 @@ where precursor.DECOY == 0
 order by transition_group_id;
 """
 
-FETCH_EXPORT_DATA = """
+FETCH_TRIC_EXPORT_DATA = """
 select
+    feature.run_id run_id,
     precursor.id transition_group_id,
-    feature.id feature_id,
-    feature.exp_rt exp_rt,
-    feature.norm_rt norm_rt,
+    feature.id id,
+    feature.exp_rt RT,
+    feature.norm_rt iRT,
     feature.delta_rt delta_rt,
     precursor.PRECURSOR_MZ mz,
-    precursor.CHARGE charge,
+    precursor.CHARGE Charge,
     precursor.DECOY decoy,
-    peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-    peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
-    protein.PROTEIN_ACCESSION protein_accession,
+    peptide.UNMODIFIED_SEQUENCE Sequence,
+    peptide.MODIFIED_SEQUENCE FullPeptideName,
+    protein.PROTEIN_ACCESSION ProteinName,
     protein.decoy protein_decoy,
-    ms1.AREA_INTENSITY area_intensity,
-    ms1.APEX_INTENSITY apex_intensity,
-    ms2.AREA_INTENSITY ms2_area_intensity,
-    ms2.TOTAL_AREA_INTENSITY total_area_intensity,
-    gst.vote_percentage,
-    gst.d_score,
+    ms1.AREA_INTENSITY aggr_prec_Peak_Area,
+    ms1.APEX_INTENSITY aggr_prec_Peak_Apex,
+    ms2.AREA_INTENSITY Intensity,
+    feature.LEFT_WIDTH leftWidth,
+    feature.RIGHT_WIDTH rightWidth,
     gst.m_score,
-    gst.alt_d_score,
-    gst.ghost_score_id
+    gst.alt_d_score d_score
 from precursor 
 inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
 inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id

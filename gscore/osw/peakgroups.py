@@ -143,7 +143,7 @@ def preprocess_data(osw_df):
     return osw_df
 
 
-def fetch_peak_groups(host='', query='',):
+def fetch_peak_groups(host='', query='', preprocess=True):
 
     peak_groups = list()
 
@@ -153,9 +153,17 @@ def fetch_peak_groups(host='', query='',):
 
             peak_groups.append(record)
 
-    peak_groups = preprocess_data(
-        pd.DataFrame(peak_groups)
-    )
+    if preprocess:
+
+        peak_groups = preprocess_data(
+            pd.DataFrame(peak_groups)
+        )
+
+    else:
+
+        peak_groups = pd.DataFrame(
+            peak_groups
+        )
     
     split_peak_groups = dict(
         tuple(

@@ -3,7 +3,7 @@ import numpy as np
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
-    FETCH_EXPORT_DATA
+    FETCH_TRIC_EXPORT_DATA
 )
 
 def main(args, logger):
@@ -11,7 +11,8 @@ def main(args, logger):
     if args.export_method == 'tric-formatted':
         peak_groups = fetch_peak_groups(
             host=args.input_osw_file,
-            query=FETCH_EXPORT_DATA
+            query=FETCH_TRIC_EXPORT_DATA,
+            preprocess=False
         )
 
         highest_scoring = peak_groups.select_peak_group(
@@ -22,5 +23,6 @@ def main(args, logger):
 
         highest_scoring.to_csv(
             args.output_tsv_file,
-            sep='\t'
+            sep='\t',
+            index=False
         )
