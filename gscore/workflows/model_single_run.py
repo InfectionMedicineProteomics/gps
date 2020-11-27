@@ -56,7 +56,7 @@ def format_model_distribution(data, proteotypic_peptides):
     ].copy()
 
     decoys = data[
-        data['vote_percentage'] == 0
+        data['vote_percentage'] <= 0.5
     ].copy()
 
     decoys = decoys.loc[
@@ -71,7 +71,7 @@ def format_model_distribution(data, proteotypic_peptides):
     return model_distribution
 
 
-def save_plot(score_distribution, args):
+def save_plot(score_distribution, plot_name):
 
     import matplotlib.pyplot as plt
 
@@ -89,7 +89,7 @@ def save_plot(score_distribution, args):
         color='red', 
         linestyle='-'
     )
-    plt.savefig(f'{args.input_osw_file}.scoring_model.pdf')
+    plt.savefig(f'{plot_name}.scoring_model.pdf')
 
 
 def main(args, logger):
@@ -130,7 +130,7 @@ def main(args, logger):
 
     save_plot(
         score_distribution=score_distribution, 
-        args=args
+        plot_name=args.input_osw_file
     )
 
     all_peak_groups = peak_groups.select_peak_group(

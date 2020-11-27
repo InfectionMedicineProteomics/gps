@@ -11,6 +11,40 @@ from gscore.workflows import (
 from gscore.utils.logger import Logger
 
 
+
+def build_global_model_parser_args(parser):
+
+    parser.add_argument(
+        '-i',
+        '--input',
+        dest='input_osw_files',
+        help='OSW files for building score model',
+        type=argparse.FileType('r'),
+        nargs='+'
+    )
+
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        dest='model_output_destination',
+        help='Exported model file',
+        default=''
+    )
+
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
+        ],
+        default='INFO'
+    )
+
+    return parser  
+
+
 def export_parser_args(parser):
 
     parser.add_argument(
@@ -294,6 +328,15 @@ def get_args():
     )
 
     export_parser = export_parser_args(export_parser)
+
+    build_global_model_parser = subparsers.add_parser(
+        'buildglobalmodel',
+        help='Build scoring model based on dataset'
+    )
+
+    build_global_model_parser = build_global_model_parser_args(
+        build_global_model_parser
+    )
 
     args = base_parser.parse_args()
 
