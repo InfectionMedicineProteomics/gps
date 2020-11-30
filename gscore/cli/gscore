@@ -5,6 +5,7 @@ from gscore.workflows import (
     denoise,
     build_scorer,
     score_run,
+    build_scoring_model,
     model_single_run,
     export
 )
@@ -397,5 +398,14 @@ if __name__ == '__main__':
         )
 
         export.main(args, logger)
+
+    elif args.tool_name == 'buildglobalmodel':
+
+        logger = Logger(
+            name='buildglobalmodel',
+            level=args.verbosity_level
+        )
+
+        build_scoring_model.main(args, logger)
 
             

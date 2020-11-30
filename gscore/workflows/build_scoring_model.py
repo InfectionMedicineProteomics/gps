@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import datetime
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -23,7 +25,13 @@ def main(args, logger):
 
     multi_distributions = list()
 
+    logger.info('starting model building')
+
     for osw_path in args.input_osw_files:
+
+        osw_path = osw_path.name
+
+        logger.info(f'building model for {osw_path}')
 
         peak_groups = fetch_peak_groups(
             host=osw_path,
@@ -35,11 +43,15 @@ def main(args, logger):
             ascending=False
         )
 
+        logger.info('selecting highest ranking peakgroups')
+
         highest_ranking = peak_groups.select_peak_group(
             rank=1,
             rerank_keys=['alt_d_score'],
             ascending=False
         )
+
+        logger.info('identifying proteotypic peptides')
 
         proteotypic_peptides = peak_groups.select_proteotypic_peptides(
             rerank_keys=['alt_d_score']
@@ -49,6 +61,8 @@ def main(args, logger):
             lambda row: '{}_{}'.format(row['peptide_sequence'], row['charge']),
             axis=1
         )
+
+        logger.info('estimating target/false target distributions')
 
         targets = highest_ranking[
             highest_ranking['vote_percentage'] == 1.0
@@ -84,6 +98,7 @@ def main(args, logger):
         ignore_index=True
     )
 
+    logger.info('building combined distributions')
 
     filtered_peak_groups = build_false_target_protein_distributions(
         targets=combined_peak_groups[
@@ -108,11 +123,20 @@ def main(args, logger):
         ascending=False
     )
 
+    logger.info('creating scoring distribution')
+
     score_distribution = ScoreDistribution(
         data=highest_scoring_per_protein
     )
 
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
     save_plot(
         score_distribution=score_distribution,
-        plot_name='global_scoring_model.pdf'
+        plot_name=f'{timestamp}_global_scoring_model'
     )
+
+    logger.info('saving scoring distribution model')
+
+    with open(args.model_output_destination, 'wb') as pkl:
+        pickle.dump(score_distribution, pkl)
