@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -94,7 +95,6 @@ def save_plot(score_distribution, plot_name):
 
 def main(args, logger):
 
-    logger.info('[INFO] Starting q_value calculation for single run')
     peak_groups = fetch_peak_groups(
         host=args.input_osw_file, 
         query=FETCH_SCORED_DATA
@@ -105,33 +105,51 @@ def main(args, logger):
         ascending=False
     )
 
-    highest_ranking = peak_groups.select_peak_group(
-        rank=1,
-        rerank_keys=['alt_d_score'], 
-        ascending=False
-    )
+    if args.scoring_model:
 
-    logger.info('[INFO] Select proteotypic peptides')
+        with open(args.scoring_model, 'rb') as pkl:
+            score_distribution = pickle.load(pkl)
 
-    proteotypic_peptides = peak_groups.select_proteotypic_peptides(
-        rerank_keys=['alt_d_score']
-    )
+    else:
 
-    logger.info('[INFO] Building score distribution')
+        logger.info('[INFO] Starting q_value calculation for single run')
+        peak_groups = fetch_peak_groups(
+            host=args.input_osw_file, 
+            query=FETCH_SCORED_DATA
+        )
 
-    model_distribution = format_model_distribution(
-        data=highest_ranking,
-        proteotypic_peptides=proteotypic_peptides
-    )
+        peak_groups.rerank_groups(
+            rerank_keys=['alt_d_score'], 
+            ascending=False
+        )
 
-    score_distribution = ScoreDistribution(
-        data=model_distribution
-    )
+        highest_ranking = peak_groups.select_peak_group(
+            rank=1,
+            rerank_keys=['alt_d_score'], 
+            ascending=False
+        )
 
-    save_plot(
-        score_distribution=score_distribution, 
-        plot_name=args.input_osw_file
-    )
+        logger.info('[INFO] Select proteotypic peptides')
+
+        proteotypic_peptides = peak_groups.select_proteotypic_peptides(
+            rerank_keys=['alt_d_score']
+        )
+
+        logger.info('[INFO] Building score distribution')
+
+        model_distribution = format_model_distribution(
+            data=highest_ranking,
+            proteotypic_peptides=proteotypic_peptides
+        )
+
+        score_distribution = ScoreDistribution(
+            data=model_distribution
+        )
+
+        save_plot(
+            score_distribution=score_distribution, 
+            plot_name=args.input_osw_file
+        )
 
     all_peak_groups = peak_groups.select_peak_group(
         return_all=True

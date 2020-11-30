@@ -105,6 +105,14 @@ def calc_q_value_args(parser):
     )
 
     parser.add_argument(
+        '-sm',
+        '--scoring-model',
+        dest='scoring_model',
+        help='Optional path to globally defined model used to score peakgroups',
+        default=''
+    )
+
+    parser.add_argument(
         '-v',
         '--verbose',
         dest='verbosity_level',
