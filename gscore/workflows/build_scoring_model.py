@@ -58,14 +58,17 @@ def main(args, logger):
         )
 
         highest_ranking['peptide_sequence_charge'] = highest_ranking.apply(
-            lambda row: '{}_{}'.format(row['peptide_sequence'], row['charge']),
+            lambda row: '{}_{}'.format(
+                row['peptide_sequence'], 
+                row['charge']
+            ),
             axis=1
         )
 
         logger.info('estimating target/false target distributions')
 
         targets = highest_ranking[
-            highest_ranking['vote_percentage'] == 1.0
+            highest_ranking['vote_percentage'] >= 0.9
         ].copy()
 
         targets = targets.loc[
@@ -75,7 +78,7 @@ def main(args, logger):
         targets['target'] = 1.0
 
         decoys = highest_ranking[
-            highest_ranking['vote_percentage'] <= 0.5
+            highest_ranking['vote_percentage'] <= 0.1
         ].copy()
 
         decoys = decoys.loc[
@@ -101,12 +104,7 @@ def main(args, logger):
     logger.info('building combined distributions')
 
     filtered_peak_groups = build_false_target_protein_distributions(
-        targets=combined_peak_groups[
-            combined_peak_groups.target == 1.0
-        ].copy(),
-        false_targets=combined_peak_groups[
-            combined_peak_groups.target == 0.0
-        ].copy()
+        data=combined_peak_groups
     )
 
     peak_groups = dict(

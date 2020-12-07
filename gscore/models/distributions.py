@@ -6,6 +6,8 @@ import matplotlib.pyplot as pyplot
 from sklearn.neighbors import KernelDensity
 from scipy.interpolate import InterpolatedUnivariateSpline
 
+from gscore.osw.peakgroups import PeakGroupList
+
 
 class LabelDistribution(KernelDensity):
 
@@ -195,37 +197,62 @@ class ScoreDistribution:
     
 
 def build_false_target_protein_distributions(
-    targets, 
-    false_targets, 
+    data=None,
     protein_column='protein_accession'
 ):
     
-    target_proteins = set(targets[protein_column])
-
-    false_target_proteins = set(false_targets[protein_column])
-
-    protein_overlap = list(
-        target_proteins.intersection(
-            false_target_proteins
+    peak_groups = dict(
+        tuple(
+            data.groupby('peptide_sequence_charge')
         )
     )
 
-    small_decoys = false_targets.loc[
-        ~false_targets[protein_column].isin(protein_overlap)
-    ].copy()
+    peak_groups = PeakGroupList(peak_groups)
 
-    small_decoys['target'] = 0.0
+    false_target_protein_groups = list()
 
-    small_targets = targets.loc[
-        ~targets[protein_column].isin(protein_overlap)
-    ].copy()
+    target_protein_groups = list()
 
-    small_targets['target'] = 1.0
+    for peak_group in peak_groups.peak_groups:
+
+        peak_group = peak_group.peak_group
+
+        false_proteins = peak_group[
+            peak_group['target'] == 0.0
+        ].copy()
+
+        true_proteins = peak_group[
+            peak_group['target'] == 1.0
+        ].copy()
+
+        target_percentage = len(true_proteins) / (len(false_proteins) + len(true_proteins))
+
+        false_target_percentage = len(false_proteins) / (len(false_proteins) + len(true_proteins))
+
+        if target_percentage > 0.9:
+
+            target_protein_groups.append(peak_group)
+
+        elif false_target_percentage > 0.90:
+            
+            false_target_protein_groups.append(peak_group)
+
+    targets = pd.concat(
+        target_protein_groups,
+        ignore_index=True
+    )
+
+    false_targets = pd.concat(
+        false_target_protein_groups,
+        ignore_index=True
+    )
+
+    false_targets['target'] = 0.0
 
     combined = pd.concat(
         [
-            small_targets,
-            small_decoys
+            targets,
+            false_targets
         ]
     )
 

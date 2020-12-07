@@ -44,7 +44,10 @@ def update_score_records(records, osw_path):
 def format_model_distribution(data, proteotypic_peptides):
 
     data['peptide_sequence_charge'] = data.apply(
-        lambda row: '{}_{}'.format(row['peptide_sequence'], row['charge']),
+        lambda row: '{}_{}'.format(
+            row['peptide_sequence'], 
+            row['charge']
+        ),
         axis=1
     )
 
@@ -64,9 +67,15 @@ def format_model_distribution(data, proteotypic_peptides):
         decoys.peptide_sequence_charge.isin(proteotypic_peptides)
     ].copy()
 
+    combined = pd.concat(
+        [
+            targets,
+            decoys
+        ]
+    )
+
     model_distribution = build_false_target_protein_distributions(
-        targets,
-        decoys
+        data=combined
     )
 
     return model_distribution
