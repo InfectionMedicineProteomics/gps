@@ -153,6 +153,8 @@ def fetch_peak_groups(host='', query='', preprocess=True):
 
             peak_groups.append(record)
 
+    print(len(peak_groups))
+
     if preprocess:
 
         peak_groups = preprocess_data(
@@ -164,7 +166,9 @@ def fetch_peak_groups(host='', query='', preprocess=True):
         peak_groups = pd.DataFrame(
             peak_groups
         )
-    
+
+    print(peak_groups.columns)
+
     split_peak_groups = dict(
         tuple(
             peak_groups.groupby('transition_group_id')

@@ -31,7 +31,13 @@ class LabelDistribution(KernelDensity):
 
         self.values = np.exp(self.probability_densities)
 
-        self.max_value = self.x_axis[-1]
+    @property
+    def max_value(self):
+        return self.x_axis[-1]
+
+    @property
+    def min_value(self):
+        return self.x_axis[0]
 
 
 class TempDistribution:
@@ -56,7 +62,6 @@ class TempDistribution:
             stop=np.exp(1.0) * 1.0,
             num=len(bins)
         )[:, np.newaxis].ravel()
-
 
     def _set_bin_means(self, bin_edges):
 
@@ -111,16 +116,20 @@ class ScoreDistribution:
             data[distribution_type], bins='auto'
         )
         
-        self.target_kde = TempDistribution(
-            data=data[
-                data['target'] == 1.0
-            ][distribution_type],
+        self.target_kde = LabelDistribution(
+            data=np.asarray(
+                data[
+                    data['target'] == 1.0
+                ][distribution_type]
+            ).reshape(-1, 1),
         )
 
-        self.null_kde = TempDistribution(
-            data=data[
-                data['target'] == 0.0
-            ][distribution_type],
+        self.null_kde = LabelDistribution(
+            data=np.asarray(
+                data[
+                    data['target'] == 0.0
+                ][distribution_type]
+            ).reshape(-1, 1),
         )
 
         # self.combined_axis = np.array(
@@ -152,8 +161,8 @@ class ScoreDistribution:
 
         
 
-        self.target_values, self.target_axis = self.target_kde.estimate()
-        self.null_values, self.null_axis = self.null_kde.estimate()
+        self.target_values, self.target_axis = self.target_kde.values, self.target_kde.x_axis
+        self.null_values, self.null_axis = self.null_kde.values, self.null_kde.x_axis
 
         self.target_distribution = InterpolatedUnivariateSpline(
             self.target_axis,
@@ -177,6 +186,10 @@ class ScoreDistribution:
 
             return 0.0
 
+        elif prob_score >= self.target_kde.max_value:
+
+            return 0.0
+
         else:
 
             null_area = self.null_distribution.integral(
@@ -191,19 +204,25 @@ class ScoreDistribution:
 
             total_area = null_area + target_area
 
-            q_value = null_area / total_area
+            try:
+
+                q_value = null_area / total_area
+
+            except ZeroDivisionError as e:
+                print(q_value)
+                raise e
 
         return q_value
     
 
 def build_false_target_protein_distributions(
-    data=None,
+    model_data=None,
     protein_column='protein_accession'
 ):
     
     peak_groups = dict(
         tuple(
-            data.groupby('peptide_sequence_charge')
+            model_data.groupby(protein_column)
         )
     )
 
@@ -217,23 +236,19 @@ def build_false_target_protein_distributions(
 
         peak_group = peak_group.peak_group
 
-        false_proteins = peak_group[
-            peak_group['target'] == 0.0
+        false_peak_groups = peak_group[
+            peak_group['vote_percentage'] <= 0.5
         ].copy()
 
-        true_proteins = peak_group[
-            peak_group['target'] == 1.0
+        true_peak_groups = peak_group[
+            peak_group['vote_percentage'] > 0.5
         ].copy()
 
-        target_percentage = len(true_proteins) / (len(false_proteins) + len(true_proteins))
-
-        false_target_percentage = len(false_proteins) / (len(false_proteins) + len(true_proteins))
-
-        if target_percentage > 0.9:
+        if len(true_peak_groups) > len(false_peak_groups):
 
             target_protein_groups.append(peak_group)
 
-        elif false_target_percentage > 0.90:
+        elif len(true_peak_groups) < len(false_peak_groups):
             
             false_target_protein_groups.append(peak_group)
 

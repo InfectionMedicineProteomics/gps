@@ -6,9 +6,12 @@ import pandas as pd
 import numpy as np
 
 from gscore.osw.peakgroups import fetch_peak_groups
+
 from gscore.osw.queries import (
-    FETCH_SCORED_DATA
+    SelectPeakGroups,
+    CreateIndex
 )
+
 from gscore.models.denoiser import DenoizingClassifier
 from gscore.osw.connection import OSWConnection
 

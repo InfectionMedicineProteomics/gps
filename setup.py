@@ -12,7 +12,7 @@ scripts = [
 install_requires = [
     'pandas',
     'sklearn',
-    'numpy==1.18.5',
+    'numpy',
     'tensorflow',
     'matplotlib'
 ]

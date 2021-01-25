@@ -3,6 +3,9 @@ import sys
 
 from enum import Enum
 
+NAME = ''
+LEVEL = ''
+
 class LogLevel(Enum):
     CRITICAL = logging.CRITICAL
     ERROR = logging.ERROR
@@ -15,6 +18,7 @@ class LogLevel(Enum):
     def get_level(cls, name=''):
         return cls[name].value
 
+## TODO: Only emit based on log level
 
 class Logger(logging.Logger):
 

@@ -56,7 +56,7 @@ class DenoizingClassifier:
                 swath_training_prepared[self.columns]
             )
             
-            n_samples = int(len(swath_training_prepared) * 0.05)
+            n_samples = int(len(swath_training_prepared) * 0.33)
             
             print(
                 f"Training for fold {idx} training size={len(swath_training_prepared)} "
@@ -70,8 +70,8 @@ class DenoizingClassifier:
                 denoizing_classifier = SGDClassifier(
                     alpha=1e-05,
                     average=True,
-                    loss='hinge',
-                    max_iter=1000,
+                    loss='log',
+                    max_iter=100,
                     penalty='l2',
                     shuffle=True,
                     tol=0.0001,

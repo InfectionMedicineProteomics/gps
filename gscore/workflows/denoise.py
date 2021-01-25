@@ -1,10 +1,13 @@
 import pandas as pd
 
 from gscore.osw.peakgroups import fetch_peak_groups
+
 from gscore.osw.queries import (
-    FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE,
-    CREATE_GHOSTSCORE_TABLE
+    SelectPeakGroups,
+    CreateIndex,
+    CreateTable
 )
+
 from gscore.models.denoiser import DenoizingClassifier
 from gscore.osw.connection import (
     OSWConnection
@@ -71,42 +74,58 @@ def denoise(training_data, peak_groups, columns, logger=None, num_folds=10, num_
 
 def main(args, logger):
 
+    logger.info(f"[INFO] Indexing OSW file.")
+
+    with OSWConnection(args.input_osw_file) as conn:
+        for idx in CreateIndex.ALL_INDICES:
+            conn.run_raw_sql(idx)
+
     logger.info(f'[INFO] Beginning target label denoising for {args.input_osw_file}')
 
-    logger.debug(f'[DEBUG] Extracting true targets and reranking')
+    logger.info(f'[INFO] Extracting true targets and reranking')
 
     peak_groups = fetch_peak_groups(
         host=args.input_osw_file,
-        query=FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+        query=SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS
     )
+
+    logger.info('[INFO] Reranking peak groups')
 
     peak_groups.rerank_groups(
         rerank_keys=['var_xcorr_shape_weighted'],
         ascending=False
     )
 
-    logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
-
-    second_ranking = peak_groups.select_peak_group(
-        rank=2,
-        rerank_keys=['var_xcorr_shape_weighted'], 
-        ascending=False
-    )
-
-    second_ranking['target'] = 0.0
-
     highest_ranking = peak_groups.select_peak_group(
         rank=1,
-        rerank_keys=['var_xcorr_shape_weighted'], 
+        rerank_keys=['var_xcorr_shape_weighted'],
         ascending=False
     )
 
-    noisey_target_labels = pd.concat(
-        [
-            highest_ranking,
-            second_ranking
-        ]
-    )
+    decoy_free = False
+
+    if decoy_free:
+
+        logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
+
+        second_ranking = peak_groups.select_peak_group(
+            rank=2,
+            rerank_keys=['var_xcorr_shape_weighted'],
+            ascending=False
+        )
+
+        second_ranking['target'] = 0.0
+
+        noisey_target_labels = pd.concat(
+            [
+                highest_ranking,
+                second_ranking
+            ]
+        )
+
+    else:
+
+        noisey_target_labels = highest_ranking
 
     all_peak_groups = denoise(
         training_data=noisey_target_labels,
@@ -129,8 +148,12 @@ def main(args, logger):
 
         with OSWConnection(args.input_osw_file) as conn:
 
+            conn.drop_table(
+                'ghost_score_table'
+            )
+
             conn.create_table(
-                CREATE_GHOSTSCORE_TABLE
+                CreateTable.CREATE_GHOSTSCORE_TABLE
             )
 
             conn.add_records(

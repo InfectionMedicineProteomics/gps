@@ -11,7 +11,8 @@ from sklearn.utils import resample
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
-    FETCH_VOTED_DATA
+    SelectPeakGroups,
+    CreateIndex
 )
 from gscore.models.scorer import (
     TargetScoringModel,
@@ -29,13 +30,19 @@ from gscore.models.preprocess import (
 
 def combine_peak_group_data(scored_files, cutoff):
 
+
+    decoy_free = False
+
     combined_peak_groups = list()
 
     for osw_path in scored_files:
 
+
+        #TODO: Change query names here (fetch decoy vs fetch decoy free)
+
         peak_groups = fetch_peak_groups(
-            host=osw_path, 
-            query=FETCH_VOTED_DATA
+            host=osw_path,
+            query=SelectPeakGroups.FETCH_VOTED_DATA
         )
         
         peak_groups.rerank_groups(
@@ -49,31 +56,60 @@ def combine_peak_group_data(scored_files, cutoff):
             ascending=False
         )
 
-        low_ranking = list()
+        if decoy_free:
 
-        for rank in range(3, 6):
+            low_ranking = list()
 
-            lower_ranking = peak_groups.select_peak_group(
-                rank=rank,
-                rerank_keys=['var_xcorr_shape_weighted'], 
+            for rank in range(3, 6):
+
+                lower_ranking = peak_groups.select_peak_group(
+                    rank=rank,
+                    rerank_keys=['var_xcorr_shape_weighted'],
+                    ascending=False
+                )
+
+                low_ranking.append(lower_ranking)
+
+            lower_ranking = pd.concat(
+                low_ranking,
+                ignore_index=True
+            )
+
+            target_data = denoise_target_labels(
+                highest_ranking
+            )
+
+            false_target_data = denoise_false_target_labels(
+                lower_ranking
+            )
+
+        else:
+            print("Here")
+
+            target_data = highest_ranking[
+                highest_ranking['target'] == 1.0
+            ].copy()
+
+            target_data = denoise_target_labels(
+                target_data
+            )
+
+            decoy_peak_groups = fetch_peak_groups(
+                host=osw_path,
+                query=SelectPeakGroups.FETCH_DECOY_PEAK_GROUPS
+            )
+
+            decoy_peak_groups.rerank_groups(
+                rerank_keys=['var_xcorr_shape_weighted'],
                 ascending=False
             )
 
-            low_ranking.append(lower_ranking)
-        
-        lower_ranking = pd.concat(
-            low_ranking,
-            ignore_index=True
-        )
+            false_target_data = decoy_peak_groups.select_peak_group(
+                rank=1,
+                rerank_keys=['var_xcorr_shape_weighted'],
+                ascending=False
+            )
 
-        target_data = denoise_target_labels(
-            highest_ranking 
-        )
-
-        false_target_data = denoise_false_target_labels(
-            lower_ranking
-        )
-        
         false_target_data = resample(
             false_target_data,
             replace=False,
@@ -81,14 +117,16 @@ def combine_peak_group_data(scored_files, cutoff):
             random_state=42
         )
 
+        #TODO: Rename these variables and the denoise label function
         denoised_target_labels = pd.concat(
             [
                 target_data,
                 false_target_data
-            ]
+            ],
+            ignore_index=True
         )
 
-        print(denoised_target_labels.target.value_counts())
+        print("Labels: ", denoised_target_labels.target.value_counts())
         
         combined_peak_groups.append(
             denoised_target_labels
@@ -128,10 +166,14 @@ def main(args, logger):
         args.target_vote_cutoff
     )
 
-    ml_features = [
-        col for col in combined_peak_groups.columns
-        if col.startswith('var')
-    ]
+    openswath_input = True
+
+    if openswath_input:
+
+        ml_features = [
+            col for col in combined_peak_groups.columns
+            if col.startswith('var')
+        ]
 
     logger.info("[INFO] Denoising target labels")
 

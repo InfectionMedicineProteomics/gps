@@ -7,8 +7,8 @@ from tensorflow import keras
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
-    FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE,
-    CREATE_GHOSTSCORE_TABLE
+    SelectPeakGroups,
+    CreateIndex
 )
 from gscore.models.denoiser import DenoizingClassifier
 from gscore.osw.connection import (
@@ -89,42 +89,72 @@ def main(args, logger):
 
     logger.debug(f'[DEBUG] Extracting true targets and reranking')
 
-    peak_groups = fetch_peak_groups(
-        host=args.input_osw_file,
-        query=FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
-    )
+    decoy_free = False
 
-    peak_groups.rerank_groups(
-        rerank_keys=['var_xcorr_shape_weighted'],
-        ascending=False
-    )
+    if decoy_free:
 
-    logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
+        peak_groups = fetch_peak_groups(
+            host=args.input_osw_file,
+            query=FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+        )
 
-    low_ranking = list()
-
-    for rank in range(2, 3):
-
-        lower_ranking = peak_groups.select_peak_group(
-            rank=rank,
-            rerank_keys=['var_xcorr_shape_weighted'], 
+        peak_groups.rerank_groups(
+            rerank_keys=['var_xcorr_shape_weighted'],
             ascending=False
         )
 
-        lower_ranking['target'] = 0.0
+        logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
 
-        low_ranking.append(lower_ranking)
-    
-    lower_ranking = pd.concat(
-        low_ranking,
-        ignore_index=True
-    )
+        low_ranking = list()
 
-    highest_ranking = peak_groups.select_peak_group(
-        rank=1,
-        rerank_keys=['var_xcorr_shape_weighted'], 
-        ascending=False
-    )
+        for rank in range(2, 3):
+
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
+                rerank_keys=['var_xcorr_shape_weighted'],
+                ascending=False
+            )
+
+            lower_ranking['target'] = 0.0
+
+            low_ranking.append(lower_ranking)
+
+        lower_ranking = pd.concat(
+            low_ranking,
+            ignore_index=True
+        )
+
+        highest_ranking = peak_groups.select_peak_group(
+            rank=1,
+            rerank_keys=['var_xcorr_shape_weighted'],
+            ascending=False
+        )
+    else:
+        peak_groups = fetch_peak_groups(
+            host=args.input_osw_file,
+            query=FETCH_UNSCORED_PEAK_GROUPS
+        )
+
+        peak_groups.rerank_groups(
+            rerank_keys=['var_xcorr_shape_weighted'],
+            ascending=False
+        )
+
+        highest_ranking = peak_groups.select_peak_group(
+            rank=1,
+            rerank_keys=['var_xcorr_shape_weighted'],
+            ascending=False
+        )
+
+        lower_ranking = highest_ranking.loc[
+            highest_ranking.target == 0.0
+        ].copy()
+
+        highest_ranking = highest_ranking.loc[
+            highest_ranking.target == 1.0
+        ].copy()
+
+
 
     noisey_target_labels = pd.concat(
         [
@@ -132,6 +162,10 @@ def main(args, logger):
             lower_ranking
         ],
         ignore_index=True
+    )
+
+    print(
+        noisey_target_labels.target.value_counts()
     )
 
     all_peak_groups = denoise(
@@ -154,6 +188,12 @@ def main(args, logger):
     all_peak_groups['alt_d_score'] = np.exp(
         all_peak_groups['vote_percentage']
     ) * all_peak_groups['d_score']
+
+    check = all_peak_groups.loc[
+        all_peak_groups['alt_d_score'] > 3
+    ].copy()
+
+    print(check)
 
     record_updates = prepare_add_records(all_peak_groups)
 

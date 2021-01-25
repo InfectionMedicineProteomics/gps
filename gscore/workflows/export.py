@@ -3,7 +3,8 @@ import numpy as np
 
 from gscore.osw.peakgroups import fetch_peak_groups
 from gscore.osw.queries import (
-    FETCH_TRIC_EXPORT_DATA
+    SelectPeakGroups,
+    CreateIndex
 )
 
 def main(args, logger):
@@ -11,7 +12,7 @@ def main(args, logger):
     if args.export_method == 'tric-formatted':
         peak_groups = fetch_peak_groups(
             host=args.input_osw_file,
-            query=FETCH_TRIC_EXPORT_DATA,
+            query=SelectPeakGroups.FETCH_TRIC_EXPORT_DATA,
             preprocess=False
         )
 
