@@ -1,15 +1,12 @@
-import pandas as pd
-import numpy as np
-
-from gscore.osw.peakgroups import fetch_peak_groups
-from gscore.osw.queries import (
-    SelectPeakGroups,
-    CreateIndex
+from gscore.parsers.osw.peakgroups import fetch_peak_groups
+from gscore.parsers.osw.queries import (
+    SelectPeakGroups
 )
 
 def main(args, logger):
 
     if args.export_method == 'tric-formatted':
+
         peak_groups = fetch_peak_groups(
             host=args.input_osw_file,
             query=SelectPeakGroups.FETCH_TRIC_EXPORT_DATA,

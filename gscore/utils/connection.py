@@ -10,7 +10,7 @@ class Queries:
     CREATE_INDEX = """CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_list});"""
 
 
-class OSWConnection:
+class Connection:
     
     def __init__(self, db_path):
         
@@ -225,5 +225,5 @@ class OSWConnection:
         
         
 def connect(db_path):
-    conn = OSWConnection(db_path)
+    conn = Connection(db_path)
     return conn

@@ -2,297 +2,15 @@
 import argparse
 
 from gscore.workflows import (
-    denoise,
     build_scorer,
     score_run,
-    build_scoring_model,
-    model_single_run,
     export
 )
 from gscore.utils.logger import Logger
 
-
-
-def build_global_model_parser_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_files',
-        help='OSW files for building score model',
-        type=argparse.FileType('r'),
-        nargs='+'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outfile',
-        dest='model_output_destination',
-        help='Exported model file',
-        default=''
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    return parser  
-
-
-def export_parser_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_file',
-        help='Scored OSW files to export'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outfile',
-        dest='output_tsv_file',
-        help='Exported tsv file',
-        default=''
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    parser.add_argument(
-        '-m',
-        '--export-method',
-        dest='export_method',
-        choices=[
-            'tric-formatted', 'scored'
-        ],
-        help='Which format to export results'
-    )
-
-    return parser
-
-
-def calc_q_value_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_file',
-        help='Scored OSW files for q value calculation'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outfile',
-        dest='output_osw_file',
-        help='Specify output directory',
-        default=''
-    )
-
-    parser.add_argument(
-        '-sm',
-        '--scoring-model',
-        dest='scoring_model',
-        help='Optional path to globally defined model used to score peakgroups',
-        default=''
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    return parser
-
-
-def score_runs_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_file',
-        help='OSW files for training scorer'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outfile',
-        dest='output_osw_file',
-        help='Specify output directory',
-        default=''
-    )
-
-    parser.add_argument(
-        '-m',
-        '--model-path',
-        dest='model_path',
-        help='Specify model path',
-    )
-
-    parser.add_argument(
-        '-s',
-        '--scaler-path',
-        dest='scaler_path',
-        help='Specify scaler name',
-    )
-
-    parser.add_argument(
-        '-nc',
-        '--num-classifiers',
-        dest='num_classifiers',
-        help='The number of ensemble learners used to denoise each fold',
-        default=500,
-        type=int
-    )
-
-    parser.add_argument(
-        '-f',
-        '--num-folds',
-        dest='num_folds',
-        help='The number of folds used to denoise the target labels',
-        default=10,
-        type=int
-    )
-
-    parser.add_argument(
-        '-mr',
-        '--model-run',
-        dest='model_run',
-        help='Set to TRUE if you wish to calculate the q-values for single -run',
-        default=False,
-        action='store_true'
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    return parser
-
-def build_scorer_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_files',
-        help='OSW files for training scorer',
-        type=argparse.FileType('r'),
-        nargs='+'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outmodeldir',
-        dest='output_directory',
-        help='Specify output directory for storing the static model',
-        default=''
-    )
-
-    parser.add_argument(
-        '-c',
-        '--target-vote-cutoff',
-        dest='target_vote_cutoff',
-        help='Specify target vote cutoff',
-        type=float,
-        default=1.0
-    )
-
-    parser.add_argument(
-        '-m',
-        '--model-name',
-        dest='model_name',
-        help='Specify model name',
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    return parser
-    
-
-def denoising_args(parser):
-
-    parser.add_argument(
-        '-i',
-        '--input',
-        dest='input_osw_file',
-        help='OSW file archive to denoise target labels'
-    )
-
-    parser.add_argument(
-        '-o',
-        '--outfile',
-        dest='output_osw_file',
-        help='Specify output directory',
-        default=''
-    )
-
-    parser.add_argument(
-        '-nc',
-        '--num-classifiers',
-        dest='num_classifiers',
-        help='The number of ensemble learners used to denoise each fold',
-        default=500,
-        type=int
-    )
-
-    parser.add_argument(
-        '-f',
-        '--num-folds',
-        dest='num_folds',
-        help='The number of folds used to denoise the target labels',
-        default=10,
-        type=int
-    )
-
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbosity_level',
-        help='Level of verbosity to use, corresponds to python log levels',
-        choices=[
-            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'
-        ],
-        default='INFO'
-    )
-
-    return parser
+import build_scoring_model_args
+import score_run_args
+import export_args
 
 
 def get_args():
@@ -303,48 +21,31 @@ def get_args():
         dest='tool_name'
     )
 
-    denoising_parser = subparsers.add_parser(
-        'denoise',
-        help='denoising help'
-    )
-
-    denoising_parser = denoising_args(denoising_parser)
-
-    build_scorer_parser = subparsers.add_parser(
+    build_scoring_model_parser = subparsers.add_parser(
         'buildscorer',
         help='build scorer help'
     )
 
-    build_scorer_parser = build_scorer_args(build_scorer_parser)
+    build_scoring_model_args.parse_args(
+        build_scoring_model_parser
+    )
 
     score_run_parser = subparsers.add_parser(
         'scorerun',
         help='score individual run'
     )
 
-    score_run_parser = score_runs_args(score_run_parser)
-
-    calc_q_value_parser = subparsers.add_parser(
-        'calcqvalue',
-        help='calc q value for scored run'
+    score_run_args.parse_args(
+        score_run_parser
     )
-
-    calc_q_value_parser = calc_q_value_args(calc_q_value_parser)
 
     export_parser = subparsers.add_parser(
         'export',
         help='Export SQLite to tsv'
     )
 
-    export_parser = export_parser_args(export_parser)
-
-    build_global_model_parser = subparsers.add_parser(
-        'buildglobalmodel',
-        help='Build scoring model based on dataset'
-    )
-
-    build_global_model_parser = build_global_model_parser_args(
-        build_global_model_parser
+    export_args.parse_args(
+        export_parser
     )
 
     args = base_parser.parse_args()
@@ -356,16 +57,7 @@ if __name__ == '__main__':
     
     args = get_args()
 
-    if args.tool_name == 'denoise':
-
-        logger = Logger(
-            name=f"{args.input_osw_file}_denoise",
-            level=args.verbosity_level
-        )
-
-        denoise.main(args, logger)
-
-    elif args.tool_name == 'buildscorer':
+    if args.tool_name == 'buildscorer':
 
         logger = Logger(
             name="build_scorer",
@@ -383,21 +75,6 @@ if __name__ == '__main__':
 
         score_run.main(args, logger)
 
-        if args.model_run:
-            
-            logger.info('[INFO] Starting q_value calculation for single run')
-
-            model_single_run.main(args, logger)
-    
-    elif args.tool_name == 'calcqvalue':
-
-        logger = Logger(
-            name='calc_q_value',
-            level=args.verbosity_level
-        )
-
-        model_single_run.main(args, logger)
-
     elif args.tool_name == 'export':
 
         logger = Logger(
@@ -406,14 +83,3 @@ if __name__ == '__main__':
         )
 
         export.main(args, logger)
-
-    elif args.tool_name == 'buildglobalmodel':
-
-        logger = Logger(
-            name='buildglobalmodel',
-            level=args.verbosity_level
-        )
-
-        build_scoring_model.main(args, logger)
-
-            

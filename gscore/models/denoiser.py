@@ -10,6 +10,8 @@ from sklearn.preprocessing import (
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
 
+from sklearn.ensemble import BaggingClassifier
+
 
 class DenoizingFold:
     
@@ -20,6 +22,60 @@ class DenoizingFold:
         self.classifiers = classifiers
 
         self.scaling_pipeline = scaling_pipeline
+
+
+class BaggedDenoiser(BaggingClassifier):
+
+    def __init__(
+            self,
+            base_estimator=None,
+            n_estimators=250,
+            max_samples=3,
+            threads=5
+    ):
+
+        if not base_estimator:
+            base_estimator = SGDClassifier(
+                alpha=1e-05,
+                average=True,
+                loss='log',
+                max_iter=500,
+                penalty='l2',
+                shuffle=True,
+                tol=0.0001,
+                learning_rate='adaptive',
+                eta0=0.001,
+                fit_intercept=True
+            )
+        super().__init__(
+            base_estimator=base_estimator,
+            n_estimators=n_estimators,
+            max_samples=max_samples,
+            bootstrap=True,
+            n_jobs=threads
+        )
+
+    def vote(self, noisy_data):
+
+        voted_data = noisy_data.copy()
+
+        estimator_columns = list()
+
+        for estimator_idx, estimator in enumerate(
+                self.estimators_
+        ):
+
+            estimator_column = f"estimator_{estimator_idx}"
+
+            estimator_columns.append(estimator_column)
+
+            voted_data[estimator_column] = estimator.predict(noisy_data)
+
+        voted_data["vote_percentage"] = voted_data[
+            estimator_columns
+        ].sum(axis=1) / self.n_estimators
+
+        return voted_data["vote_percentage"]
 
 
 class DenoizingClassifier:
@@ -56,7 +112,7 @@ class DenoizingClassifier:
                 swath_training_prepared[self.columns]
             )
             
-            n_samples = int(len(swath_training_prepared) * 0.33)
+            n_samples = int(len(swath_training_prepared) * 0.10)
             
             print(
                 f"Training for fold {idx} training size={len(swath_training_prepared)} "
@@ -71,7 +127,7 @@ class DenoizingClassifier:
                     alpha=1e-05,
                     average=True,
                     loss='log',
-                    max_iter=100,
+                    max_iter=500,
                     penalty='l2',
                     shuffle=True,
                     tol=0.0001,
@@ -102,7 +158,8 @@ class DenoizingClassifier:
                     scaling_pipeline=full_pipeline
                 )
             )
-            
+
+    # TODO: Need to speed this up
     def vote(self, data, match_index):
         
         scored_data = list()
@@ -146,34 +203,31 @@ class DenoizingClassifier:
         )
 
         return scored_data['target_vote_percentage']
+
     
-    def predict_average_score(self, data):
-        
+    def predict_average_score(self, data, match_index):
+
         scored_data = list()
-        
+
         for denoizing_fold in self.denoizing_folds:
-            
+
             classifier_columns = list()
-            
+
             subset = data.loc[
-                denoizing_fold.indices
+                data[match_index].isin(denoizing_fold.indices[match_index])
             ]
-            
+
             testing_prepared = subset.copy()
-            
+
             testing_prepared[self.columns] = denoizing_fold.scaling_pipeline.transform(
                 testing_prepared[self.columns]
             )
-            
-            print(len(denoizing_fold.classifiers))
-            
+
             for num_classifier, classifier in enumerate(denoizing_fold.classifiers):
-                
-                
                 classifier_key = f"num_{num_classifier}"
-                
+
                 classifier_columns.append(classifier_key)
-                
+
                 testing_prepared[classifier_key] = classifier.decision_function(
                     testing_prepared[self.columns]
                 )
@@ -188,7 +242,8 @@ class DenoizingClassifier:
             )
             
         scored_data = pd.concat(
-            scored_data
+            scored_data,
+            ignore_index=True
         )
         
         return scored_data['average_combined_score']

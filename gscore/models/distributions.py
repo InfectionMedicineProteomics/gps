@@ -1,19 +1,17 @@
 import numpy as np
 import pandas as pd
 
-import matplotlib.pyplot as pyplot
-
 from sklearn.neighbors import KernelDensity
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-from gscore.osw.peakgroups import PeakGroupList
+from gscore.parsers.osw.peakgroups import PeakGroupList
 
 
 class LabelDistribution(KernelDensity):
 
     def __init__(self, kernel='epanechnikov', bandwidth=0.25, data=None):
 
-        #bandwidth = 0.3#len(data) ** (-1. / (1 + 4))
+        bandwidth = len(data) ** (-1. / (1 + 4))
 
         print(bandwidth)
 
@@ -22,7 +20,7 @@ class LabelDistribution(KernelDensity):
         self.fit(data)
 
         self.x_axis = np.linspace(
-            start=0.0,
+            start=data.min(),
             stop=data.max(),
             num=len(data)
         )[:, np.newaxis]
