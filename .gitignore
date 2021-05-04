@@ -13,3 +13,6 @@ prototyping/
 
 build/
 build/*
+
+notebooks/
+notebooks/*
