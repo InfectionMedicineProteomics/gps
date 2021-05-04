@@ -284,6 +284,25 @@ def main(args, logger):
         
         false_targets['target'] = 0.0
 
+        if len(targets) < len(false_targets):
+
+            false_targets = resample(
+                false_targets,
+                replace=False,
+                n_samples=len(targets)
+            )
+
+            print("Downsampled false targets for better training")
+
+        else:
+            targets = resample(
+                targets,
+                replace=False,
+                n_samples=len(false_targets)
+            )
+
+            print("Downsampled targets for better training")
+
         denoised_labels = pd.concat(
             [
                 targets,
@@ -363,7 +382,9 @@ def main(args, logger):
     dense_model.compile(
         loss='binary_crossentropy',
         optimizer=optimizer,
-        metrics=['accuracy']
+        metrics=[
+            tf.keras.metrics.Accuracy()
+        ]
     )
 
     dense_history = dense_model.fit(
