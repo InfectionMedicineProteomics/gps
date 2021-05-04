@@ -393,10 +393,10 @@ def main(args, logger):
     print('saving trained model and scaler')
 
     dense_model.save(
-        f'{args.output_directory}/{args.model_name}.md5'
+        f'{args.output_directory}/{args.model_name}.h5'
     )
 
-    scaler_file_path = f'{args.output_directory}/{args.model_name}.scaler.md5'
+    scaler_file_path = f'{args.output_directory}/{args.model_name}.scaler.pkl'
 
     with open(scaler_file_path, 'wb') as pkl:
         pickle.dump(scaling_pipeline, pkl)
