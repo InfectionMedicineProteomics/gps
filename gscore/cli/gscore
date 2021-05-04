@@ -8,9 +8,12 @@ from gscore.workflows import (
 )
 from gscore.utils.logger import Logger
 
-import build_scoring_model_args
-import score_run_args
-import export_args
+
+from gscore.cli import (
+    build_scoring_model_args,
+    score_run_args,
+    export_args
+)
 
 
 def get_args():
