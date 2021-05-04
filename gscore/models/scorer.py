@@ -5,10 +5,10 @@ import tensorflow as tf
 from tensorflow import keras
 
 
-ADAM_OPTIMIZER = keras.optimizers.Adam()
+ADAM_OPTIMIZER = keras.optimizers.Adam(lr=0.001)
 
 EARLY_STOPPING_CB = keras.callbacks.EarlyStopping(
-    patience=10,
+    patience=5,
     restore_best_weights=True
 )
 
@@ -28,7 +28,7 @@ class TargetScoringModel(keras.Model):
         self.dense_2 = self.RegularizedDense(30)
         self.dense_3 = self.RegularizedDense(30)
         self.dense_4 = self.RegularizedDense(30)
-        self.score_output = keras.layers.Dense(1, activation='sigmoid', dtype='float64')
+        self.score_output = keras.layers.Dense(1, activation='linear', dtype='float64')
 
     def call(self, inputs):
         x = self.dense_1(inputs)

@@ -6,10 +6,11 @@ class CreateTable:
             ghost_score_id INTEGER PRIMARY KEY,
             feature_id INTEGER not null,
             vote_percentage REAL,
-            vote_score REAL,
-            m_score REAL,
+            probability REAL,
+            logit_probability REAL,
             d_score REAL,
-            alt_d_score REAL,
+            m_score REAL,
+            weighted_d_score REAL,
             FOREIGN KEY (feature_id)
                 REFERENCES FEATURE (id)
         )
@@ -91,20 +92,11 @@ class SelectPeakGroups:
         """
         precursor.id transition_group_id,
         feature.id feature_id,
-        feature.exp_rt exp_rt,
-        feature.norm_rt norm_rt,
-        feature.delta_rt delta_rt,
-        precursor.PRECURSOR_MZ mz,
         precursor.CHARGE charge,
-        precursor.DECOY decoy,
         peptide.UNMODIFIED_SEQUENCE peptide_sequence,
         peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
         protein.PROTEIN_ACCESSION protein_accession,
-        protein.decoy protein_decoy,
-        ms1.AREA_INTENSITY area_intensity,
-        ms1.APEX_INTENSITY apex_intensity,
-        ms2.AREA_INTENSITY ms2_area_intensity,
-        ms2.TOTAL_AREA_INTENSITY total_area_intensity
+        protein.decoy decoy
         """
     )
 
@@ -194,7 +186,9 @@ class SelectPeakGroups:
         where precursor.DECOY == 0
         order by transition_group_id;
         """
-    )
+    ).format(
+        base_columns=BASE_COLUMNS,
+        score_columns=SCORE_COLUMNS)
 
     FETCH_VOTED_DATA_DECOY_FREE = (
         """
@@ -215,9 +209,11 @@ class SelectPeakGroups:
         where precursor.DECOY == 0
         order by precursor.id;
         """
-    )
+    ).format(
+        base_columns=BASE_COLUMNS,
+        score_columns=SCORE_COLUMNS)
 
-    FETCH_VOTED_DATA_ALL = (
+    FETCH_VOTED_DATA = (
         """
         select
                 {base_columns},
@@ -235,7 +231,9 @@ class SelectPeakGroups:
         inner join protein as protein on protein.id = pep_prot_map.protein_id
         order by precursor.id;
         """
-    )
+    ).format(
+        base_columns=BASE_COLUMNS,
+        score_columns=SCORE_COLUMNS)
 
     FETCH_SCORED_DATA_DECOY_FREE = (
         """
@@ -243,9 +241,8 @@ class SelectPeakGroups:
             {base_columns},
             ms2.VAR_XCORR_SHAPE var_xcorr_shape,
             gst.vote_percentage,
-            gst.vote_score,
             gst.d_score,
-            gst.alt_d_score,
+            gst.weighted_d_score,
             gst.ghost_score_id
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
@@ -305,8 +302,8 @@ class SelectPeakGroups:
             ms2.AREA_INTENSITY Intensity,
             feature.LEFT_WIDTH leftWidth,
             feature.RIGHT_WIDTH rightWidth,
-            gst.m_score,
-            gst.alt_d_score d_score
+            gst.probability m_score,
+            gst.weighted_d_score d_score
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
@@ -340,4 +337,40 @@ class SelectPeakGroups:
         group by PRECURSOR.ID
         order by PRECURSOR.ID;
         """
+    )
+
+    FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA = (
+        """
+        select
+            feature.run_id run_id,
+            precursor.id transition_group_id,
+            feature.id id,
+            feature.exp_rt RT,
+            feature.delta_rt delta_rt,
+            feature.LEFT_WIDTH feature_start_rt,
+            feature.RIGHT_WIDTH feature_end_rt,
+            precursor.PRECURSOR_MZ mz,
+            precursor.CHARGE charge,
+            peptide.UNMODIFIED_SEQUENCE sequence,
+            peptide.MODIFIED_SEQUENCE modified_sequence,
+            protein.decoy decoy,
+            ms1.AREA_INTENSITY ms1_area_intensity,
+            ms1.APEX_INTENSITY ms1_apex_intensity,
+            ms2.AREA_INTENSITY ms2_area_intenstiy,
+            ms2.APEX_INTENSITY ms2_apex_intensity,
+            ms2.VAR_MASSDEV_SCORE transition_mass_dev_score,
+            ms1.VAR_MASSDEV_SCORE precursor_mass_dev_score,
+            {score_columns},
+            gst.vote_percentage
+        from precursor 
+        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
+        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
+        inner join feature on feature.precursor_id = precursor.id
+        left join ghost_score_table as gst on gst.feature_id = feature.id
+        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
+        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
+        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
+        inner join protein as protein on protein.id = pep_prot_map.protein_id
+        order by precursor.id;
+        """.format(score_columns=SCORE_COLUMNS)
     )

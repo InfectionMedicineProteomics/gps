@@ -1,6 +1,6 @@
 import pandas as pd
 
-from gscore.osw.connection import OSWConnection
+from gscore.utils.connection import Connection
 
 
 class PeakGroup:
@@ -147,7 +147,7 @@ def fetch_peak_groups(host='', query='', preprocess=True):
 
     peak_groups = list()
 
-    with OSWConnection(host) as conn:
+    with Connection(host) as conn:
 
         for record in conn.iterate_records(query):
 

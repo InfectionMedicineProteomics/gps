@@ -1,32 +1,55 @@
+from gscore.utils.connection import Connection
 import pickle
 
 import pandas as pd
 import numpy as np
+import seaborn as sns
 
-from tensorflow import keras
+from gscore.parsers.osw import peakgroups
 
-from gscore.osw.peakgroups import fetch_peak_groups
-from gscore.osw.queries import (
+from gscore.parsers.osw.queries import (
     SelectPeakGroups,
-    CreateIndex
-)
-from gscore.models.denoiser import DenoizingClassifier
-from gscore.osw.connection import (
-    OSWConnection
+    CreateTable
 )
 
-from gscore.workflows.denoise import denoise
-from gscore.models.preprocess import preprocess_data
+# Need to rename the preprocess function
+from gscore.parsers.osw.peakgroups import preprocess_data, PeakGroupList
+
+from gscore.models.denoiser import (
+    DenoizingClassifier,
+    BaggedDenoiser
+)
+
+from sklearn.model_selection import train_test_split
+
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import precision_score, recall_score
+
+
+from sklearn.preprocessing import (
+    StandardScaler,
+    RobustScaler,
+    MinMaxScaler
+)
+import glob
+import pickle
+
+
+from gscore.models import preprocess
+from gscore.models.distributions import ScoreDistribution
+
+import tensorflow as tf
 
 
 def prepare_add_records(records):
-
     record_updates = records[
         [
             'feature_id',
             'vote_percentage',
+            'probability',
+            'logit_probability',
             'd_score',
-            'alt_d_score'
+            'weighted_d_score'
         ]
     ]
 
@@ -36,186 +59,347 @@ def prepare_add_records(records):
 
     d_scores = list(record_updates['d_score'])
 
-    alt_d_scores = list(record_updates['alt_d_score'])
+    weighted_d_scores = list(record_updates['weighted_d_score'])
+
+    probabilities = list(record_updates['probability'])
+
+    logit_probabilities = list(record_updates['logit_probability'])
+
+    q_values = list(records['q_value'])
 
     record_updates = list()
 
-    for feature_id, vote, d_score, alt_d_score in zip(feature_ids, votes, d_scores, alt_d_scores):
-
+    for feature_id, vote, d_score, weighted_d_score, probability, logit_probability, q_value in zip(
+            feature_ids, votes, d_scores, weighted_d_scores, probabilities, logit_probabilities, q_values
+    ):
         record_updates.append(
             {'feature_id': feature_id,
-            'vote_percentage': vote,
-            'd_score': d_score,
-            'alt_d_score': alt_d_score}
+             'vote_percentage': vote,
+             'probability': probability,
+             'logit_probability': logit_probability,
+             'd_score': d_score,
+             'weighted_d_score': weighted_d_score,
+             'm_score': q_value}
         )
-    
+
     return record_updates
 
 
 def add_vote_records(records, osw_path):
 
-    with OSWConnection(osw_path) as conn:
+    with Connection(osw_path) as conn:
 
         conn.add_records(
             table_name='ghost_score_table', 
             records=records
         )
 
-
-def score(data, columns, logger=None, model_path='', scaler_path=''):
-
-    with open(scaler_path, 'rb') as pkl:
-        pipeline = pickle.load(pkl)
-
-    scoring_model = keras.models.load_model(
-        model_path
-    )
-
-    all_peak_groups = preprocess_data(
-        pipeline=pipeline,
-        data=data.copy(),
-        columns=columns,
-    )
-
-    all_peak_groups['d_score'] = scoring_model.predict(
-        all_peak_groups[columns]
-    ).ravel()
-
-    return all_peak_groups
-
 def main(args, logger):
 
-    logger.info(f'[INFO] Beginning scoring for {args.input_osw_file}')
+    with open(args.scaler_path, 'rb') as pkl:
+        scaler_pipeline = pickle.load(pkl)
 
-    logger.debug(f'[DEBUG] Extracting true targets and reranking')
+    scoring_model = tf.keras.models.load_model(
+        args.model_path
+    )
 
-    decoy_free = False
+    score_columns = [
+        'var_massdev_score_ms1',
+        'var_isotope_correlation_score_ms1',
+        'var_isotope_overlap_score_ms1',
+        'var_xcorr_coelution_contrast_ms1',
+        'var_xcorr_coelution_combined_ms1',
+        'var_xcorr_shape_contrast_ms1',
+        'var_xcorr_shape_combined_ms1',
+        'var_bseries_score',
+        'var_dotprod_score',
+        'var_intensity_score',
+        'var_isotope_correlation_score',
+        'var_isotope_overlap_score',
+        'var_library_corr',
+        'var_library_dotprod',
+        'var_library_manhattan',
+        'var_library_rmsd',
+        'var_library_rootmeansquare',
+        'var_library_sangle',
+        'var_log_sn_score',
+        'var_manhattan_score',
+        'var_massdev_score',
+        'var_massdev_score_weighted',
+        'var_norm_rt_score',
+        'var_xcorr_coelution',
+        'var_xcorr_coelution_weighted',
+        'var_xcorr_shape',
+        'var_xcorr_shape_weighted',
+        'var_yseries_score'
+    ]
 
-    if decoy_free:
+    print(f"Denoising {args.input}")
+    print("Processing peakgroups")
+    peak_group_records = list()
+    with Connection(args.input) as conn:
+        for record in conn.iterate_records(SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE):
+            peak_group_records.append(record)
 
-        peak_groups = fetch_peak_groups(
-            host=args.input_osw_file,
-            query=FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+    peak_groups = peakgroups.preprocess_data(
+        pd.DataFrame(peak_group_records)
+    )
+
+    split_peak_groups = dict(
+        tuple(
+            peak_groups.groupby('transition_group_id')
         )
+    )
 
-        peak_groups.rerank_groups(
+    peak_groups = peakgroups.PeakGroupList(split_peak_groups)
+
+    highest_ranking = peak_groups.select_peak_group(
+        rank=1,
+        rerank_keys=['var_xcorr_shape_weighted'],
+        ascending=False
+    )
+
+    low_ranking = list()
+
+    for rank in range(2, 3):
+        lower_ranking = peak_groups.select_peak_group(
+            rank=rank,
             rerank_keys=['var_xcorr_shape_weighted'],
             ascending=False
         )
 
-        logger.debug(f'[DEBUG] Extracting second ranked targets as decoys and reranking')
+        low_ranking.append(lower_ranking)
 
-        low_ranking = list()
+    low_ranking = pd.concat(
+        low_ranking,
+        ignore_index=True
+    )
 
-        for rank in range(2, 3):
-
-            lower_ranking = peak_groups.select_peak_group(
-                rank=rank,
-                rerank_keys=['var_xcorr_shape_weighted'],
-                ascending=False
-            )
-
-            lower_ranking['target'] = 0.0
-
-            low_ranking.append(lower_ranking)
-
-        lower_ranking = pd.concat(
-            low_ranking,
-            ignore_index=True
-        )
-
-        highest_ranking = peak_groups.select_peak_group(
-            rank=1,
-            rerank_keys=['var_xcorr_shape_weighted'],
-            ascending=False
-        )
-    else:
-        peak_groups = fetch_peak_groups(
-            host=args.input_osw_file,
-            query=FETCH_UNSCORED_PEAK_GROUPS
-        )
-
-        peak_groups.rerank_groups(
-            rerank_keys=['var_xcorr_shape_weighted'],
-            ascending=False
-        )
-
-        highest_ranking = peak_groups.select_peak_group(
-            rank=1,
-            rerank_keys=['var_xcorr_shape_weighted'],
-            ascending=False
-        )
-
-        lower_ranking = highest_ranking.loc[
-            highest_ranking.target == 0.0
-        ].copy()
-
-        highest_ranking = highest_ranking.loc[
-            highest_ranking.target == 1.0
-        ].copy()
-
-
+    low_ranking['target'] = 0.0
 
     noisey_target_labels = pd.concat(
         [
             highest_ranking,
-            lower_ranking
-        ],
+            low_ranking
+        ]
+    )
+
+    print(noisey_target_labels.target.value_counts())
+
+    shuffled_peak_groups = noisey_target_labels.sample(frac=1)
+
+    split_data = np.array_split(
+        shuffled_peak_groups,
+        args.num_folds
+    )
+
+    all_peak_groups = peak_groups.select_peak_group(
+        return_all=True
+    )
+
+    scored_data = list()
+
+    for idx, fold_data in enumerate(split_data):
+
+        training_data = pd.concat(
+            [df for i, df in enumerate(split_data) if i != idx]
+        )
+
+        full_pipeline = Pipeline([
+            ('standard_scaler', RobustScaler()),
+            ('min_max_scaler', MinMaxScaler())
+        ])
+
+        swath_training_prepared = training_data.copy()
+
+        swath_training_prepared[score_columns] = full_pipeline.fit_transform(
+            swath_training_prepared[score_columns]
+        )
+
+        n_samples = int(len(swath_training_prepared) * 0.50)
+
+        denoizer = BaggedDenoiser(
+            max_samples=n_samples,
+            n_estimators=args.num_classifiers,
+            threads=args.threads
+        )
+
+        denoizer.fit(
+            swath_training_prepared[score_columns],
+            swath_training_prepared['target']
+        )
+
+        group_ids = list(fold_data['transition_group_id'])
+
+        left_out_peak_groups = all_peak_groups.loc[
+            all_peak_groups['transition_group_id'].isin(group_ids)
+        ].copy()
+
+        left_out_peak_groups_transformed = left_out_peak_groups.copy()
+
+        left_out_peak_groups_transformed[score_columns] = full_pipeline.transform(
+            left_out_peak_groups[score_columns]
+        )
+
+        left_out_peak_groups['vote_percentage'] = denoizer.vote(
+            left_out_peak_groups_transformed[score_columns]
+        )
+
+        class_index = np.where(
+            denoizer.classes_ == 1.0
+        )[0][0]
+
+        left_out_peak_groups['probability'] = denoizer.predict_proba(
+            left_out_peak_groups_transformed[score_columns]
+        )[:, class_index]
+
+        left_out_peak_groups['logit_probability'] = np.log(
+            (
+                    left_out_peak_groups['probability'] / (1 - left_out_peak_groups['probability'])
+            )
+        )
+
+        fold_data[score_columns] = full_pipeline.transform(
+            fold_data[score_columns]
+        )
+
+        fold_precision = precision_score(
+            denoizer.predict(
+                fold_data[score_columns]
+            ),
+            fold_data['target']
+        )
+
+        fold_recall = recall_score(
+            denoizer.predict(
+                fold_data[score_columns]
+            ),
+            fold_data['target']
+        )
+
+        print(
+            f"Fold {idx + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+        )
+
+        untransformed_peak_groups = all_peak_groups.loc[
+            all_peak_groups['transition_group_id'].isin(group_ids)
+        ].copy()
+
+        untransformed_peak_groups['vote_percentage'] = left_out_peak_groups['vote_percentage']
+        untransformed_peak_groups['probability'] = left_out_peak_groups['probability']
+        untransformed_peak_groups['logit_probability'] = left_out_peak_groups['logit_probability']
+
+        scored_data.append(untransformed_peak_groups)
+
+    scored_data = pd.concat(
+        scored_data,
         ignore_index=True
     )
 
-    print(
-        noisey_target_labels.target.value_counts()
+    scoring_columns = score_columns + ['logit_probability']
+
+    all_peak_groups = preprocess.preprocess_data(
+        pipeline=scaler_pipeline,
+        data=scored_data.copy(),
+        columns=scoring_columns
     )
 
-    all_peak_groups = denoise(
-        training_data=noisey_target_labels,
-        peak_groups=peak_groups,
-        columns=peak_groups.ml_features,
-        logger=logger,
-        num_folds=args.num_folds,
-        num_classifiers=args.num_classifiers
-    )
+    print(f'Scoring {args.input}')
 
-    all_peak_groups = score(
-        data=all_peak_groups,
-        columns=peak_groups.ml_features,
-        logger=logger,
-        model_path=args.model_path,
-        scaler_path=args.scaler_path
-    )
+    all_peak_groups['d_score'] = scoring_model.predict(
+        all_peak_groups[scoring_columns]
+    ).ravel()
 
-    all_peak_groups['alt_d_score'] = np.exp(
+    all_peak_groups['weighted_d_score'] = np.exp(
         all_peak_groups['vote_percentage']
     ) * all_peak_groups['d_score']
 
-    check = all_peak_groups.loc[
-        all_peak_groups['alt_d_score'] > 3
+    split_peak_groups = dict(
+        tuple(
+            all_peak_groups.groupby('transition_group_id')
+        )
+    )
+
+    peak_groups = PeakGroupList(split_peak_groups)
+
+    print('Modelling run and calculating q-values')
+
+    highest_ranking = peak_groups.select_peak_group(
+        rank=1,
+        rerank_keys=['weighted_d_score'],
+        ascending=False
+    )
+
+    low_ranking = list()
+
+    for rank in range(2, 3):
+        lower_ranking = peak_groups.select_peak_group(
+            rank=rank,
+            rerank_keys=['weighted_d_score'],
+            ascending=False
+        )
+
+        low_ranking.append(lower_ranking)
+
+    low_ranking = pd.concat(
+        low_ranking,
+        ignore_index=True
+    )
+
+    low_ranking['target'] = 0.0
+
+    low_ranking = low_ranking[
+        low_ranking['probability'] < 0.5
     ].copy()
 
-    print(check)
+    model_distribution = pd.concat(
+        [
+            highest_ranking,
+            low_ranking
+        ]
+    )
 
-    record_updates = prepare_add_records(all_peak_groups)
+    run_distributions_plot = sns.displot(
+        model_distribution,
+        x='weighted_d_score',
+        hue='target',
+        element='step',
+        kde=True
+    )
 
-    logger.debug(f'[DEBUG] Adding records to library')
+    run_distributions_plot.savefig(f"{args.input}.score_distribution.png")
 
-    if args.output_osw_file:
+    print('building score distributions')
 
-        pass
+    score_distribution = ScoreDistribution(
+        data=model_distribution,
+        distribution_type='weighted_d_score'
+    )
 
-    else:
+    all_peak_groups = peak_groups.select_peak_group(
+        return_all=True
+    )
 
-        with OSWConnection(args.input_osw_file) as conn:
+    all_peak_groups['q_value'] = all_peak_groups['weighted_d_score'].apply(
+        score_distribution.calc_q_value
+    )
 
-            conn.drop_table(
-                'ghost_score_table'
-            )
+    print(f'Updating {args.input}')
 
-            conn.create_table(
-                CREATE_GHOSTSCORE_TABLE
-            )
+    record_updates = prepare_add_records(
+        all_peak_groups
+    )
 
-            conn.add_records(
-                table_name='ghost_score_table', 
-                records=record_updates
-            )
+    with Connection(args.input) as conn:
+        conn.drop_table(
+            'ghost_score_table'
+        )
+
+        conn.create_table(
+            CreateTable.CREATE_GHOSTSCORE_TABLE
+        )
+
+        conn.add_records(
+            table_name='ghost_score_table',
+            records=record_updates
+        )

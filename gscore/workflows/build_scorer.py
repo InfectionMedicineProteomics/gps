@@ -1,238 +1,400 @@
 import pickle
 
 import pandas as pd
+import numpy as np
+
+
+from sklearn.utils import resample
+from sklearn.model_selection import train_test_split
+
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import precision_score, recall_score
+
+
+from sklearn.preprocessing import (
+    RobustScaler,
+    MinMaxScaler
+)
+
+from gscore.utils.connection import Connection
+
+from gscore.parsers.osw import peakgroups
+
+from gscore.parsers.osw.queries import (
+    SelectPeakGroups
+)
+
+from gscore.models.denoiser import (
+    BaggedDenoiser
+)
+
 import tensorflow as tf
 
-from tensorflow import keras
+from gscore.models import scorer
+from gscore.models import preprocess
 
 
-from sklearn.model_selection import train_test_split
-from sklearn.utils import resample
+def main(args, logger):
 
-from gscore.osw.peakgroups import fetch_peak_groups
-from gscore.osw.queries import (
-    SelectPeakGroups,
-    CreateIndex
-)
-from gscore.models.scorer import (
-    TargetScoringModel,
-    ADAM_OPTIMIZER,
-    EARLY_STOPPING_CB
-)
-from gscore.osw.connection import (
-    OSWConnection
-)
-from gscore.models.preprocess import (
-    preprocess_data,
-    STANDARD_SCALAR_PIPELINE
-)
+    score_columns = [
+        'var_massdev_score_ms1',
+        'var_isotope_correlation_score_ms1',
+        'var_isotope_overlap_score_ms1',
+        'var_xcorr_coelution_contrast_ms1',
+        'var_xcorr_coelution_combined_ms1',
+        'var_xcorr_shape_contrast_ms1',
+        'var_xcorr_shape_combined_ms1',
+        'var_bseries_score',
+        'var_dotprod_score',
+        'var_intensity_score',
+        'var_isotope_correlation_score',
+        'var_isotope_overlap_score',
+        'var_library_corr',
+        'var_library_dotprod',
+        'var_library_manhattan',
+        'var_library_rmsd',
+        'var_library_rootmeansquare',
+        'var_library_sangle',
+        'var_log_sn_score',
+        'var_manhattan_score',
+        'var_massdev_score',
+        'var_massdev_score_weighted',
+        'var_norm_rt_score',
+        'var_xcorr_coelution',
+        'var_xcorr_coelution_weighted',
+        'var_xcorr_shape',
+        'var_xcorr_shape_weighted',
+        'var_yseries_score'
+    ]
 
+    input_files = [input_file.name for input_file in args.input_files]
 
-def combine_peak_group_data(scored_files, cutoff):
+    all_training_records = list()
 
+    for input_path in input_files:
 
-    decoy_free = False
+        logger.info(f"Denoising {input_path}")
 
-    combined_peak_groups = list()
+        peak_group_records = list()
 
-    for osw_path in scored_files:
+        with Connection(input_path) as conn:
 
+            for record in conn.iterate_records(
+                SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+            ):
+                peak_group_records.append(record)
 
-        #TODO: Change query names here (fetch decoy vs fetch decoy free)
+        print("Processing peakgroups")
 
-        peak_groups = fetch_peak_groups(
-            host=osw_path,
-            query=SelectPeakGroups.FETCH_VOTED_DATA
+        peak_groups = peakgroups.preprocess_data(
+            pd.DataFrame(peak_group_records)
         )
-        
-        peak_groups.rerank_groups(
-            rerank_keys=['var_xcorr_shape_weighted'], 
-            ascending=False
+
+        split_peak_groups = dict(
+            tuple(
+                peak_groups.groupby('transition_group_id')
+            )
+        )
+
+        peak_groups = peakgroups.PeakGroupList(
+            split_peak_groups
         )
 
         highest_ranking = peak_groups.select_peak_group(
             rank=1,
-            rerank_keys=['var_xcorr_shape_weighted'], 
+            rerank_keys=['var_xcorr_shape_weighted'],
             ascending=False
         )
 
-        if decoy_free:
+        low_ranking = list()
 
-            low_ranking = list()
+        for rank in range(2, 3):
 
-            for rank in range(3, 6):
-
-                lower_ranking = peak_groups.select_peak_group(
-                    rank=rank,
-                    rerank_keys=['var_xcorr_shape_weighted'],
-                    ascending=False
-                )
-
-                low_ranking.append(lower_ranking)
-
-            lower_ranking = pd.concat(
-                low_ranking,
-                ignore_index=True
-            )
-
-            target_data = denoise_target_labels(
-                highest_ranking
-            )
-
-            false_target_data = denoise_false_target_labels(
-                lower_ranking
-            )
-
-        else:
-            print("Here")
-
-            target_data = highest_ranking[
-                highest_ranking['target'] == 1.0
-            ].copy()
-
-            target_data = denoise_target_labels(
-                target_data
-            )
-
-            decoy_peak_groups = fetch_peak_groups(
-                host=osw_path,
-                query=SelectPeakGroups.FETCH_DECOY_PEAK_GROUPS
-            )
-
-            decoy_peak_groups.rerank_groups(
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
                 rerank_keys=['var_xcorr_shape_weighted'],
                 ascending=False
             )
 
-            false_target_data = decoy_peak_groups.select_peak_group(
-                rank=1,
-                rerank_keys=['var_xcorr_shape_weighted'],
-                ascending=False
-            )
+            low_ranking.append(lower_ranking)
 
-        false_target_data = resample(
-            false_target_data,
-            replace=False,
-            n_samples=len(target_data),
-            random_state=42
-        )
-
-        #TODO: Rename these variables and the denoise label function
-        denoised_target_labels = pd.concat(
-            [
-                target_data,
-                false_target_data
-            ],
+        low_ranking = pd.concat(
+            low_ranking,
             ignore_index=True
         )
 
-        print("Labels: ", denoised_target_labels.target.value_counts())
-        
-        combined_peak_groups.append(
-            denoised_target_labels
+        low_ranking['target'] = 0.0
+
+        noisey_target_labels = pd.concat(
+            [
+                highest_ranking,
+                low_ranking
+            ]
         )
 
-    return pd.concat(combined_peak_groups, ignore_index=True)
+        shuffled_peak_groups = noisey_target_labels.sample(frac=1)
 
+        split_data = np.array_split(
+            shuffled_peak_groups,
+            args.num_folds
+        )
 
-def denoise_target_labels(peak_groups):
+        all_peak_groups = peak_groups.select_peak_group(
+            return_all=True
+        )
 
-    targets = peak_groups[
-        (peak_groups['vote_percentage'] == 1.0) &
-        (peak_groups['target'] == 1.0)
-    ].copy()
+        scored_data = list()
 
-    return targets
+        print("Denoising target labels")
 
-def denoise_false_target_labels(peak_groups):
+        for idx, fold_data in enumerate(split_data):
 
-    false_targets = peak_groups[
-        #(peak_groups['vote_percentage'] == 0.0) &
-        (peak_groups['target'] == 1.0)
-    ].copy()
+            training_data = pd.concat(
+                [df for i, df in enumerate(split_data) if i != idx]
+            )
 
-    false_targets['target'] = 0.0
+            full_pipeline = Pipeline([
+                ('standard_scaler', RobustScaler()),
+                ('min_max_scaler', MinMaxScaler())
+            ])
 
-    return false_targets
+            swath_training_prepared = training_data.copy()
 
-def main(args, logger):
+            swath_training_prepared[score_columns] = full_pipeline.fit_transform(
+                swath_training_prepared[score_columns]
+            )
 
-    scored_files = [input_file.name for input_file in args.input_osw_files]
+            n_samples = int(len(swath_training_prepared) * 0.5) # Change this later based on sample size
 
-    logger.info("[INFO] Combining datasets")
+            denoizer = BaggedDenoiser(
+                max_samples=n_samples,
+                n_estimators=args.num_classifiers,
+                threads=args.threads
+            )
 
-    combined_peak_groups = combine_peak_group_data(
-        scored_files, 
-        args.target_vote_cutoff
+            denoizer.fit(
+                swath_training_prepared[score_columns],
+                swath_training_prepared['target']
+            )
+
+            group_ids = list(fold_data['transition_group_id'])
+
+            left_out_peak_groups = all_peak_groups.loc[
+                all_peak_groups['transition_group_id'].isin(group_ids)
+            ].copy()
+
+            left_out_peak_groups_transformed = left_out_peak_groups.copy()
+
+            left_out_peak_groups_transformed[score_columns] = full_pipeline.transform(
+                left_out_peak_groups[score_columns]
+            )
+
+            left_out_peak_groups['vote_percentage'] = denoizer.vote(
+                left_out_peak_groups_transformed[score_columns]
+            )
+
+            class_index = np.where(
+                denoizer.classes_ == 1.0
+            )[0][0]
+
+            left_out_peak_groups['probability'] = denoizer.predict_proba(
+                left_out_peak_groups_transformed[score_columns]
+            )[:, class_index]
+
+            left_out_peak_groups['logit_probability'] = np.log(
+                (
+                        left_out_peak_groups['probability'] / (1 - left_out_peak_groups['probability'])
+                )
+            )
+
+            fold_data[score_columns] = full_pipeline.transform(
+                fold_data[score_columns]
+            )
+
+            fold_precision = precision_score(
+                denoizer.predict(
+                    fold_data[score_columns]
+                ),
+                fold_data['target']
+            )
+
+            fold_recall = recall_score(
+                denoizer.predict(
+                    fold_data[score_columns]
+                ),
+                fold_data['target']
+            )
+
+            print(
+                f"Fold {idx + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+            )
+
+            untransformed_peak_groups = all_peak_groups.loc[
+                all_peak_groups['transition_group_id'].isin(group_ids)
+            ].copy()
+
+            untransformed_peak_groups['vote_percentage'] = left_out_peak_groups['vote_percentage']
+            untransformed_peak_groups['probability'] = left_out_peak_groups['probability']
+            untransformed_peak_groups['logit_probability'] = left_out_peak_groups['logit_probability']
+
+            scored_data.append(untransformed_peak_groups)
+
+        scored_data = pd.concat(
+            scored_data,
+            ignore_index=True
+        )
+
+        split_peak_groups = dict(
+            tuple(
+                scored_data.groupby('transition_group_id')
+            )
+        )
+
+        peak_groups = peakgroups.PeakGroupList(split_peak_groups)
+
+        highest_ranking = peak_groups.select_peak_group(
+            rank=1,
+            rerank_keys=['logit_probability'],
+            ascending=False
+        )
+
+        low_ranking = list()
+
+        for rank in range(2, 3):
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
+                rerank_keys=['logit_probability'],
+                ascending=False
+            )
+
+            low_ranking.append(lower_ranking)
+
+        low_ranking = pd.concat(
+            low_ranking,
+            ignore_index=True
+        )
+
+        targets = highest_ranking[
+            (highest_ranking['probability'] >= 0.9)
+        ].copy()
+
+        false_targets = low_ranking[
+            (low_ranking['probability'] < 0.5)
+        ].copy()
+        
+        false_targets['target'] = 0.0
+
+        denoised_labels = pd.concat(
+            [
+                targets,
+                false_targets
+            ]
+        )
+        
+        print(denoised_labels.target.value_counts())
+        
+        all_training_records.append(
+            denoised_labels
+        )
+
+    all_training_records = pd.concat(all_training_records)
+
+    print(all_training_records.target.value_counts())
+
+    training_split, test_split = train_test_split(
+        all_training_records
     )
 
-    openswath_input = True
+    scoring_columns = [
+        'var_massdev_score_ms1',
+        'var_isotope_correlation_score_ms1',
+        'var_isotope_overlap_score_ms1',
+        'var_xcorr_coelution_contrast_ms1',
+        'var_xcorr_coelution_combined_ms1',
+        'var_xcorr_shape_contrast_ms1',
+        'var_xcorr_shape_combined_ms1',
+        'var_bseries_score',
+        'var_dotprod_score',
+        'var_intensity_score',
+        'var_isotope_correlation_score',
+        'var_isotope_overlap_score',
+        'var_library_corr',
+        'var_library_dotprod',
+        'var_library_manhattan',
+        'var_library_rmsd',
+        'var_library_rootmeansquare',
+        'var_library_sangle',
+        'var_log_sn_score',
+        'var_manhattan_score',
+        'var_massdev_score',
+        'var_massdev_score_weighted',
+        'var_norm_rt_score',
+        'var_xcorr_coelution',
+        'var_xcorr_coelution_weighted',
+        'var_xcorr_shape',
+        'var_xcorr_shape_weighted',
+        'var_yseries_score',
+        # 'vote_percentage',
+        # 'probabilities',
+        'logit_probability'
+        # 'ensemble_score'
+    ]
 
-    if openswath_input:
-
-        ml_features = [
-            col for col in combined_peak_groups.columns
-            if col.startswith('var')
-        ]
-
-    logger.info("[INFO] Denoising target labels")
-
-    training_data, testing_data = train_test_split(
-        combined_peak_groups, 
-        test_size=0.1, 
-        random_state=42
+    learning_rate_schedule = tf.keras.optimizers.schedules.PolynomialDecay(
+        0.01,
+        1000,
+        0.001
     )
 
-    print(training_data.target.value_counts())
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate_schedule)
 
-    scaling_pipeline = STANDARD_SCALAR_PIPELINE
-
-    training_processed, scaling_pipeline = preprocess_data(
-        pipeline=scaling_pipeline,
-        data=training_data.copy(),
-        columns=ml_features,
+    training_preprocessed, scaling_pipeline = preprocess.preprocess_data(
+        pipeline=preprocess.STANDARD_SCALAR_PIPELINE,
+        data=training_split.copy(),
+        columns=scoring_columns,
         train=True,
         return_scaler=True
     )
 
-    save_scaler_path = f"{args.output_directory}/scalers/{args.model_name}.pkl"
-
-    with open(save_scaler_path, 'wb') as pkl:
-        pickle.dump(scaling_pipeline, pkl)
-
-    testing_processed = preprocess_data(
-        pipeline=scaling_pipeline,
-        data=testing_data.copy(),
-        columns=ml_features,
+    dense_model = scorer.TargetScoringModel(
+        input_dim=training_preprocessed[scoring_columns].shape[1:]
     )
 
-    model = TargetScoringModel(
-        input_dim=training_processed[ml_features].shape[1:]
+    dense_model.compile(
+        loss='binary_crossentropy',
+        optimizer=optimizer,
+        metrics=['accuracy']
     )
 
-    model.compile(loss='binary_crossentropy',
-              optimizer=ADAM_OPTIMIZER,
-              metrics=['accuracy']
-    )
-
-    logger.info("[INFO] Training model")
-
-    history = model.fit(
-        training_processed[ml_features], 
-        training_processed['target'],
-        epochs=50,
+    dense_history = dense_model.fit(
+        training_preprocessed[scoring_columns],
+        training_preprocessed['target'],
+        epochs=100,
         validation_split=0.10,
-        callbacks=[EARLY_STOPPING_CB],
-        batch_size=32
+        callbacks=[
+            tf.keras.callbacks.EarlyStopping(
+                patience=5,
+                restore_best_weights=True
+            )
+        ],
+        batch_size=100
     )
 
-    logger.info("[INFO] Evaluating model")
-
-    model.evaluate(
-        testing_processed[ml_features], 
-        testing_processed['target']
+    testing_processed = preprocess.preprocess_data(
+        pipeline=scaling_pipeline,
+        data=test_split.copy(),
+        columns=scoring_columns,
     )
 
-    logger.info("[INFO] Saving model")
+    dense_model.evaluate(testing_processed[scoring_columns], testing_processed['target'])
 
-    model.save(f"{args.output_directory}/{args.model_name}")
+    print('saving trained model and scaler')
+
+    dense_model.save(
+        f'{args.output_directory}/{args.model_name}.md5'
+    )
+
+    scaler_file_path = f'{args.output_directory}/{args.model_name}.scaler.md5'
+
+    with open(scaler_file_path, 'wb') as pkl:
+        pickle.dump(scaling_pipeline, pkl)
