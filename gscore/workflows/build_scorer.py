@@ -8,7 +8,7 @@ from sklearn.utils import resample
 from sklearn.model_selection import train_test_split
 
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import precision_score, recall_score
+from sklearn.metrics import precision_score, recall_score, accuracy_score
 
 
 from sklearn.preprocessing import (
@@ -139,6 +139,8 @@ def main(args, logger):
             args.num_folds
         )
 
+        split_data = split_data[::-1]
+
         all_peak_groups = peak_groups.select_peak_group(
             return_all=True
         )
@@ -164,12 +166,13 @@ def main(args, logger):
                 swath_training_prepared[score_columns]
             )
 
-            n_samples = int(len(swath_training_prepared) * 0.5) # Change this later based on sample size
+            n_samples = int(len(swath_training_prepared) * 1.0) # Change this later based on sample size
 
             denoizer = BaggedDenoiser(
                 max_samples=n_samples,
                 n_estimators=args.num_classifiers,
-                threads=args.threads
+                threads=args.threads,
+                random_state=idx
             )
 
             denoizer.fit(
@@ -207,26 +210,41 @@ def main(args, logger):
                 )
             )
 
+            swath_training_prepared.to_csv(
+                f"{args.output_directory}/training_data_fold_{idx}.tsv", sep='\t'
+            )
+
             fold_data[score_columns] = full_pipeline.transform(
                 fold_data[score_columns]
             )
 
+            fold_data.to_csv(
+                f"{args.output_directory}/testing_data_fold_{idx}.tsv", sep='\t'
+            )
+
             fold_precision = precision_score(
-                denoizer.predict(
+                y_pred=denoizer.predict(
                     fold_data[score_columns]
                 ),
-                fold_data['target']
+                y_true=fold_data['target']
             )
 
             fold_recall = recall_score(
-                denoizer.predict(
+                y_pred=denoizer.predict(
                     fold_data[score_columns]
                 ),
-                fold_data['target']
+                y_true=fold_data['target']
+            )
+
+            fold_accuracy = accuracy_score(
+                y_pred=denoizer.predict(
+                    fold_data[score_columns]
+                ),
+                y_true=fold_data['target']
             )
 
             print(
-                f"Fold {idx + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+                f"Fold {idx + 1}: Precision = {fold_precision}, Recall = {fold_recall}, Accuracy = {fold_accuracy}"
             )
 
             untransformed_peak_groups = all_peak_groups.loc[
@@ -275,11 +293,21 @@ def main(args, logger):
         )
 
         targets = highest_ranking[
-            (highest_ranking['probability'] >= 0.9)
+            (highest_ranking['vote_percentage'] == 1.0)
         ].copy()
 
+        targets_below_50 = highest_ranking[
+            (highest_ranking['vote_percentage'] < 0.5)
+        ].copy()
+
+        targets_below_50['target'] = 0.0
+
+        num_targets_below_50 = len(targets_below_50)
+
+        print(f"Targets below 50 {num_targets_below_50}")
+
         false_targets = low_ranking[
-            (low_ranking['probability'] < 0.5)
+            (low_ranking['vote_percentage'] < 0.5)
         ].copy()
         
         false_targets['target'] = 0.0
@@ -287,7 +315,8 @@ def main(args, logger):
         denoised_labels = pd.concat(
             [
                 targets,
-                false_targets
+                false_targets,
+                targets_below_50
             ]
         )
         
@@ -300,6 +329,39 @@ def main(args, logger):
     all_training_records = pd.concat(all_training_records)
 
     print(all_training_records.target.value_counts())
+
+    # targets = all_training_records[
+    #     all_training_records['target'] == 1.0
+    # ].copy()
+    #
+    # false_targets = all_training_records[
+    #     all_training_records['target'] == 0.0
+    # ].copy()
+    #
+    # num_false_targets = len(false_targets)
+    # num_targets = len(targets)
+    #
+    # if num_false_targets < num_targets:
+    #     targets = resample(
+    #         targets,
+    #         replace=False,
+    #         n_samples=num_false_targets,
+    #         random_state=0
+    #     )
+    # elif num_false_targets > num_targets:
+    #     false_targets = resample(
+    #         false_targets,
+    #         replace=False,
+    #         n_samples=num_targets,
+    #         random_state=0
+    #     )
+    #
+    # all_training_records = pd.concat(
+    #     [
+    #         targets,
+    #         false_targets
+    #     ]
+    # )
 
     training_split, test_split = train_test_split(
         all_training_records
@@ -379,7 +441,8 @@ def main(args, logger):
                 restore_best_weights=True
             )
         ],
-        batch_size=100
+        batch_size=32,
+        shuffle=True
     )
 
     testing_processed = preprocess.preprocess_data(
@@ -393,7 +456,8 @@ def main(args, logger):
     print('saving trained model and scaler')
 
     dense_model.save(
-        f'{args.output_directory}/{args.model_name}.h5'
+        f'{args.output_directory}/{args.model_name}',
+        save_format='tf'
     )
 
     scaler_file_path = f'{args.output_directory}/{args.model_name}.scaler.pkl'

@@ -16,7 +16,6 @@ from gscore.parsers.osw.queries import (
 from gscore.parsers.osw.peakgroups import preprocess_data, PeakGroupList
 
 from gscore.models.denoiser import (
-    DenoizingClassifier,
     BaggedDenoiser
 )
 
@@ -193,14 +192,17 @@ def main(args, logger):
         args.num_folds
     )
 
+    split_data = split_data[::-1]
+
     all_peak_groups = peak_groups.select_peak_group(
         return_all=True
     )
 
     scored_data = list()
 
-    for idx, fold_data in enumerate(split_data):
+    print("Denoising target labels")
 
+    for idx, fold_data in enumerate(split_data):
         training_data = pd.concat(
             [df for i, df in enumerate(split_data) if i != idx]
         )
@@ -216,12 +218,18 @@ def main(args, logger):
             swath_training_prepared[score_columns]
         )
 
-        n_samples = int(len(swath_training_prepared) * 0.50)
+        print(
+            f"Number of labels: \n",
+            swath_training_prepared.target.value_counts()
+        )
+
+        n_samples = int(len(swath_training_prepared) * 1.0)  # Change this later based on sample size
 
         denoizer = BaggedDenoiser(
             max_samples=n_samples,
             n_estimators=args.num_classifiers,
-            threads=args.threads
+            threads=args.threads,
+            random_state=idx
         )
 
         denoizer.fit(
@@ -349,7 +357,7 @@ def main(args, logger):
     low_ranking['target'] = 0.0
 
     low_ranking = low_ranking[
-        low_ranking['probability'] < 0.5
+        low_ranking['vote_percentage'] < 0.5
     ].copy()
 
     model_distribution = pd.concat(
