@@ -26,11 +26,10 @@ from sklearn.metrics import precision_score, recall_score
 
 
 from sklearn.preprocessing import (
-    StandardScaler,
     RobustScaler,
     MinMaxScaler
 )
-import glob
+
 import pickle
 
 
@@ -40,6 +39,41 @@ from gscore.models.distributions import ScoreDistribution
 import tensorflow as tf
 
 
+def prepare_add_denoise_records(records):
+
+    record_updates = records[
+        [
+            'feature_id',
+            'vote_percentage',
+            'probability',
+            'logit_probability'
+        ]
+    ]
+
+    feature_ids = list(record_updates['feature_id'])
+
+    votes = list(record_updates['vote_percentage'])
+
+    probabilities = list(record_updates['probability'])
+
+    logit_probabilities = list(record_updates['logit_probability'])
+
+    record_updates = list()
+
+    for feature_id, vote, probability, logit_probability in zip(
+            feature_ids, votes, probabilities, logit_probabilities
+    ):
+        record_updates.append(
+            {
+                'feature_id': feature_id,
+                'vote_percentage': vote,
+                'probability': probability,
+                'logit_probability': logit_probability
+            }
+        )
+
+    return record_updates
+
 def prepare_add_records(records):
     record_updates = records[
         [
@@ -48,7 +82,8 @@ def prepare_add_records(records):
             'probability',
             'logit_probability',
             'd_score',
-            'weighted_d_score'
+            'weighted_d_score',
+            'q_value'
         ]
     ]
 
@@ -64,7 +99,7 @@ def prepare_add_records(records):
 
     logit_probabilities = list(record_updates['logit_probability'])
 
-    q_values = list(records['q_value'])
+    q_values = list(record_updates['q_value'])
 
     record_updates = list()
 
@@ -304,110 +339,132 @@ def main(args, logger):
         ignore_index=True
     )
 
-    scoring_columns = score_columns + ['logit_probability']
+    if args.denoise_only:
 
-    all_peak_groups = preprocess.preprocess_data(
-        pipeline=scaler_pipeline,
-        data=scored_data.copy(),
-        columns=scoring_columns
-    )
-
-    print(f'Scoring {args.input}')
-
-    all_peak_groups['d_score'] = scoring_model.predict(
-        all_peak_groups[scoring_columns]
-    ).ravel()
-
-    all_peak_groups['weighted_d_score'] = np.exp(
-        all_peak_groups['vote_percentage']
-    ) * all_peak_groups['d_score']
-
-    split_peak_groups = dict(
-        tuple(
-            all_peak_groups.groupby('transition_group_id')
+        record_updates = prepare_add_denoise_records(
+            scored_data
         )
-    )
 
-    peak_groups = PeakGroupList(split_peak_groups)
+        with Connection(args.input) as conn:
+            conn.drop_table(
+                'ghost_score_table'
+            )
 
-    print('Modelling run and calculating q-values')
+            conn.create_table(
+                CreateTable.CREATE_GHOSTSCORE_TABLE
+            )
 
-    highest_ranking = peak_groups.select_peak_group(
-        rank=1,
-        rerank_keys=['weighted_d_score'],
-        ascending=False
-    )
+            conn.add_records(
+                table_name='ghost_score_table',
+                records=record_updates
+            )
 
-    low_ranking = list()
+    else:
 
-    for rank in range(2, 3):
-        lower_ranking = peak_groups.select_peak_group(
-            rank=rank,
+        scoring_columns = score_columns + ['logit_probability']
+
+        all_peak_groups = preprocess.preprocess_data(
+            pipeline=scaler_pipeline,
+            data=scored_data.copy(),
+            columns=scoring_columns
+        )
+
+        print(f'Scoring {args.input}')
+
+        all_peak_groups['d_score'] = scoring_model.predict(
+            all_peak_groups[scoring_columns]
+        ).ravel()
+
+        all_peak_groups['weighted_d_score'] = np.exp(
+            all_peak_groups['vote_percentage']
+        ) * all_peak_groups['d_score']
+
+        split_peak_groups = dict(
+            tuple(
+                all_peak_groups.groupby('transition_group_id')
+            )
+        )
+
+        peak_groups = PeakGroupList(split_peak_groups)
+
+        print('Modelling run and calculating q-values')
+
+        highest_ranking = peak_groups.select_peak_group(
+            rank=1,
             rerank_keys=['weighted_d_score'],
             ascending=False
         )
 
-        low_ranking.append(lower_ranking)
+        low_ranking = list()
 
-    low_ranking = pd.concat(
-        low_ranking,
-        ignore_index=True
-    )
+        for rank in range(2, 3):
+            lower_ranking = peak_groups.select_peak_group(
+                rank=rank,
+                rerank_keys=['weighted_d_score'],
+                ascending=False
+            )
 
-    low_ranking['target'] = 0.0
+            low_ranking.append(lower_ranking)
 
-    low_ranking = low_ranking[
-        low_ranking['vote_percentage'] < 0.5
-    ].copy()
-
-    model_distribution = pd.concat(
-        [
-            highest_ranking,
-            low_ranking
-        ]
-    )
-
-    run_distributions_plot = sns.displot(
-        model_distribution,
-        x='weighted_d_score',
-        hue='target',
-        element='step',
-        kde=True
-    )
-
-    run_distributions_plot.savefig(f"{args.input}.score_distribution.png")
-
-    print('building score distributions')
-
-    score_distribution = ScoreDistribution(
-        data=model_distribution,
-        distribution_type='weighted_d_score'
-    )
-
-    all_peak_groups = peak_groups.select_peak_group(
-        return_all=True
-    )
-
-    all_peak_groups['q_value'] = all_peak_groups['weighted_d_score'].apply(
-        score_distribution.calc_q_value
-    )
-
-    print(f'Updating {args.input}')
-
-    record_updates = prepare_add_records(
-        all_peak_groups
-    )
-
-    with Connection(args.input) as conn:
-        conn.drop_table(
-            'ghost_score_table'
+        low_ranking = pd.concat(
+            low_ranking,
+            ignore_index=True
         )
 
-        conn.create_table(
-            CreateTable.CREATE_GHOSTSCORE_TABLE
+        low_ranking['target'] = 0.0
+
+        low_ranking = low_ranking[
+            low_ranking['vote_percentage'] < 1.0
+        ].copy()
+
+        model_distribution = pd.concat(
+            [
+                highest_ranking,
+                low_ranking
+            ]
         )
 
-        conn.add_records(
-            table_name='ghost_score_table',
-            records=record_updates
+        run_distributions_plot = sns.displot(
+            model_distribution,
+            x='weighted_d_score',
+            hue='target',
+            element='step',
+            kde=True
         )
+
+        run_distributions_plot.savefig(f"{args.input}.score_distribution.png")
+
+        print('building score distributions')
+
+        score_distribution = ScoreDistribution(
+            data=model_distribution,
+            distribution_type='weighted_d_score'
+        )
+
+        all_peak_groups = peak_groups.select_peak_group(
+            return_all=True
+        )
+
+        all_peak_groups['q_value'] = all_peak_groups['weighted_d_score'].apply(
+            score_distribution.calc_q_value
+        )
+
+        print(f'Updating {args.input}')
+
+        record_updates = prepare_add_records(
+            all_peak_groups
+        )
+
+        with Connection(args.input) as conn:
+            conn.drop_table(
+                'ghost_score_table'
+            )
+
+            conn.create_table(
+                CreateTable.CREATE_GHOSTSCORE_TABLE
+            )
+
+            conn.add_records(
+                table_name='ghost_score_table',
+                records=record_updates
+            )

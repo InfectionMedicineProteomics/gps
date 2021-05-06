@@ -39,33 +39,6 @@ def parse_args(parser):
     )
 
     parser.add_argument(
-        '-nc',
-        '--num-classifiers',
-        dest='num_classifiers',
-        help='The number of ensemble learners used to denoise each fold',
-        default=100,
-        type=int
-    )
-
-    parser.add_argument(
-        '-f',
-        '--num-folds',
-        dest='num_folds',
-        help='The number of folds used to denoise the target labels',
-        default=10,
-        type=int
-    )
-
-    parser.add_argument(
-        '-t',
-        '--threads',
-        dest='threads',
-        help='The number of threads used to denoise the target labels',
-        default=10,
-        type=int
-    )
-
-    parser.add_argument(
         '-v',
         '--verbose',
         dest='verbosity_level',

@@ -196,7 +196,9 @@ class SelectPeakGroups:
             {base_columns},
             {score_columns},
             gst.vote_percentage,
-            gst.vote_score
+            gst.probability,
+            gst.logit_probability,
+            gst.ghost_score_id
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id

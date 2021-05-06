@@ -21,7 +21,7 @@ def parse_args(parser):
         '-m',
         '--model-path',
         dest='model_path',
-        help='Specify model path',
+        help='Specify model path.',
     )
 
     parser.add_argument(
@@ -67,6 +67,18 @@ def parse_args(parser):
         help='The number of threads used to denoise the target labels',
         default=10,
         type=int
+    )
+
+    parser.add_argument(
+        '-dn',
+        '--denoise-only',
+        dest='denoise_only',
+        help=(
+            'Set this flag if you want to only denoise the data, and not calculate the q-values. '
+            'This is done if you are training a new model.'
+        ),
+        default=False,
+        action='store_true'
     )
 
     parser.add_argument(
