@@ -130,13 +130,6 @@ def add_vote_records(records, osw_path):
 
 def main(args, logger):
 
-    with open(args.scaler_path, 'rb') as pkl:
-        scaler_pipeline = pickle.load(pkl)
-
-    scoring_model = tf.keras.models.load_model(
-        args.model_path
-    )
-
     score_columns = [
         'var_massdev_score_ms1',
         'var_isotope_correlation_score_ms1',
@@ -360,6 +353,13 @@ def main(args, logger):
             )
 
     else:
+
+        with open(args.scaler_path, 'rb') as pkl:
+            scaler_pipeline = pickle.load(pkl)
+
+        scoring_model = tf.keras.models.load_model(
+            args.model_path
+        )
 
         scoring_columns = score_columns + ['logit_probability']
 
