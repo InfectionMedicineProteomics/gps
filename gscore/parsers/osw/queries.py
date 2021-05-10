@@ -91,6 +91,7 @@ class SelectPeakGroups:
     BASE_COLUMNS = (
         """
         precursor.id transition_group_id,
+        peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as peptide_charge,
         feature.id feature_id,
         precursor.CHARGE charge,
         peptide.UNMODIFIED_SEQUENCE peptide_sequence,
@@ -243,6 +244,8 @@ class SelectPeakGroups:
             {base_columns},
             ms2.VAR_XCORR_SHAPE var_xcorr_shape,
             gst.vote_percentage,
+            gst.logit_probability,
+            gst.probability,
             gst.d_score,
             gst.weighted_d_score,
             gst.ghost_score_id
@@ -304,7 +307,7 @@ class SelectPeakGroups:
             ms2.AREA_INTENSITY Intensity,
             feature.LEFT_WIDTH leftWidth,
             feature.RIGHT_WIDTH rightWidth,
-            gst.probability m_score,
+            gst.m_score m_score,
             gst.weighted_d_score d_score
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id

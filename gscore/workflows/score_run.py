@@ -1,25 +1,23 @@
 from gscore.utils.connection import Connection
-import pickle
 
 import pandas as pd
 import numpy as np
 import seaborn as sns
 
-from gscore.parsers.osw import peakgroups
+from gscore import peakgroups
 
+from gscore.parsers.osw import osw
 from gscore.parsers.osw.queries import (
     SelectPeakGroups,
     CreateTable
 )
 
 # Need to rename the preprocess function
-from gscore.parsers.osw.peakgroups import preprocess_data, PeakGroupList
+from gscore.peakgroups import PeakGroupList
 
 from gscore.models.denoiser import (
     BaggedDenoiser
 )
-
-from sklearn.model_selection import train_test_split
 
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import precision_score, recall_score
@@ -164,11 +162,13 @@ def main(args, logger):
     print(f"Denoising {args.input}")
     print("Processing peakgroups")
     peak_group_records = list()
+
+    #TODO: Refactor this into a separate function
     with Connection(args.input) as conn:
         for record in conn.iterate_records(SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE):
             peak_group_records.append(record)
 
-    peak_groups = peakgroups.preprocess_data(
+    peak_groups = osw.preprocess_data(
         pd.DataFrame(peak_group_records)
     )
 
@@ -180,6 +180,7 @@ def main(args, logger):
 
     peak_groups = peakgroups.PeakGroupList(split_peak_groups)
 
+    #TODO: Reimplement the peakgroup datastructure to not use
     highest_ranking = peak_groups.select_peak_group(
         rank=1,
         rerank_keys=['var_xcorr_shape_weighted'],
@@ -213,6 +214,8 @@ def main(args, logger):
 
     print(noisey_target_labels.target.value_counts())
 
+    #TODO: Break shuffling of peakgroups and splitting of data into
+    # different functions
     shuffled_peak_groups = noisey_target_labels.sample(frac=1)
 
     split_data = np.array_split(
@@ -230,6 +233,7 @@ def main(args, logger):
 
     print("Denoising target labels")
 
+    #TODO: Refactor denoising to a specific function
     for idx, fold_data in enumerate(split_data):
         training_data = pd.concat(
             [df for i, df in enumerate(split_data) if i != idx]
@@ -389,6 +393,8 @@ def main(args, logger):
 
         print('Modelling run and calculating q-values')
 
+        #TODO: Need to have the peak selection in another function
+
         highest_ranking = peak_groups.select_peak_group(
             rank=1,
             rerank_keys=['weighted_d_score'],
@@ -424,6 +430,8 @@ def main(args, logger):
             ]
         )
 
+        #TODO: May should save the actual learned distribution from below
+        # instead of the nice looking one
         run_distributions_plot = sns.displot(
             model_distribution,
             x='weighted_d_score',

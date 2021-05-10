@@ -1,19 +1,20 @@
 import pickle
 
 import pandas as pd
-import numpy as np
-
 
 from sklearn.utils import resample
 from sklearn.model_selection import train_test_split
 
 from gscore.utils.connection import Connection
 
-from gscore.parsers.osw import peakgroups
+from gscore import peakgroups
 
 from gscore.parsers.osw.queries import (
     SelectPeakGroups
 )
+
+from gscore.parsers.osw import osw
+
 
 import tensorflow as tf
 
@@ -40,7 +41,7 @@ def main(args, logger):
             ):
                 peak_group_records.append(record)
 
-        peak_groups = peakgroups.preprocess_data(
+        peak_groups = osw.preprocess_data(
             pd.DataFrame(peak_group_records)
         )
 

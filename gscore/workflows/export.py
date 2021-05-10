@@ -1,4 +1,4 @@
-from gscore.parsers.osw.peakgroups import fetch_peak_groups
+from gscore.parsers.osw import osw
 from gscore.parsers.osw.queries import (
     SelectPeakGroups
 )
@@ -7,7 +7,7 @@ def main(args, logger):
 
     if args.export_method == 'tric-formatted':
 
-        peak_groups = fetch_peak_groups(
+        peak_groups = osw.fetch_peak_groups(
             host=args.input_osw_file,
             query=SelectPeakGroups.FETCH_TRIC_EXPORT_DATA,
             preprocess=False
@@ -24,3 +24,7 @@ def main(args, logger):
             sep='\t',
             index=False
         )
+
+    elif args.export_method == 'peptide':
+
+        pass
