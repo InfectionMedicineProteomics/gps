@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
 
@@ -36,7 +38,7 @@ class BaggedDenoiser(BaggingClassifier):
             random_state=random_state
         )
 
-    def vote(self, noisy_data):
+    def vote(self, noisy_data, threshold=0.9):
 
         voted_data = noisy_data.copy()
 
@@ -50,7 +52,12 @@ class BaggedDenoiser(BaggingClassifier):
 
             estimator_columns.append(estimator_column)
 
-            voted_data[estimator_column] = estimator.predict(noisy_data)
+
+            voted_data[estimator_column] = np.where(
+                estimator.predict_proba(noisy_data)[:,1] >= threshold,
+                1,
+                0
+            )
 
         voted_data["vote_percentage"] = voted_data[
             estimator_columns

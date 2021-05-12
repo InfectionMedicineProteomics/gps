@@ -47,4 +47,14 @@ def parse_args(parser):
         nargs='+'
     )
 
+    parser.add_argument(
+        '--quant_type',
+        dest='quant_type',
+        help='Whether to use MS1 or MS2 based quantification from swath data',
+        choices=[
+            'ms1', 'ms2'
+        ],
+        default='ms2'
+    )
+
     return parser

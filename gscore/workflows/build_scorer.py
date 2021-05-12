@@ -1,5 +1,6 @@
 import pickle
 
+import numpy as np
 import pandas as pd
 
 from sklearn.utils import resample
@@ -83,16 +84,6 @@ def main(args, logger):
             (highest_ranking['vote_percentage'] == 1.0)
         ].copy()
 
-        # targets_below_50 = highest_ranking[
-        #     (highest_ranking['probability'] < 0.2)
-        # ].copy()
-        #
-        # targets_below_50['target'] = 0.0
-        #
-        # num_targets_below_50 = len(targets_below_50)
-        #
-        # print(f"Targets below 50 {num_targets_below_50}")
-
         false_targets = low_ranking[
             (low_ranking['vote_percentage'] < 0.5)
         ].copy()
@@ -128,18 +119,26 @@ def main(args, logger):
     num_false_targets = len(false_targets)
     num_targets = len(targets)
 
-    if num_false_targets < num_targets:
+    # if num_false_targets < num_targets:
+    #     targets = resample(
+    #         targets,
+    #         replace=False,
+    #         n_samples=num_false_targets,
+    #         random_state=0
+    #     )
+    # elif num_false_targets > num_targets:
+    #     false_targets = resample(
+    #         false_targets,
+    #         replace=False,
+    #         n_samples=num_targets,
+    #         random_state=0
+    #     )
+
+    if num_false_targets > num_targets:
         targets = resample(
             targets,
-            replace=False,
+            replace=True,
             n_samples=num_false_targets,
-            random_state=0
-        )
-    elif num_false_targets > num_targets:
-        false_targets = resample(
-            false_targets,
-            replace=False,
-            n_samples=num_targets,
             random_state=0
         )
 
@@ -217,10 +216,18 @@ def main(args, logger):
         ]
     )
 
+    from sklearn.utils.class_weight import compute_class_weight
+
+    class_weights = compute_class_weight(
+        'balanced',
+        np.unique(training_preprocessed['target']),
+        training_preprocessed['target']
+    )
+
     dense_history = dense_model.fit(
         training_preprocessed[scoring_columns],
         training_preprocessed['target'],
-        epochs=500,
+        epochs=50,
         validation_split=0.10,
         callbacks=[
             tf.keras.callbacks.EarlyStopping(
@@ -229,7 +236,13 @@ def main(args, logger):
             )
         ],
         batch_size=32,
-        shuffle=True
+        shuffle=True,
+        # class_weight=dict(
+        #     enumerate(class_weights)
+        # ),
+        # sample_weight=np.asarray(
+        #     np.exp(training_preprocessed['vote_percentage'])
+        # )
     )
 
     testing_processed = preprocess.preprocess_data(
@@ -238,7 +251,13 @@ def main(args, logger):
         columns=scoring_columns,
     )
 
-    dense_model.evaluate(testing_processed[scoring_columns], testing_processed['target'])
+    dense_model.evaluate(
+        testing_processed[scoring_columns],
+        testing_processed['target'],
+        # sample_weight=np.asarray(
+        #     np.exp(testing_processed['vote_percentage'])
+        # )
+    )
 
     print('saving trained model and scaler')
 
