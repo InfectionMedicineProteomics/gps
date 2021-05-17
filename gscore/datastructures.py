@@ -1,5 +1,7 @@
 import numpy as np
 
+from sklearn.utils import shuffle
+
 # TODO: THERE IS A BUG WITH THE SCORE FEATURES AND WRITING THE OUTPUT TO SQLITE
 class PeakGroup:
 
@@ -10,6 +12,11 @@ class PeakGroup:
         self.ms2_intensity = ms2_intensity
         self.ms1_intensity = ms1_intensity
         self.sub_scores = dict()
+        self.scores = dict()
+
+    def add_score_column(self, key, value):
+
+        self.scores[key] = value
 
     def add_sub_score_column(self, key, value):
 
@@ -48,7 +55,14 @@ class Protein:
 
 class MissingNodeException(Exception):
 
-    pass
+    def __init__(self, message=''):
+        super().__init__(message)
+
+class NonColorOperationException(Exception):
+
+    def __init__(self, message=''):
+        super().__init__(message)
+
 
 class Node:
 
@@ -125,6 +139,11 @@ class Graph:
 
             return self._nodes[key]
 
+        else:
+            print(key)
+
+            raise MissingNodeException(key)
+
     def __getitem__(self, key):
 
         if key in self._nodes:
@@ -190,3 +209,195 @@ class Graph:
             for node in self._nodes.values():
 
                 yield node
+
+    def get_nodes_by_rank(self, color='', rank=0, return_all=False):
+
+        if self._colors:
+
+            nodes_by_rank = list()
+
+            for node in self.iter(color=color):
+
+                if return_all:
+
+                    for edge in node.get_edges():
+
+                        nodes_by_rank.append(edge)
+
+                else:
+                    ranked_node = node.get_edge_by_ranked_weight(
+                        rank=rank
+                    )
+
+                    if ranked_node:
+
+                        nodes_by_rank.append(
+                            ranked_node
+                        )
+
+        else:
+
+            raise NonColorOperationException(
+                message="Cannot perform partite operation on graph with no partite elements."
+            )
+
+        return nodes_by_rank
+
+    def get_ranked_nodes_by_node_list(self, node_list=[], rank=0, return_all=False):
+
+        nodes_by_rank = list()
+
+        for node in self.iter(keys=node_list):
+
+            if return_all:
+
+                for edge in node.get_edges():
+                    nodes_by_rank.append(edge)
+
+            else:
+                ranked_node = node.get_edge_by_ranked_weight(
+                    rank=rank
+                )
+
+                if ranked_node:
+                    nodes_by_rank.append(
+                        ranked_node
+                    )
+
+        return nodes_by_rank
+
+
+def parse_scores_labels_index(graph, node_keys, is_decoy=False):
+
+    scores = list()
+    score_labels = list()
+    score_indices = list()
+
+    for idx, node_key in enumerate(node_keys):
+
+        node = graph.get_node(node_key)
+
+        score_array = node.data.get_score_column_array()
+
+        scores.append(score_array)
+
+        if is_decoy:
+
+            score_labels.append(
+                [0.0]
+            )
+
+        else:
+
+            score_labels.append(
+                [1.0]
+            )
+
+        score_indices.append(
+            node.data.key
+        )
+
+    scores = np.array(scores, dtype=np.float64)
+    score_labels = np.array(score_labels, dtype=np.float)
+    score_indices = np.array(score_indices, dtype=np.str)
+
+    return scores, score_labels, score_indices
+
+
+def get_training_peptides(peptide_folds, fold_num):
+
+    training_peptides = list()
+
+    for training_fold_idx, peptide_ids in enumerate(peptide_folds):
+
+        if training_fold_idx != fold_num:
+
+            for peptide_id in peptide_ids:
+
+                training_peptides.append(peptide_id)
+
+    return training_peptides
+
+
+def preprocess_training_data(graph, training_peptides):
+    training_top_ranked = graph.get_ranked_nodes_by_node_list(
+        node_list=training_peptides,
+        rank=1
+    )
+
+    training_second_ranked = graph.get_ranked_nodes_by_node_list(
+        node_list=training_peptides,
+        rank=2
+    )
+
+    target_scores, target_labels, target_indices = parse_scores_labels_index(
+        graph=graph,
+        node_keys=training_top_ranked,
+        is_decoy=False
+    )
+
+    false_target_scores, false_target_labels, false_target_indices = parse_scores_labels_index(
+        graph=graph,
+        node_keys=training_second_ranked,
+        is_decoy=True
+    )
+
+    scores = np.concatenate(
+        [
+            target_scores,
+            false_target_scores
+        ]
+    )
+
+    score_labels = np.concatenate(
+        [
+            target_labels,
+            false_target_labels
+        ]
+    )
+
+    score_indices = np.concatenate(
+        [
+            target_indices,
+            false_target_indices
+        ]
+    )
+
+    train_data, train_labels, train_indices = shuffle(
+        scores, score_labels, score_indices,
+        random_state=42
+    )
+
+    return train_data, train_labels, train_indices
+
+
+def preprocess_data_to_score(graph, node_list, rank=0, return_all=False):
+
+    if return_all:
+
+        peakgroup_keys = graph.get_ranked_nodes_by_node_list(
+            node_list=node_list,
+            return_all=True
+        )
+
+    else:
+
+        peakgroup_keys = graph.get_ranked_nodes_by_node_list(
+            node_list=node_list,
+            rank=rank
+        )
+
+    scores, labels, indices = parse_scores_labels_index(
+        graph=graph,
+        node_keys=peakgroup_keys,
+        is_decoy=False
+    )
+
+    return scores, labels, indices
+
+
+def update_peakgroup_scores(graph, testing_indices, testing_scores, score_name):
+
+    for index, score in zip(testing_indices, testing_scores):
+
+        graph[index].data.scores[score_name] = score

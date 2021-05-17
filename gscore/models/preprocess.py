@@ -28,3 +28,4 @@ def preprocess_data(pipeline, data, columns, train=False, return_scaler=False):
         
         data[columns] = pipeline.transform(data[columns])
         return data
+

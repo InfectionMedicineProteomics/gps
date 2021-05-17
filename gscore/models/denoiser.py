@@ -3,6 +3,15 @@ import numpy as np
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
 
+from sklearn.pipeline import Pipeline
+
+from sklearn.preprocessing import (
+    RobustScaler,
+    MinMaxScaler
+)
+
+from gscore.datastructures import preprocess_training_data
+
 
 class BaggedDenoiser(BaggingClassifier):
 
@@ -11,7 +20,7 @@ class BaggedDenoiser(BaggingClassifier):
             base_estimator=None,
             n_estimators=250,
             max_samples=3,
-            threads=5,
+            n_jobs=5,
             random_state=0
     ):
 
@@ -29,40 +38,65 @@ class BaggedDenoiser(BaggingClassifier):
                 fit_intercept=True,
                 random_state=random_state
             )
+
         super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             max_samples=max_samples,
             bootstrap=True,
-            n_jobs=threads,
+            n_jobs=n_jobs,
             random_state=random_state
         )
 
-    def vote(self, noisy_data, threshold=0.9):
+    def vote(self, noisy_data, threshold=0.5):
 
-        voted_data = noisy_data.copy()
+        estimator_probabilities = list()
 
-        estimator_columns = list()
+        for estimator in self.estimators_:
 
-        for estimator_idx, estimator in enumerate(
-                self.estimators_
-        ):
-
-            estimator_column = f"estimator_{estimator_idx}"
-
-            estimator_columns.append(estimator_column)
-
-
-            voted_data[estimator_column] = np.where(
+            probabilities = np.where(
                 estimator.predict_proba(noisy_data)[:,1] >= threshold,
                 1,
                 0
             )
 
-        voted_data["vote_percentage"] = voted_data[
-            estimator_columns
-        ].sum(axis=1) / self.n_estimators
+            estimator_probabilities.append(probabilities)
 
-        return voted_data["vote_percentage"]
+        estimator_probabilities = np.array(estimator_probabilities)
+
+        vote_percentages = (
+            estimator_probabilities.sum(axis=0) /
+            len(self.estimators_)
+        )
+
+        return vote_percentages
 
 
+def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):
+
+    train_data, train_labels, train_indices = preprocess_training_data(graph, training_peptides)
+
+    scaler = Pipeline([
+        ('standard_scaler', RobustScaler()),
+        ('min_max_scaler', MinMaxScaler())
+    ])
+
+    train_data = scaler.fit_transform(
+        train_data
+    )
+
+    n_samples = int(len(train_data) * 1.0)  # Change this later based on sample size
+
+    denoizer = BaggedDenoiser(
+        max_samples=n_samples,
+        n_estimators=n_estimators,
+        n_jobs=n_jobs,
+        random_state=42
+    )
+
+    denoizer.fit(
+        train_data,
+        train_labels.ravel()
+    )
+
+    return denoizer, scaler
