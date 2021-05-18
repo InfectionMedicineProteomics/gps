@@ -145,9 +145,9 @@ def main(args, logger):
         loss='binary_crossentropy',
         optimizer=optimizer,
         metrics=[
-            tf.keras.metrics.Recall(),
-            tf.keras.metrics.Precision()
-        ]
+            'accuracy'
+        ],
+
     )
 
     class_weights = class_weight.compute_class_weight(

@@ -229,12 +229,6 @@ def main(args, logger):
             scores
         ).ravel()
 
-        d_scores = np.log(
-            (
-                d_scores / (1 - d_scores)
-            )
-        )
-
         vote_percentages = list()
 
         for index in indices:
@@ -260,7 +254,7 @@ def main(args, logger):
             peakgroup_graph.update_edge_weight(
                 node_from=peptide_id,
                 node_to=index,
-                weight=d_score,
+                weight=weighted_d_score,
                 directed=False
             )
 
@@ -284,19 +278,19 @@ def main(args, logger):
         target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=true_targets,
-            score_column='d_score'
+            score_column='weighted_d_score'
         )
 
         false_target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=false_targets,
-            score_column='d_score'
+            score_column='weighted_d_score'
         )
 
         second_target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=second_ranked,
-            score_column='d_score'
+            score_column='weighted_d_score'
         )
 
         target_distribution = distributions.LabelDistribution(
@@ -325,7 +319,7 @@ def main(args, logger):
 
         for node in peakgroup_graph.iter(keys=all_peak_groups):
 
-            score = node.data.scores['d_score']
+            score = node.data.scores['weighted_d_score']
 
             node.data.scores['q_value'] = score_distribution.calc_q_value(score)
 
