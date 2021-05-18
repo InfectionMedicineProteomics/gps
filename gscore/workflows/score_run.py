@@ -1,341 +1,170 @@
-from gscore.utils.connection import Connection
+import random
 import pickle
 
-import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import seaborn as sns
-
-from gscore.parsers.osw import peakgroups
-
-from gscore.parsers.osw.queries import (
-    SelectPeakGroups,
-    CreateTable
-)
-
-# Need to rename the preprocess function
-from gscore.parsers.osw.peakgroups import preprocess_data, PeakGroupList
-
-from gscore.models.denoiser import (
-    BaggedDenoiser
-)
-
-from sklearn.model_selection import train_test_split
-
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import precision_score, recall_score
-
-
-from sklearn.preprocessing import (
-    RobustScaler,
-    MinMaxScaler
-)
-
-import pickle
-
-
-from gscore.models import preprocess
-from gscore.models.distributions import ScoreDistribution
-
 import tensorflow as tf
 
+from sklearn.metrics import precision_score, recall_score
 
-def prepare_add_denoise_records(records):
+from gscore.utils.connection import Connection
+from gscore.parsers.osw import (
+    osw,
+    queries
+)
+from gscore import peakgroups, denoiser, distributions
 
-    record_updates = records[
-        [
-            'feature_id',
-            'vote_percentage',
-            'probability',
-            'logit_probability'
-        ]
-    ]
 
-    feature_ids = list(record_updates['feature_id'])
+def plot_distributions(target_distribution, null_distribution, fig_path):
 
-    votes = list(record_updates['vote_percentage'])
+    fig, ax = plt.subplots()
+    sns.lineplot(x=target_distribution.x_axis, y=target_distribution.values, ax=ax, label='Targets')
+    sns.lineplot(x=null_distribution.x_axis, y=null_distribution.values, ax=ax, label='False Targets')
+    plt.savefig(fig_path)
 
-    probabilities = list(record_updates['probability'])
-
-    logit_probabilities = list(record_updates['logit_probability'])
-
-    record_updates = list()
-
-    for feature_id, vote, probability, logit_probability in zip(
-            feature_ids, votes, probabilities, logit_probabilities
-    ):
-        record_updates.append(
-            {
-                'feature_id': feature_id,
-                'vote_percentage': vote,
-                'probability': probability,
-                'logit_probability': logit_probability
-            }
-        )
-
-    return record_updates
-
-def prepare_add_records(records):
-    record_updates = records[
-        [
-            'feature_id',
-            'vote_percentage',
-            'probability',
-            'logit_probability',
-            'd_score',
-            'weighted_d_score',
-            'q_value'
-        ]
-    ]
-
-    feature_ids = list(record_updates['feature_id'])
-
-    votes = list(record_updates['vote_percentage'])
-
-    d_scores = list(record_updates['d_score'])
-
-    weighted_d_scores = list(record_updates['weighted_d_score'])
-
-    probabilities = list(record_updates['probability'])
-
-    logit_probabilities = list(record_updates['logit_probability'])
-
-    q_values = list(record_updates['q_value'])
+def prepare_qvalue_add_records(graph):
 
     record_updates = list()
 
-    for feature_id, vote, d_score, weighted_d_score, probability, logit_probability, q_value in zip(
-            feature_ids, votes, d_scores, weighted_d_scores, probabilities, logit_probabilities, q_values
-    ):
-        record_updates.append(
-            {'feature_id': feature_id,
-             'vote_percentage': vote,
-             'probability': probability,
-             'logit_probability': logit_probability,
-             'd_score': d_score,
-             'weighted_d_score': weighted_d_score,
-             'm_score': q_value}
-        )
+    for peakgroup in graph.iter(color='peakgroup'):
+
+        record = {
+            'feature_id': peakgroup.data.key,
+            'vote_percentage': peakgroup.data.scores['vote_percentage'],
+            'probability': peakgroup.data.scores['probability'],
+            'd_score': peakgroup.data.scores['d_score'],
+            'weighted_d_score': peakgroup.data.scores['weighted_d_score'],
+            'q_value': peakgroup.data.scores['q_value']
+        }
+
+        record_updates.append(record)
 
     return record_updates
 
 
-def add_vote_records(records, osw_path):
+def prepare_denoise_record_additions(graph):
 
-    with Connection(osw_path) as conn:
+    record_updates = list()
 
-        conn.add_records(
-            table_name='ghost_score_table', 
-            records=records
-        )
+    for peakgroup in graph.iter(color='peakgroup'):
+        record = {
+            'feature_id': peakgroup.data.key,
+            'vote_percentage': peakgroup.data.scores['vote_percentage'],
+            'probability': peakgroup.data.scores['probability']
+        }
+
+        record_updates.append(record)
+
+    return record_updates
+
 
 def main(args, logger):
 
-    score_columns = [
-        'var_massdev_score_ms1',
-        'var_isotope_correlation_score_ms1',
-        'var_isotope_overlap_score_ms1',
-        'var_xcorr_coelution_contrast_ms1',
-        'var_xcorr_coelution_combined_ms1',
-        'var_xcorr_shape_contrast_ms1',
-        'var_xcorr_shape_combined_ms1',
-        'var_bseries_score',
-        'var_dotprod_score',
-        'var_intensity_score',
-        'var_isotope_correlation_score',
-        'var_isotope_overlap_score',
-        'var_library_corr',
-        'var_library_dotprod',
-        'var_library_manhattan',
-        'var_library_rmsd',
-        'var_library_rootmeansquare',
-        'var_library_sangle',
-        'var_log_sn_score',
-        'var_manhattan_score',
-        'var_massdev_score',
-        'var_massdev_score_weighted',
-        'var_norm_rt_score',
-        'var_xcorr_coelution',
-        'var_xcorr_coelution_weighted',
-        'var_xcorr_shape',
-        'var_xcorr_shape_weighted',
-        'var_yseries_score'
-    ]
+    peakgroup_graph = osw.fetch_peakgroup_graph(
+        osw_path=args.input,
+        osw_query=queries.SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+    )
 
     print(f"Denoising {args.input}")
+
     print("Processing peakgroups")
-    peak_group_records = list()
-    with Connection(args.input) as conn:
-        for record in conn.iterate_records(SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE):
-            peak_group_records.append(record)
 
-    peak_groups = peakgroups.preprocess_data(
-        pd.DataFrame(peak_group_records)
-    )
+    peptide_ids = list(peakgroup_graph.get_nodes(color='peptide'))
 
-    split_peak_groups = dict(
-        tuple(
-            peak_groups.groupby('transition_group_id')
-        )
-    )
+    random.seed(42)
+    random.shuffle(peptide_ids)
 
-    peak_groups = peakgroups.PeakGroupList(split_peak_groups)
-
-    highest_ranking = peak_groups.select_peak_group(
-        rank=1,
-        rerank_keys=['var_xcorr_shape_weighted'],
-        ascending=False
-    )
-
-    low_ranking = list()
-
-    for rank in range(2, 3):
-        lower_ranking = peak_groups.select_peak_group(
-            rank=rank,
-            rerank_keys=['var_xcorr_shape_weighted'],
-            ascending=False
-        )
-
-        low_ranking.append(lower_ranking)
-
-    low_ranking = pd.concat(
-        low_ranking,
-        ignore_index=True
-    )
-
-    low_ranking['target'] = 0.0
-
-    noisey_target_labels = pd.concat(
-        [
-            highest_ranking,
-            low_ranking
-        ]
-    )
-
-    print(noisey_target_labels.target.value_counts())
-
-    shuffled_peak_groups = noisey_target_labels.sample(frac=1)
-
-    split_data = np.array_split(
-        shuffled_peak_groups,
+    peptide_folds = np.array_split(
+        peptide_ids,
         args.num_folds
     )
 
-    split_data = split_data[::-1]
+    for fold_num, peptide_fold in enumerate(peptide_folds):
 
-    all_peak_groups = peak_groups.select_peak_group(
-        return_all=True
-    )
+        print(f"Processing fold {fold_num + 1}")
 
-    scored_data = list()
-
-    print("Denoising target labels")
-
-    for idx, fold_data in enumerate(split_data):
-        training_data = pd.concat(
-            [df for i, df in enumerate(split_data) if i != idx]
+        training_peptides = peakgroups.get_training_peptides(
+            peptide_folds=peptide_folds,
+            fold_num=fold_num
         )
 
-        full_pipeline = Pipeline([
-            ('standard_scaler', RobustScaler()),
-            ('min_max_scaler', MinMaxScaler())
-        ])
-
-        swath_training_prepared = training_data.copy()
-
-        swath_training_prepared[score_columns] = full_pipeline.fit_transform(
-            swath_training_prepared[score_columns]
-        )
-
-        print(
-            f"Number of labels: \n",
-            swath_training_prepared.target.value_counts()
-        )
-
-        n_samples = int(len(swath_training_prepared) * 1.0)  # Change this later based on sample size
-
-        denoizer = BaggedDenoiser(
-            max_samples=n_samples,
+        denoizer, scaler = denoiser.get_denoizer(
+            peakgroup_graph,
+            training_peptides,
             n_estimators=args.num_classifiers,
-            threads=args.threads,
-            random_state=idx
+            n_jobs=args.threads
         )
 
-        denoizer.fit(
-            swath_training_prepared[score_columns],
-            swath_training_prepared['target']
+        testing_scores, testing_labels, testing_indices = peakgroups.preprocess_data_to_score(
+            peakgroup_graph,
+            list(peptide_fold),
+            return_all=True
+
         )
 
-        group_ids = list(fold_data['transition_group_id'])
-
-        left_out_peak_groups = all_peak_groups.loc[
-            all_peak_groups['transition_group_id'].isin(group_ids)
-        ].copy()
-
-        left_out_peak_groups_transformed = left_out_peak_groups.copy()
-
-        left_out_peak_groups_transformed[score_columns] = full_pipeline.transform(
-            left_out_peak_groups[score_columns]
-        )
-
-        left_out_peak_groups['vote_percentage'] = denoizer.vote(
-            left_out_peak_groups_transformed[score_columns]
+        testing_scores = scaler.transform(
+            testing_scores
         )
 
         class_index = np.where(
             denoizer.classes_ == 1.0
         )[0][0]
 
-        left_out_peak_groups['probability'] = denoizer.predict_proba(
-            left_out_peak_groups_transformed[score_columns]
-        )[:, class_index]
+        print("Scoring data")
 
-        left_out_peak_groups['logit_probability'] = np.log(
-            (
-                    left_out_peak_groups['probability'] / (1 - left_out_peak_groups['probability'])
-            )
+        vote_percentages = denoizer.vote(
+            testing_scores,
+            threshold=0.5
         )
 
-        fold_data[score_columns] = full_pipeline.transform(
-            fold_data[score_columns]
+        probabilities = denoizer.predict_proba(
+            testing_scores
+        )[:, class_index]
+
+        print("Updating peakgroups")
+
+        peakgroups.update_peakgroup_scores(
+            peakgroup_graph,
+            testing_indices,
+            vote_percentages,
+            "vote_percentage"
+        )
+
+        peakgroups.update_peakgroup_scores(
+            peakgroup_graph,
+            testing_indices,
+            probabilities,
+            "probability"
+        )
+
+        val_scores, val_labels, _ = peakgroups.preprocess_training_data(
+            peakgroup_graph,
+            list(peptide_fold),
+        )
+
+        val_scores = scaler.transform(
+            val_scores
         )
 
         fold_precision = precision_score(
-            denoizer.predict(
-                fold_data[score_columns]
-            ),
-            fold_data['target']
+            y_pred=denoizer.predict(val_scores),
+            y_true=val_labels.ravel()
         )
 
         fold_recall = recall_score(
-            denoizer.predict(
-                fold_data[score_columns]
-            ),
-            fold_data['target']
+            y_pred=denoizer.predict(val_scores),
+            y_true=val_labels.ravel()
         )
 
         print(
-            f"Fold {idx + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+            f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
         )
-
-        untransformed_peak_groups = all_peak_groups.loc[
-            all_peak_groups['transition_group_id'].isin(group_ids)
-        ].copy()
-
-        untransformed_peak_groups['vote_percentage'] = left_out_peak_groups['vote_percentage']
-        untransformed_peak_groups['probability'] = left_out_peak_groups['probability']
-        untransformed_peak_groups['logit_probability'] = left_out_peak_groups['logit_probability']
-
-        scored_data.append(untransformed_peak_groups)
-
-    scored_data = pd.concat(
-        scored_data,
-        ignore_index=True
-    )
 
     if args.denoise_only:
 
-        record_updates = prepare_add_denoise_records(
-            scored_data
+        record_updates = prepare_denoise_record_additions(
+            peakgroup_graph
         )
 
         with Connection(args.input) as conn:
@@ -344,7 +173,7 @@ def main(args, logger):
             )
 
             conn.create_table(
-                CreateTable.CREATE_GHOSTSCORE_TABLE
+                queries.CreateTable.CREATE_GHOSTSCORE_TABLE
             )
 
             conn.add_records(
@@ -361,107 +190,139 @@ def main(args, logger):
             args.model_path
         )
 
-        scoring_columns = score_columns + ['logit_probability']
+        all_peakgroups = peakgroup_graph.get_nodes(color='peakgroup')
+        all_peptides = peakgroup_graph.get_nodes(color='peptide')
 
-        all_peak_groups = preprocess.preprocess_data(
-            pipeline=scaler_pipeline,
-            data=scored_data.copy(),
-            columns=scoring_columns
-        )
+        for node in peakgroup_graph.iter(keys=all_peakgroups):
 
-        print(f'Scoring {args.input}')
+            probability = node.data.scores['probability']
 
-        all_peak_groups['d_score'] = scoring_model.predict(
-            all_peak_groups[scoring_columns]
-        ).ravel()
-
-        all_peak_groups['weighted_d_score'] = np.exp(
-            all_peak_groups['vote_percentage']
-        ) * all_peak_groups['d_score']
-
-        split_peak_groups = dict(
-            tuple(
-                all_peak_groups.groupby('transition_group_id')
-            )
-        )
-
-        peak_groups = PeakGroupList(split_peak_groups)
-
-        print('Modelling run and calculating q-values')
-
-        highest_ranking = peak_groups.select_peak_group(
-            rank=1,
-            rerank_keys=['weighted_d_score'],
-            ascending=False
-        )
-
-        low_ranking = list()
-
-        for rank in range(2, 3):
-            lower_ranking = peak_groups.select_peak_group(
-                rank=rank,
-                rerank_keys=['weighted_d_score'],
-                ascending=False
+            node.data.add_sub_score_column(
+                key='probability',
+                value=probability
             )
 
-            low_ranking.append(lower_ranking)
-
-        low_ranking = pd.concat(
-            low_ranking,
-            ignore_index=True
-        )
-
-        low_ranking['target'] = 0.0
-
-        low_ranking = low_ranking[
-            low_ranking['vote_percentage'] < 1.0
-        ].copy()
-
-        model_distribution = pd.concat(
-            [
-                highest_ranking,
-                low_ranking
-            ]
-        )
-
-        run_distributions_plot = sns.displot(
-            model_distribution,
-            x='weighted_d_score',
-            hue='target',
-            element='step',
-            kde=True
-        )
-
-        run_distributions_plot.savefig(f"{args.input}.score_distribution.png")
-
-        print('building score distributions')
-
-        score_distribution = ScoreDistribution(
-            data=model_distribution,
-            distribution_type='weighted_d_score'
-        )
-
-        all_peak_groups = peak_groups.select_peak_group(
+        scores, labels, indices = peakgroups.preprocess_data_to_score(
+            peakgroup_graph,
+            list(all_peptides),
             return_all=True
         )
 
-        all_peak_groups['q_value'] = all_peak_groups['weighted_d_score'].apply(
-            score_distribution.calc_q_value
+        scores = scaler_pipeline.transform(scores)
+
+        d_scores = scoring_model.predict(
+            scores
+        ).ravel()
+
+        vote_percentages = list()
+
+        for index in indices:
+            vote_percentage = peakgroup_graph[index].data.scores['vote_percentage']
+
+            vote_percentages.append(
+                vote_percentage
+            )
+        vote_percentages = np.array(vote_percentages)
+
+        weighted_d_scores = np.exp(
+            vote_percentages
+        ) * d_scores
+
+        for d_score, weighted_d_score, index in zip(d_scores, weighted_d_scores, indices):
+
+            peakgroup_graph[index].data.scores['d_score'] = d_score
+
+            peakgroup_graph[index].data.scores['weighted_d_score'] = weighted_d_score
+
+            peptide_id = list(peakgroup_graph[index]._edges.keys())[0]
+
+            peakgroup_graph.update_edge_weight(
+                node_from=peptide_id,
+                node_to=index,
+                weight=weighted_d_score,
+                directed=False
+            )
+
+        true_targets = peakgroup_graph.query_nodes(
+            color='peptide',
+            rank=1,
+            query="vote_percentage == 1.0"
         )
+
+        false_targets = peakgroup_graph.query_nodes(
+            color='peptide',
+            rank=1,
+            query="vote_percentage < 1.0"
+        )
+
+        second_ranked = peakgroup_graph.query_nodes(
+            color='peptide',
+            rank=2,
+        )
+
+        target_scores = peakgroups.get_score_array(
+            graph=peakgroup_graph,
+            node_list=true_targets,
+            score_column='weighted_d_score'
+        )
+
+        false_target_scores = peakgroups.get_score_array(
+            graph=peakgroup_graph,
+            node_list=false_targets,
+            score_column='weighted_d_score'
+        )
+
+        second_target_scores = peakgroups.get_score_array(
+            graph=peakgroup_graph,
+            node_list=second_ranked,
+            score_column='weighted_d_score'
+        )
+
+        target_distribution = distributions.LabelDistribution(
+            data=target_scores.reshape(-1, 1)
+        )
+
+        false_target_distribution = distributions.LabelDistribution(
+            data=false_target_scores.reshape(-1, 1)
+        )
+
+        score_distribution = distributions.ScoreDistribution(
+            null_distribution=false_target_distribution,
+            target_distribution=target_distribution,
+        )
+
+        plot_distributions(
+            target_distribution,
+            false_target_distribution,
+            f"{args.input}.score_distribution.png"
+        )
+
+        all_peak_groups = peakgroup_graph.query_nodes(
+            color='peptide',
+            return_all=True
+        )
+
+        for node in peakgroup_graph.iter(keys=all_peak_groups):
+
+            score = node.data.scores['weighted_d_score']
+
+            node.data.scores['q_value'] = score_distribution.calc_q_value(score)
+
 
         print(f'Updating {args.input}')
 
-        record_updates = prepare_add_records(
-            all_peak_groups
+        record_updates = prepare_qvalue_add_records(
+            peakgroup_graph
         )
 
         with Connection(args.input) as conn:
+
             conn.drop_table(
                 'ghost_score_table'
             )
 
             conn.create_table(
-                CreateTable.CREATE_GHOSTSCORE_TABLE
+                queries.CreateTable.CREATE_GHOSTSCORE_TABLE
             )
 
             conn.add_records(

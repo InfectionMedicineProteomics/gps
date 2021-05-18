@@ -1,7 +1,4 @@
 from functools import partial
-
-import tensorflow as tf
-
 from tensorflow import keras
 
 
@@ -11,6 +8,7 @@ EARLY_STOPPING_CB = keras.callbacks.EarlyStopping(
     patience=5,
     restore_best_weights=True
 )
+
 
 class TargetScoringModel(keras.Model):
 

@@ -1,3 +1,5 @@
+import argparse
+
 def parse_args(parser):
 
     parser.add_argument(
@@ -31,9 +33,28 @@ def parse_args(parser):
         '--export-method',
         dest='export_method',
         choices=[
-            'tric-formatted', 'scored'
+            'tric-formatted', 'scored', 'peptide', 'protein'
         ],
         help='Which format to export results'
+    )
+
+    parser.add_argument(
+        '-f',
+        '--input-files',
+        dest='input_files',
+        help='Indicate multiple input files to ',
+        type=argparse.FileType('r'),
+        nargs='+'
+    )
+
+    parser.add_argument(
+        '--quant_type',
+        dest='quant_type',
+        help='Whether to use MS1 or MS2 based quantification from swath data',
+        choices=[
+            'ms1', 'ms2'
+        ],
+        default='ms2'
     )
 
     return parser
