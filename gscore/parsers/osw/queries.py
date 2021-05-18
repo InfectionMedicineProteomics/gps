@@ -9,7 +9,7 @@ class CreateTable:
             probability REAL,
             logit_probability REAL,
             d_score REAL,
-            m_score REAL,
+            q_value REAL,
             weighted_d_score REAL,
             FOREIGN KEY (feature_id)
                 REFERENCES FEATURE (id)

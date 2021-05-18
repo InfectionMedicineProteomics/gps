@@ -11,9 +11,7 @@ from gscore.parsers.osw.queries import (
 )
 
 from gscore.utils.connection import Connection
-from gscore.models.distributions import ScoreDistribution
 
-from gscore import peakgroups
 
 class Peptides(MutableMapping):
 
@@ -56,12 +54,6 @@ class Peptides(MutableMapping):
                     key=lambda sample: sample.d_score,
                     reverse=True
                 )
-
-
-
-
-
-
 
 
 class SampleOutputRecord:

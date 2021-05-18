@@ -2,15 +2,13 @@ import numpy as np
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
-
 from sklearn.pipeline import Pipeline
-
 from sklearn.preprocessing import (
     RobustScaler,
     MinMaxScaler
 )
 
-from gscore.datastructures import preprocess_training_data
+from gscore.peakgroups import preprocess_training_data
 
 
 class BaggedDenoiser(BaggingClassifier):
