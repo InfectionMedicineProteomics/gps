@@ -16,3 +16,5 @@ build/*
 
 notebooks/
 notebooks/*
+
+.ipynb_checkpoints
