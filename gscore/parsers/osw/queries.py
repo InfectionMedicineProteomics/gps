@@ -7,7 +7,6 @@ class CreateTable:
             feature_id INTEGER not null,
             vote_percentage REAL,
             probability REAL,
-            logit_probability REAL,
             d_score REAL,
             q_value REAL,
             weighted_d_score REAL,

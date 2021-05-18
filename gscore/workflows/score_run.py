@@ -33,7 +33,6 @@ def prepare_qvalue_add_records(graph):
             'feature_id': peakgroup.data.key,
             'vote_percentage': peakgroup.data.scores['vote_percentage'],
             'probability': peakgroup.data.scores['probability'],
-            'logit_probability': peakgroup.data.scores['logit_probability'],
             'd_score': peakgroup.data.scores['d_score'],
             'weighted_d_score': peakgroup.data.scores['weighted_d_score'],
             'q_value': peakgroup.data.scores['q_value']
@@ -52,8 +51,7 @@ def prepare_denoise_record_additions(graph):
         record = {
             'feature_id': peakgroup.data.key,
             'vote_percentage': peakgroup.data.scores['vote_percentage'],
-            'probability': peakgroup.data.scores['probability'],
-            'logit_probability': peakgroup.data.scores['logit_probability'],
+            'probability': peakgroup.data.scores['probability']
         }
 
         record_updates.append(record)
@@ -124,12 +122,6 @@ def main(args, logger):
             testing_scores
         )[:, class_index]
 
-        logit_probabilities = np.log(
-            (
-                    probabilities / (1 - probabilities)
-            )
-        )
-
         print("Updating peakgroups")
 
         peakgroups.update_peakgroup_scores(
@@ -144,13 +136,6 @@ def main(args, logger):
             testing_indices,
             probabilities,
             "probability"
-        )
-
-        peakgroups.update_peakgroup_scores(
-            peakgroup_graph,
-            testing_indices,
-            logit_probabilities,
-            "logit_probability"
         )
 
         val_scores, val_labels, _ = peakgroups.preprocess_training_data(
