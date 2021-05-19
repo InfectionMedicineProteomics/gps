@@ -59,7 +59,7 @@ def prepare_denoise_record_additions(graph):
     return record_updates
 
 
-def main(args, logger):
+def main(args, logger=None):
 
     peakgroup_graph = osw.fetch_peakgroup_graph(
         osw_path=args.input,
@@ -214,6 +214,10 @@ def main(args, logger):
             scores
         ).ravel()
 
+        d_scores = np.log(
+            (d_scores / (1 - d_scores))
+        )
+
         vote_percentages = list()
 
         for index in indices:
@@ -236,10 +240,18 @@ def main(args, logger):
 
             peptide_id = list(peakgroup_graph[index]._edges.keys())[0]
 
+            if args.score_column == 'weighted_d_score':
+
+                score = weighted_d_score
+
+            elif args.score_column == 'd_score':
+
+                score = d_score
+
             peakgroup_graph.update_edge_weight(
                 node_from=peptide_id,
                 node_to=index,
-                weight=weighted_d_score,
+                weight=score,
                 directed=False
             )
 
@@ -263,19 +275,19 @@ def main(args, logger):
         target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=true_targets,
-            score_column='weighted_d_score'
+            score_column=args.score_column
         )
 
         false_target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=false_targets,
-            score_column='weighted_d_score'
+            score_column=args.score_column
         )
 
         second_target_scores = peakgroups.get_score_array(
             graph=peakgroup_graph,
             node_list=second_ranked,
-            score_column='weighted_d_score'
+            score_column=args.score_column
         )
 
         target_distribution = distributions.LabelDistribution(
@@ -304,7 +316,7 @@ def main(args, logger):
 
         for node in peakgroup_graph.iter(keys=all_peak_groups):
 
-            score = node.data.scores['weighted_d_score']
+            score = node.data.scores[args.score_column]
 
             node.data.scores['q_value'] = score_distribution.calc_q_value(score)
 

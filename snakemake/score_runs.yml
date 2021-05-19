@@ -1,0 +1,12 @@
+osw_dir: '/path/to/osws'
+
+scoring_model:
+  path: '/path/to/model'
+  scaler: '/path/to/scaler.pkl'
+
+gscore:
+  scorerun:
+    num_classifiers: '100'
+    num_folds: '20'
+    log_level: NOTSET
+    threads: 20

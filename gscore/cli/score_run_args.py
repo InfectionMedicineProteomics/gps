@@ -61,6 +61,17 @@ def parse_args(parser):
     )
 
     parser.add_argument(
+        '-sc',
+        '--score-column',
+        dest='score_column',
+        help='Level of verbosity to use, corresponds to python log levels',
+        choices=[
+            'weighted_d_score', 'd_score'
+        ],
+        default='weighted_d_score'
+    )
+
+    parser.add_argument(
         '-t',
         '--threads',
         dest='threads',

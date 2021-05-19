@@ -15,8 +15,8 @@ from gscore.utils.connection import Connection
 
 class Peptides(MutableMapping):
 
-    def __init__(self):
-        self._data = dict()
+    def __init__(self, data=dict()):
+        self._data = data
 
     def __getitem__(self, key):
         return self._data[key]
