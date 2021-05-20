@@ -54,6 +54,7 @@ class Peptide:
         self.modified_sequence = modified_sequence
         self.charge = charge
         self.decoy = decoy
+        self.scores = dict()
 
         if decoy == 0:
             self.target = 1
@@ -67,6 +68,7 @@ class Protein:
         self.key = key
         self.protein_accession = key # should change this later to parse
         self.decoy = decoy
+        self.scores = dict()
 
 
 class MissingNodeException(Exception):
@@ -490,27 +492,20 @@ def get_score_array(graph, node_list, score_column=''):
     return np.array(score_array)
 
 
-def get_median_peptide_vote_percentage(graph):
+def calc_score_grouped_by_level(graph, function=None, level='', score_column='', new_column_name=''):
 
-    for peptide_node in graph.iter(color='peptide'):
+    for node in graph.iter(color=level):
 
-        vote_percentages = list()
+        scores = list()
 
-        for peakgroup_key in peptide_node.get_edges():
+        for key in node.get_edges():
 
-            vote_percentages.append(
-                graph[peakgroup_key].data.scores['vote_percentage']
+            scores.append(
+                graph[key].data.scores[score_column]
             )
 
-        vote_percentages = np.array(vote_percentages, dtype=np.float64)
+        scores = np.array(scores, dtype=np.float64)
 
-        vote_percentage = np.median(vote_percentages)
+        score = function(scores)
 
-        peakgroup_key = peptide_node.get_edge_by_ranked_weight(
-            rank=1
-        )
-
-        graph[peakgroup_key].data.add_score_column(
-            key='median_vote_percentage',
-            value=vote_percentage
-        )
+        node.data.scores[new_column_name] = score

@@ -104,4 +104,21 @@ def parse_args(parser):
         action='store_true'
     )
 
+    parser.add_argument(
+        '--apply-scoring-model',
+        dest='apply_scoring_model',
+        help=(
+            'Set this flag if you want to only apply a global scoring model to a dataset. '
+            'This is done if you want to parallelize the scoring of other already scored data.'
+        ),
+        default=False,
+        action='store_true'
+    )
+
+    parser.add_argument(
+        '--scoring-model-path',
+        dest='scoring_model_path',
+        help='Specify scoring model path.',
+    )
+
     return parser

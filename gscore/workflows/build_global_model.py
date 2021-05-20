@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
 from gscore import distributions
@@ -62,28 +63,65 @@ def main(args):
             args.score_column
         )
 
-        peakgroups.get_median_peptide_vote_percentage(full_graph)
+        peakgroups.calc_score_grouped_by_level(
+            full_graph,
+            function=np.median,
+            level='peptide',
+            score_column='vote_percentage',
+            new_column_name='median_vote_percentage'
+        )
+
+        true_targets = full_graph.query_nodes(
+            color='peptide',
+            rank=1,
+            query="probability > 0.5"
+        )
+
+        false_targets = full_graph.query_nodes(
+            color='peptide',
+            rank=1,
+            query="probability < 0.5"
+        )
+
+        all_targets = full_graph.query_nodes(
+            color='peptide',
+            rank=1
+        )
 
     elif args.scoring_level == 'protein':
 
-        pass
+        print('Parsing files to graph')
 
-    true_targets = full_graph.query_nodes(
-        color='peptide',
-        rank=1,
-        query="probability > 0.5"
-    )
+        full_graph = osw.fetch_protein_level_global_graph(
+            args.input_files,
+            osw_query,
+            args.score_column
+        )
 
-    false_targets = full_graph.query_nodes(
-        color='peptide',
-        rank=1,
-        query="probability < 0.5"
-    )
+        peakgroups.calc_score_grouped_by_level(
+            full_graph,
+            function=np.median,
+            level='protein',
+            score_column='vote_percentage',
+            new_column_name='median_vote_percentage'
+        )
 
-    all_targets = full_graph.query_nodes(
-        color='peptide',
-        rank=1
-    )
+        true_targets = full_graph.query_nodes(
+            color='protein',
+            rank=1,
+            query="probability > 0.5"
+        )
+
+        false_targets = full_graph.query_nodes(
+            color='protein',
+            rank=1,
+            query="probability < 0.5"
+        )
+
+        all_targets = full_graph.query_nodes(
+            color='protein',
+            rank=1
+        )
 
     target_scores = peakgroups.get_score_array(
         graph=full_graph,
@@ -131,3 +169,5 @@ def main(args):
 
     with open(args.model_output, 'wb') as pkl:
         pickle.dump(score_distribution, pkl)
+
+    return score_distribution

@@ -251,7 +251,6 @@ class SelectPeakGroups:
         """
         select
             {base_columns},
-            ms2.VAR_XCORR_SHAPE var_xcorr_shape,
             gst.vote_percentage,
             gst.probability,
             gst.d_score,
@@ -335,24 +334,25 @@ class SelectPeakGroups:
         select
             feature.run_id run_id,
             precursor.id transition_group_id,
-            feature.id id,
+            feature.id feature_id,
             feature.exp_rt rt,
-            feature.norm_rt iRT,
+            feature.norm_rt irt,
             feature.delta_rt delta_rt,
             precursor.PRECURSOR_MZ mz,
             precursor.CHARGE charge,
             precursor.DECOY decoy,
-            peptide.UNMODIFIED_SEQUENCE Sequence,
-            peptide.MODIFIED_SEQUENCE modified_peptide_name,
-            protein.PROTEIN_ACCESSION protein_name,
+            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
+            peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
+            protein.PROTEIN_ACCESSION protein_accession,
             protein.decoy protein_decoy,
-            ms1.AREA_INTENSITY aggr_prec_Peak_Area,
-            ms1.APEX_INTENSITY aggr_prec_Peak_Apex,
-            ms2.AREA_INTENSITY ms2_intensity,
-            feature.LEFT_WIDTH leftWidth,
-            feature.RIGHT_WIDTH rightWidth,
-            gst.m_score m_score,
-            gst.weighted_d_score weighted_d_score
+            ms1.AREA_INTENSITY ms1_integrated_intensity,
+            ms1.APEX_INTENSITY ms1_apex_intensity,
+            ms2.AREA_INTENSITY ms2_integrated_intensity,
+            feature.LEFT_WIDTH left_width,
+            feature.RIGHT_WIDTH right_width,
+            gst.q_value,
+            gst.d_score,
+            gst.weighted_d_score
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
@@ -362,6 +362,7 @@ class SelectPeakGroups:
         left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
         inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
         inner join protein as protein on protein.id = pep_prot_map.protein_id
+        where precursor.DECOY == 0
         order by precursor.id;
         """
     )
