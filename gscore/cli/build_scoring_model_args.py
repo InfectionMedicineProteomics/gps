@@ -7,7 +7,6 @@ def parse_args(parser):
         '--input',
         dest='input_files',
         help='OSW files for training scorer',
-        type=argparse.FileType('r'),
         nargs='+'
     )
 

@@ -214,8 +214,6 @@ class Graph:
                     weight=weight
                 )
 
-
-
     def get_nodes(self, color=''):
 
         if color:
@@ -490,3 +488,29 @@ def get_score_array(graph, node_list, score_column=''):
         score_array.append(score)
 
     return np.array(score_array)
+
+
+def get_median_peptide_vote_percentage(graph):
+
+    for peptide_node in graph.iter(color='peptide'):
+
+        vote_percentages = list()
+
+        for peakgroup_key in peptide_node.get_edges():
+
+            vote_percentages.append(
+                graph[peakgroup_key].data.scores['vote_percentage']
+            )
+
+        vote_percentages = np.array(vote_percentages, dtype=np.float64)
+
+        vote_percentage = np.median(vote_percentages)
+
+        peakgroup_key = peptide_node.get_edge_by_ranked_weight(
+            rank=1
+        )
+
+        graph[peakgroup_key].data.add_score_column(
+            key='median_vote_percentage',
+            value=vote_percentage
+        )

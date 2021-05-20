@@ -9,6 +9,8 @@ class CreateTable:
             probability REAL,
             d_score REAL,
             q_value REAL,
+            peptide_q_value REAL,
+            protein_q_value REAL,
             weighted_d_score REAL,
             FOREIGN KEY (feature_id)
                 REFERENCES FEATURE (id)

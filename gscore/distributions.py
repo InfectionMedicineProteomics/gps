@@ -6,7 +6,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 class LabelDistribution(KernelDensity):
 
-    def __init__(self, kernel='epanechnikov', data=None):
+    def __init__(self, kernel='gaussian', data=None):
 
         super().__init__(kernel=kernel)
 

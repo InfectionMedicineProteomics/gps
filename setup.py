@@ -10,11 +10,11 @@ scripts = [
 ]
 
 install_requires = [
-    'pandas',
     'sklearn',
     'numpy',
     'tensorflow',
-    'matplotlib'
+    'matplotlib',
+    'seaborn'
 ]
 
 setup(

@@ -27,7 +27,7 @@ from gscore import (
 
 def main(args, logger):
 
-    input_files = [input_file.name for input_file in args.input_files]
+    input_files = args.input_files
 
     all_sample_data = list()
     all_sample_labels = list()
