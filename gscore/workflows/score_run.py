@@ -258,13 +258,13 @@ def main(args, logger=None):
         true_targets = peakgroup_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="vote_percentage == 1.0"
+            query="probability > 0.5"
         )
 
         false_targets = peakgroup_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="vote_percentage < 1.0"
+            query="probability < 0.5"
         )
 
         second_ranked = peakgroup_graph.query_nodes(

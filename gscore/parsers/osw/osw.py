@@ -13,7 +13,7 @@ from gscore.peakgroups import (
     Protein
 )
 
-def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcorr_shape_weighted'):
+def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
 
     graph = Graph()
 
@@ -24,21 +24,42 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
 
         for record in conn.iterate_records(osw_query):
 
-            if str(record['protein_accession']) not in graph:
+            protein_key = str(record['protein_accession'])
+
+            if isinstance(peptide_index, list):
+
+                indices = list()
+
+                for index in peptide_index:
+
+                    indices.append(
+                        str(record[index])
+                    )
+
+                peptide_key = '_'.join(indices)
+
+            else:
+
+                peptide_key = str(record[peptide_index])
+
+            peakgroup_key = str(record['feature_id'])
+
+
+            if protein_key not in graph:
                 protein = Protein(
-                    key=str(record['protein_accession']),
+                    key=protein_key,
                     decoy=record['protein_decoy']
                 )
 
                 graph.add_node(
-                    key=protein.protein_accession,
+                    key=protein_key,
                     data=protein,
                     color='protein'
                 )
 
-            if str(record['transition_group_id']) not in graph:
+            if peptide_key not in graph:
                 peptide = Peptide(
-                    key=str(record['transition_group_id']),
+                    key=peptide_key,
                     sequence=record['peptide_sequence'],
                     modified_sequence=record['modified_peptide_sequence'],
                     charge=int(record['charge']),
@@ -46,20 +67,20 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
                 )
 
                 graph.add_node(
-                    key=peptide.key,
+                    key=peptide_key,
                     data=peptide,
                     color='peptide'
                 )
 
                 graph.add_edge(
-                    node_from=str(record['protein_accession']),
-                    node_to=peptide.key
+                    node_from=protein_key,
+                    node_to=peptide_key
                 )
 
-            if str(record['feature_id']) not in graph:
+            if peakgroup_key not in graph:
 
                 peakgroup = PeakGroup(
-                    key=str(record['feature_id']),
+                    key=peakgroup_key,
                     mz=record['mz'],
                     rt=record['rt'],
                     ms2_intensity=record['ms2_integrated_intensity'],
@@ -75,7 +96,7 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
                             value=float(column_value)
                         )
 
-                    elif column_name in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score']:
+                    elif column_name in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score', 'q_value']:
 
                         peakgroup.add_score_column(
                             key=column_name,
@@ -87,16 +108,16 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
                         peakgroup.add_ghost_score_id(str(column_value))
 
                 graph.add_node(
-                    key=peakgroup.key,
+                    key=peakgroup_key,
                     data=peakgroup,
                     color='peakgroup'
                 )
 
-                if peakgroup_weight_column in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score']:
+                if peakgroup_weight_column in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score', 'q_value']:
 
                     graph.add_edge(
-                        node_from=str(record['transition_group_id']),
-                        node_to=peakgroup.key,
+                        node_from=peptide_key,
+                        node_to=peakgroup_key,
                         weight=peakgroup.scores[peakgroup_weight_column],
                         directed=False
                     )
@@ -104,8 +125,8 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
                 else:
 
                     graph.add_edge(
-                        node_from=str(record['transition_group_id']),
-                        node_to=peakgroup.key,
+                        node_from=peptide_key,
+                        node_to=peakgroup_key,
                         weight=peakgroup.sub_scores[peakgroup_weight_column],
                         directed=False
                     )
@@ -356,21 +377,11 @@ def fetch_protein_level_global_graph(osw_paths, osw_query, score_column):
 
     return full_graph
 
-def fetch_export_graph(osw_paths, osw_query, peakgroup_weight_column='weighted_d_score'):
+def fetch_export_graph(osw_paths, osw_query):
 
     graph = Graph()
 
     for osw_path in osw_paths:
-
-        sample_key = pathlib.Path(osw_path).name
-
-        if sample_key not in graph:
-
-            graph.add_node(
-                key=sample_key,
-                data=sample_key,
-                color='sample'
-            )
 
         with Connection(osw_path) as conn:
 
@@ -381,7 +392,6 @@ def fetch_export_graph(osw_paths, osw_query, peakgroup_weight_column='weighted_d
 
                 protein_key = record['protein_accession']
                 peptide_key = str(record['transition_group_id'])
-                peakgroup_key = str(record['feature_id'])
 
                 if protein_key not in graph:
                     protein = Protein(
@@ -396,6 +406,7 @@ def fetch_export_graph(osw_paths, osw_query, peakgroup_weight_column='weighted_d
                     )
 
                 if peptide_key not in graph:
+
                     peptide = Peptide(
                         key=peptide_key,
                         sequence=record['peptide_sequence'],
@@ -412,54 +423,7 @@ def fetch_export_graph(osw_paths, osw_query, peakgroup_weight_column='weighted_d
 
                     graph.add_edge(
                         node_from=protein_key,
-                        node_to=peptide_key,
-                        directed=False
-                    )
-
-                if peakgroup_key not in graph:
-
-                    peakgroup = PeakGroup(
-                        key=peakgroup_key,
-                        mz=record['mz'],
-                        rt=record['rt'],
-                        ms2_intensity=record['ms2_integrated_intensity'],
-                        ms1_intensity=record['ms1_integrated_intensity']
-                    )
-
-                    for column_name, column_value in record.items():
-
-                        if column_name in ['q_value', 'd_score', 'weighted_d_score']:
-
-                            try:
-
-                                peakgroup.add_score_column(
-                                    key=column_name,
-                                    value=float(column_value)
-                                )
-                            except TypeError:
-
-                                print(record)
-                                print(sample_key)
-                                print(column_name, column_value)
-                                raise
-
-                    graph.add_node(
-                        key=peakgroup_key,
-                        data=peakgroup,
-                        color='peakgroup'
-                    )
-
-                    graph.add_edge(
-                        node_from=peptide_key,
-                        node_to=peakgroup_key,
-                        weight=peakgroup.scores[peakgroup_weight_column],
-                        directed=False
-                    )
-
-                    graph.add_edge(
-                        node_from=sample_key,
-                        node_to=peakgroup_key,
-                        directed=False
+                        node_to=peptide_key
                     )
 
     return graph

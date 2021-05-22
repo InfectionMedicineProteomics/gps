@@ -99,6 +99,12 @@ class Node:
     def get_edges(self):
         return self._edges.keys()
 
+    def iter_edges(self, graph):
+
+        for key, weight in self._edges.items():
+
+            yield graph[key]
+
     def get_edge_by_ranked_weight(self, reverse=True, rank=1):
 
         weights = [weight for weight in self._edges.values()]
@@ -509,3 +515,12 @@ def calc_score_grouped_by_level(graph, function=None, level='', score_column='',
         score = function(scores)
 
         node.data.scores[new_column_name] = score
+
+
+def apply_scoring_model(graph, level, model, score_column):
+
+    for peakgroup_node in graph.iter(color='peakgroup'):
+
+        score = peakgroup_node.data.scores[score_column]
+
+        peakgroup_node.data.scores[f"{level}_q_value"] = model.calc_q_value(score)

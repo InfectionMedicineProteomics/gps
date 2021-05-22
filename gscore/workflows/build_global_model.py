@@ -74,13 +74,13 @@ def main(args):
         true_targets = full_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="probability > 0.5"
+            query="probability > 0.8"
         )
 
         false_targets = full_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="probability < 0.5"
+            query="probability < 0.8"
         )
 
         all_targets = full_graph.query_nodes(
@@ -109,13 +109,13 @@ def main(args):
         true_targets = full_graph.query_nodes(
             color='protein',
             rank=1,
-            query="probability > 0.5"
+            query="probability > 0.8"
         )
 
         false_targets = full_graph.query_nodes(
             color='protein',
             rank=1,
-            query="probability < 0.5"
+            query="probability < 0.8"
         )
 
         all_targets = full_graph.query_nodes(

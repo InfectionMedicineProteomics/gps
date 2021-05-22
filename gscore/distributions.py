@@ -6,15 +6,15 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 class LabelDistribution(KernelDensity):
 
-    def __init__(self, kernel='gaussian', data=None):
+    def __init__(self, kernel='gaussian', data=None, axis_span=()):
 
         super().__init__(kernel=kernel)
 
         self.fit(data)
 
         self.x_axis = np.linspace(
-            start=data.min() - 1,
-            stop=data.max() + 1,
+            start=data.min() - 10,
+            stop=data.max() + 10,
             num=len(data)
         )
 
