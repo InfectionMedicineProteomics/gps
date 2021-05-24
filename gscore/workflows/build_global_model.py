@@ -167,7 +167,9 @@ def main(args):
         target_distribution=target_distribution,
     )
 
-    with open(args.model_output, 'wb') as pkl:
-        pickle.dump(score_distribution, pkl)
+    if args.model_output:
+
+        with open(args.model_output, 'wb') as pkl:
+            pickle.dump(score_distribution, pkl)
 
     return score_distribution

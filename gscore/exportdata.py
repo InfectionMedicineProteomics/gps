@@ -1,3 +1,5 @@
+import numpy as np
+
 from collections.abc import MutableMapping
 from csv import DictWriter
 
