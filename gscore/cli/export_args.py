@@ -96,4 +96,20 @@ def parse_args(parser):
         default='d_score'
     )
 
+    parser.add_argument(
+        '--true-target-cutoff',
+        dest='true_target_cutoff',
+        help='What q-value allowed for inclusion of true target peakgroup in the matrix',
+        type=float,
+        default=0.8
+    )
+
+    parser.add_argument(
+        '--false-target-cutoff',
+        dest='false_target_cutoff',
+        help='What q-value allowed for inclusion of false target peakgroup in the matrix',
+        type=float,
+        default=0.5
+    )
+
     return parser

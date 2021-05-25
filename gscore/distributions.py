@@ -1,28 +1,19 @@
 import numpy as np
 
-from sklearn.neighbors import KernelDensity
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 
-class LabelDistribution(KernelDensity):
+class LabelDistribution:
 
-    def __init__(self, kernel='gaussian', data=None, axis_span=()):
-
-        super().__init__(kernel=kernel)
-
-        self.fit(data)
+    def __init__(self, data=np.array, axis_span=(), model=None):
 
         self.x_axis = np.linspace(
-            start=data.min() - 10,
-            stop=data.max() + 10,
+            start=axis_span[0],
+            stop=axis_span[1],
             num=len(data)
         )
 
-        self.probability_densities = self.score_samples(
-            self.x_axis.reshape(-1, 1)
-        )
-
-        self.values = np.exp(self.probability_densities)
+        self.values = model.probability(self.x_axis)
 
     @property
     def max_value(self):

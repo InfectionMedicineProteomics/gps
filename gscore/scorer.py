@@ -2,7 +2,7 @@ from functools import partial
 from tensorflow import keras
 
 
-ADAM_OPTIMIZER = keras.optimizers.Adam(lr=0.001)
+ADAM_OPTIMIZER = keras.optimizers.Adam(learning_rate=0.001)
 
 EARLY_STOPPING_CB = keras.callbacks.EarlyStopping(
     patience=5,

@@ -48,4 +48,28 @@ def parse_args(parser):
         default='INFO'
     )
 
+    parser.add_argument(
+        '--true-target-cutoff',
+        dest='true_target_cutoff',
+        help='What q-value allowed for inclusion of peakgroup in the matrix',
+        type=float,
+        default=0.8
+    )
+
+    parser.add_argument(
+        '--false-target-cutoff',
+        dest='false_target_cutoff',
+        help='What q-value allowed for inclusion of peakgroup in the matrix',
+        type=float,
+        default=0.8
+    )
+
+    parser.add_argument(
+        '--vote-threshold',
+        dest='vote_threshold',
+        help='The probability threshold to consider for a positive vote',
+        default=0.8,
+        type=float
+    )
+
     return

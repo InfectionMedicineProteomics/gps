@@ -1,6 +1,8 @@
 import pickle
 import os
 
+from collections import Counter
+
 import numpy as np
 import tensorflow as tf
 
@@ -49,7 +51,7 @@ def main(args, logger):
         true_targets = peakgroup_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="probability > 0.8"
+            query=f"probability >= {args.true_target_cutoff}"
         )
 
         for node in peakgroup_graph.iter(keys=true_targets):
@@ -64,7 +66,7 @@ def main(args, logger):
         false_targets = peakgroup_graph.query_nodes(
             color='peptide',
             rank=1,
-            query="vote_percentage < 0.5"
+            query=f"probability < {args.false_target_cutoff}"
         )
 
         for node in peakgroup_graph.iter(keys=false_targets):
@@ -122,6 +124,11 @@ def main(args, logger):
     all_data = np.concatenate(all_sample_data)
     all_labels = np.concatenate(all_sample_labels)
 
+    pos_labels = (all_labels == 1.0).sum()
+    neg_labels = (all_labels == 0.0).sum()
+
+    print(f"Positive targets: {pos_labels}, Negative targets: {neg_labels}")
+
     training_data, testing_data, training_labels, testing_labels = train_test_split(
         all_data, all_labels,
         test_size=0.1,
@@ -155,6 +162,8 @@ def main(args, logger):
         classes=np.unique(training_labels),
         y=training_labels.ravel()
     )
+
+    print(class_weights)
 
     dense_history = dense_model.fit(
         training_data,
