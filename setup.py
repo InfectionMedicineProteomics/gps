@@ -14,7 +14,8 @@ install_requires = [
     'numpy',
     'tensorflow',
     'matplotlib',
-    'seaborn'
+    'seaborn',
+    'pomegranate==0.14.0'
 ]
 
 setup(
