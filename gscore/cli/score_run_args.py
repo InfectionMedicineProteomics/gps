@@ -88,7 +88,7 @@ def parse_args(parser):
         type=int
     )
 
-    denoise_only_group = parser.add_mutually_exclusive_group()
+    denoise_only_group = parser.add_argument_group()
 
     denoise_only_group.add_argument(
         '-dn',
@@ -102,7 +102,7 @@ def parse_args(parser):
         action='store_true'
     )
 
-    apply_static_model_group = parser.add_mutually_exclusive_group()
+    apply_static_model_group = parser.add_argument_group()
 
     apply_static_model_group.add_argument(
         '-m',
@@ -118,7 +118,7 @@ def parse_args(parser):
         help='Specify scaler name',
     )
 
-    global_scoring_model_group = parser.add_mutually_exclusive_group()
+    global_scoring_model_group = parser.add_argument_group()
 
     global_scoring_model_group.add_argument(
         '--apply-scoring-model',
