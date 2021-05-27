@@ -48,7 +48,8 @@ def plot_distributions(
 
 
 def main(args):
-    print(args.input_files)
+
+    print(f'Building {args.scoring_level} scoring model')
 
     if args.use_decoys:
 

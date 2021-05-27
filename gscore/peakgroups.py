@@ -494,14 +494,13 @@ def get_score_array(graph, node_list, score_column=''):
         try:
 
             score = node.data.scores[score_column]
+            
+            score_array.append(score)
 
         except KeyError:
 
             print(node.color, node.data.scores, node.key)
 
-            raise
-
-        score_array.append(score)
 
     return np.array(score_array)
 
