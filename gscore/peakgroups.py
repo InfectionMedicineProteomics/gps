@@ -491,7 +491,15 @@ def get_score_array(graph, node_list, score_column=''):
 
     for node in graph.iter(keys=node_list):
 
-        score = node.data.scores[score_column]
+        try:
+
+            score = node.data.scores[score_column]
+
+        except KeyError:
+
+            print(node.color, node.scores)
+
+            raise
 
         score_array.append(score)
 
