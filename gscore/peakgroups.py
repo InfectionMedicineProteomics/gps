@@ -497,7 +497,7 @@ def get_score_array(graph, node_list, score_column=''):
 
         except KeyError:
 
-            print(node.color, node.scores)
+            print(node.color, node.data.scores, node.key)
 
             raise
 
