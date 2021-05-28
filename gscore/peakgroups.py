@@ -491,16 +491,15 @@ def get_score_array(graph, node_list, score_column=''):
 
     for node in graph.iter(keys=node_list):
 
-        try:
+        if node.color == 'peakgroup':
 
             score = node.data.scores[score_column]
             
             score_array.append(score)
 
-        except KeyError:
+        else:
 
-            print(node.color, node.data.scores, node.key)
-
+            print(node.color, node.data.scores, node.key, node._edges)
 
     return np.array(score_array)
 

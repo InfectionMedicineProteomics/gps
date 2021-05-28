@@ -148,6 +148,20 @@ def main(args):
         score_column=args.score_column
     )
 
+    source_path = Path(args.input_files[0]).parent
+
+    with open(f"{source_path}/full_graph.pkl", 'wb') as pkl:
+        pickle.dump(full_graph, pkl)
+
+    with open(f"{source_path}/true_targets.pkl", 'wb') as pkl:
+        pickle.dump(true_targets, pkl)
+
+    with open(f"{source_path}/false_targets.pkl", 'wb') as pkl:
+        pickle.dump(false_targets, pkl)
+
+    with open(f"{source_path}/all_targets.pkl", 'wb') as pkl:
+        pickle.dump(all_targets, pkl)
+
     score_mixture_model = GeneralMixtureModel(
         [
             NormalDistribution(
@@ -190,8 +204,6 @@ def main(args):
         ),
         model=score_mixture_model
     )
-
-    source_path = Path(args.input_files[0]).parent
 
     plot_distributions(
         all_scores,
