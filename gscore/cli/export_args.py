@@ -109,7 +109,7 @@ def parse_args(parser):
         dest='false_target_cutoff',
         help='What q-value allowed for inclusion of false target peakgroup in the matrix',
         type=float,
-        default=0.5
+        default=0.8
     )
 
     return parser

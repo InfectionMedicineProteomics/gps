@@ -172,5 +172,6 @@ def main(args, logger):
 
         export_data.write(
             path=args.output_file,
-            sample_names=sample_names
+            sample_names=sample_names,
+            quant_type=args.quant_type
         )
