@@ -520,7 +520,10 @@ def calc_score_grouped_by_level(graph, function=None, level='', score_column='',
 
         score = function(scores)
 
-        node.data.scores[new_column_name] = score
+        #TODO: This is not optimal. Should instead set at parent node level
+        for key in node.get_edges():
+
+            graph[key].data.scores[new_column_name] = score
 
 
 def apply_scoring_model(graph, level, model, score_column):
