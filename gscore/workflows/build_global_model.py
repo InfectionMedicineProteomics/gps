@@ -75,7 +75,7 @@ def main(args):
             function=np.median,
             level='peptide',
             score_column=args.score_column,
-            new_column_name=f'median_{args._score_column}'
+            new_column_name=f'median_{args.score_column}'
         )
 
         true_targets = full_graph.query_nodes(
@@ -110,7 +110,7 @@ def main(args):
             function=np.median,
             level='protein',
             score_column=args.score_column,
-            new_column_name=f'median_{args._score_column}'
+            new_column_name=f'median_{args.score_column}'
         )
 
         true_targets = full_graph.query_nodes(
@@ -133,19 +133,19 @@ def main(args):
     target_scores = peakgroups.get_score_array(
         graph=full_graph,
         node_list=true_targets,
-        score_column=f'median_{args._score_column}'
+        score_column=f'median_{args.score_column}'
     )
 
     false_target_scores = peakgroups.get_score_array(
         graph=full_graph,
         node_list=false_targets,
-        score_column=f'median_{args._score_column}'
+        score_column=f'median_{args.score_column}'
     )
 
     all_scores = peakgroups.get_score_array(
         graph=full_graph,
         node_list=all_targets,
-        score_column=f'median_{args._score_column}'
+        score_column=f'median_{args.score_column}'
     )
 
     source_path = Path(args.input_files[0]).parent
