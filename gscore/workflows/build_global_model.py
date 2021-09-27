@@ -11,10 +11,8 @@ from pomegranate import (
 
 from gscore import distributions
 from gscore import peakgroups
-from gscore.parsers.osw import (
-    osw,
-    queries
-)
+from gscore.parsers import osw, queries
+
 
 def plot_distributions(
         all_scores,

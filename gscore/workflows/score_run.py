@@ -13,10 +13,7 @@ from pomegranate import (
 from sklearn.metrics import precision_score, recall_score
 
 from gscore.utils.connection import Connection
-from gscore.parsers.osw import (
-    osw,
-    queries
-)
+from gscore.parsers import osw, queries
 from gscore import peakgroups, denoiser, distributions
 
 

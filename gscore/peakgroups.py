@@ -17,6 +17,9 @@ class PeakGroup:
         self.ms1_intensity = ms1_intensity
         self.sub_scores = dict()
         self.scores = dict()
+        self.delta_rt = 0.0
+        self.start_rt = 0.0
+        self.end_rt = 0.0
 
     def add_ghost_score_id(self, value):
 
@@ -54,6 +57,7 @@ class Peptide:
         self.modified_sequence = modified_sequence
         self.charge = charge
         self.decoy = decoy
+        self.target = abs(decoy - 1)
         self.scores = dict()
 
         if decoy == 0:

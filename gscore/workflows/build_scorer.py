@@ -1,8 +1,6 @@
 import pickle
 import os
 
-from collections import Counter
-
 import numpy as np
 import tensorflow as tf
 
@@ -17,10 +15,7 @@ from sklearn.preprocessing import (
 )
 from sklearn.pipeline import Pipeline
 
-from gscore.parsers.osw import (
-    osw,
-    queries
-)
+from gscore.parsers import osw, queries
 from gscore import (
     peakgroups,
     scorer
