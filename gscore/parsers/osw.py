@@ -1,15 +1,19 @@
 from gscore.utils.connection import Connection
 
 from gscore.parsers.queries import (
-    CreateIndex
+    CreateIndex,
+    SelectPeakGroups
 )
 
 from gscore.peakgroups import (
-    Graph,
     PeakGroup,
     Peptide,
     Protein
 )
+
+
+from gscore.datastructures.graph import Graph
+
 
 def fetch_chromatogram_training_data(osw_path, osw_query, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
 
@@ -127,7 +131,7 @@ def fetch_chromatogram_training_data(osw_path, osw_query, peakgroup_weight_colum
 
 
 
-def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
+def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
 
     graph = Graph()
 
@@ -136,7 +140,17 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
         for sql_index in CreateIndex.ALL_INDICES:
             conn.run_raw_sql(sql_index)
 
-        for record in conn.iterate_records(osw_query):
+        if use_decoys:
+
+            query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS
+
+        else:
+
+            query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+
+        counter = 0
+
+        for record in conn.iterate_records(query):
 
             protein_key = str(record['protein_accession'])
 
@@ -145,7 +159,6 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
                 indices = list()
 
                 for index in peptide_index:
-
                     indices.append(
                         str(record[index])
                     )
@@ -158,92 +171,109 @@ def fetch_peakgroup_graph(osw_path, osw_query, peakgroup_weight_column='var_xcor
 
             peakgroup_key = str(record['feature_id'])
 
-
-            if protein_key not in graph:
+            if not graph.contains(protein_key):
                 protein = Protein(
+
                     key=protein_key,
-                    decoy=record['protein_decoy']
+                    color='protein',
+                    protein_accession=str(record['protein_accession']),
+                    decoy=int(record['protein_decoy'])
                 )
 
-                graph.add_node(
-                    key=protein_key,
-                    data=protein,
-                    color='protein'
+                graph.add_protein(
+                    protein.key,
+                    protein
                 )
 
-            if peptide_key not in graph:
+            if not graph.contains(peptide_key):
                 peptide = Peptide(
                     key=peptide_key,
+                    color='peptide',
                     sequence=record['peptide_sequence'],
                     modified_sequence=record['modified_peptide_sequence'],
                     charge=int(record['charge']),
                     decoy=int(record['protein_decoy'])
                 )
 
-                graph.add_node(
-                    key=peptide_key,
-                    data=peptide,
-                    color='peptide'
+                graph.add_peptide(
+                    peptide.key,
+                    peptide
                 )
 
                 graph.add_edge(
-                    node_from=protein_key,
-                    node_to=peptide_key
+                    protein_key,
+                    peptide_key,
+                    0.0,
+                    False
                 )
 
-            if peakgroup_key not in graph:
+            if not graph.contains(peakgroup_key):
 
                 peakgroup = PeakGroup(
                     key=peakgroup_key,
-                    mz=record['mz'],
-                    rt=record['rt'],
-                    ms2_intensity=record['ms2_integrated_intensity'],
-                    ms1_intensity=record['ms1_integrated_intensity']
+                    color='peakgroup',
+                    mz=float(record['mz']),
+                    rt=float(record['rt']),
+                    ms2_intensity=float(record['ms2_integrated_intensity']),
+                    ms1_intensity=float(record['ms1_integrated_intensity']),
+                    decoy=int(record['protein_decoy'])
                 )
 
                 for column_name, column_value in record.items():
+
                     column_name = column_name.lower()
 
                     if column_name.startswith('var_'):
                         peakgroup.add_sub_score_column(
-                            key=column_name,
-                            value=float(column_value)
+                            column_name,
+                            float(column_value)
                         )
 
-                    elif column_name in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score', 'q_value']:
+                    elif column_name in ['vote_percentage', 'probability', 'logit_probability', 'd_score',
+                                         'weighted_d_score', 'q_value']:
 
                         peakgroup.add_score_column(
-                            key=column_name,
-                            value=float(column_value)
+                            column_name,
+                            float(column_value)
                         )
 
                     elif column_name == 'ghost_score_id':
 
                         peakgroup.add_ghost_score_id(str(column_value))
 
-                graph.add_node(
-                    key=peakgroup_key,
-                    data=peakgroup,
-                    color='peakgroup'
+                graph.add_peakgroup(
+                    peakgroup.key,
+                    peakgroup
                 )
 
-                if peakgroup_weight_column in ['vote_percentage', 'probability', 'logit_probability', 'd_score', 'weighted_d_score', 'q_value']:
+                if peakgroup_weight_column in [
+                    'vote_percentage',
+                    'probability',
+                    'logit_probability',
+                    'd_score',
+                    'weighted_d_score',
+                    'q_value'
+                ]:
 
                     graph.add_edge(
                         node_from=peptide_key,
                         node_to=peakgroup_key,
                         weight=peakgroup.scores[peakgroup_weight_column],
-                        directed=False
+                        bidirectional=True
                     )
 
                 else:
 
                     graph.add_edge(
-                        node_from=peptide_key,
-                        node_to=peakgroup_key,
-                        weight=peakgroup.sub_scores[peakgroup_weight_column],
-                        directed=False
+                        peptide_key,
+                        peakgroup_key,
+                        peakgroup.sub_scores[peakgroup_weight_column],
+                        True
                     )
+            counter += 1
+
+            if counter == 10000:
+                break
 
     return graph
 

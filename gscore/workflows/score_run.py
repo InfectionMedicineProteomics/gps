@@ -12,9 +12,11 @@ from pomegranate import (
 
 from sklearn.metrics import precision_score, recall_score
 
+from gscore.denoiser import Scaler, BaggedDenoiser
 from gscore.utils.connection import Connection
 from gscore.parsers import osw, queries
 from gscore import peakgroups, denoiser, distributions
+from gscore.utils.ml import get_peptide_id_folds, get_training_peptides, preprocess_data
 
 
 def plot_distributions(
@@ -71,11 +73,16 @@ def prepare_denoise_record_additions(graph):
 
     record_updates = list()
 
-    for peakgroup in graph.iter(color='peakgroup'):
+    peakgroup_node_keys = graph.get_nodes('peakgroup')
+
+    for peakgroup_key in peakgroup_node_keys:
+
+        peakgroup = graph.get_peakgroup(peakgroup_key)
+
         record = {
-            'feature_id': peakgroup.data.key,
-            'vote_percentage': peakgroup.data.scores['vote_percentage'],
-            'probability': peakgroup.data.scores['probability']
+            'feature_id': peakgroup.key,
+            'vote_percentage': peakgroup.scores['vote_percentage'],
+            'probability': peakgroup.scores['probability']
         }
 
         record_updates.append(record)
@@ -87,103 +94,20 @@ def main(args, logger=None):
 
     peakgroup_graph = osw.fetch_peakgroup_graph(
         osw_path=args.input,
-        osw_query=queries.SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+        use_decoys=args.use_decoys
     )
 
     print(f"Denoising {args.input}")
 
     print("Processing peakgroups")
 
-    peptide_ids = list(peakgroup_graph.get_nodes(color='peptide'))
-
-    random.seed(42)
-    random.shuffle(peptide_ids)
-
-    peptide_folds = np.array_split(
-        peptide_ids,
-        args.num_folds
+    denoiser.denoise(
+        peakgroup_graph,
+        args.num_folds,
+        args.num_classifiers,
+        args.threads,
+        args.vote_threshold
     )
-
-    for fold_num, peptide_fold in enumerate(peptide_folds):
-
-        print(f"Processing fold {fold_num + 1}")
-
-        training_peptides = peakgroups.get_training_peptides(
-            peptide_folds=peptide_folds,
-            fold_num=fold_num
-        )
-
-        denoizer, scaler = denoiser.get_denoizer(
-            peakgroup_graph,
-            training_peptides,
-            n_estimators=args.num_classifiers,
-            n_jobs=args.threads
-        )
-
-        testing_scores, testing_labels, testing_indices = peakgroups.preprocess_data_to_score(
-            peakgroup_graph,
-            list(peptide_fold),
-            return_all=True
-
-        )
-
-        testing_scores = scaler.transform(
-            testing_scores
-        )
-
-        class_index = np.where(
-            denoizer.classes_ == 1.0
-        )[0][0]
-
-        print("Scoring data")
-
-        vote_percentages = denoizer.vote(
-            testing_scores,
-            threshold=args.vote_threshold
-        )
-
-        probabilities = denoizer.predict_proba(
-            testing_scores
-        )[:, class_index]
-
-        print("Updating peakgroups")
-
-        peakgroups.update_peakgroup_scores(
-            peakgroup_graph,
-            testing_indices,
-            vote_percentages,
-            "vote_percentage"
-        )
-
-        peakgroups.update_peakgroup_scores(
-            peakgroup_graph,
-            testing_indices,
-            probabilities,
-            "probability"
-        )
-
-        val_scores, val_labels, _ = peakgroups.preprocess_training_data(
-            peakgroup_graph,
-            list(peptide_fold),
-        )
-
-        val_scores = scaler.transform(
-            val_scores
-        )
-
-        fold_precision = precision_score(
-            y_pred=denoizer.predict(val_scores),
-            y_true=val_labels.ravel()
-        )
-
-        fold_recall = recall_score(
-            y_pred=denoizer.predict(val_scores),
-            y_true=val_labels.ravel()
-        )
-
-        print(
-            f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
-        )
 
     if args.denoise_only:
 

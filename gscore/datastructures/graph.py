@@ -1,275 +1,258 @@
-import operator as op
+import numba
+from numba import types, typed
+from numba.experimental import jitclass
 
-class MissingNodeException(Exception):
+from gscore.peakgroups import (
+    Protein,
+    Peptide,
+    PeakGroup
+)
 
-    def __init__(self, message=''):
-        super().__init__(message)
+edge_kv_types = (types.unicode_type, types.float64)
 
-class NonColorOperationException(Exception):
+protein_kv_types = (types.unicode_type, numba.extending.as_numba_type(Protein))
+peptide_kv_types = (types.unicode_type, numba.extending.as_numba_type(Peptide))
+peakgroup_kv_types = (types.unicode_type, numba.extending.as_numba_type(PeakGroup))
+node_kv_types = (types.unicode_type, types.unicode_type)
+colors_kv_types = (types.unicode_type, types.ListType(types.unicode_type))
 
-    def __init__(self, message=''):
-        super().__init__(message)
+from numba import jit
 
-
-class Node:
-
-    def __init__(self, key, data, color):
-        self.key = key
-        self.data = data
-        self.color = color
-        self._edges = dict()
-
-    def add_edge(self, key, weight=0.0):
-        self._edges[key] = weight
-
-    def update_weight(self, key, weight):
-        self._edges[key] = weight
-
-    def get_edges(self):
-        return self._edges.keys()
-
-    def iter_edges(self, graph):
-
-        for key, weight in self._edges.items():
-
-            yield graph[key]
-
-    def get_edge_by_ranked_weight(self, reverse=True, rank=1):
-
-        weights = [weight for weight in self._edges.values()]
-
-        weights.sort(reverse=reverse)
-
-        rank_index = rank - 1
-
-        try:
-
-            rank_weight = weights[rank_index]
-
-            for key, weight in self._edges.items():
-
-                if rank_weight == weight:
-                    return key
-
-        except IndexError:
-
-            return None
-
-    def get_weight(self, key):
-        return self._edges[key]
+graph_spec = [
+    ('_nodes', types.DictType(*node_kv_types)),
+    ('_colors', types.DictType(*colors_kv_types)),
+    ('_proteins', types.DictType(*protein_kv_types)),
+    ('_peptides', types.DictType(*peptide_kv_types)),
+    ('_peakgroups', types.DictType(*peakgroup_kv_types)),
+]
 
 
+@jitclass(graph_spec)
 class Graph:
 
     def __init__(self):
-        self._nodes = dict()
-        self._colors = dict()
 
-    def add_node(self, key, data, color=''):
+        self._nodes = typed.Dict.empty(*node_kv_types)
+        self._colors = typed.Dict.empty(*colors_kv_types)
+        self._proteins = typed.Dict.empty(*protein_kv_types)
+        self._peptides = typed.Dict.empty(*peptide_kv_types)
+        self._peakgroups = typed.Dict.empty(*peakgroup_kv_types)
 
-        node = Node(
-            key=key,
-            data=data,
-            color=color
+    def add_protein(self, key, protein):
+
+        self._proteins[key] = protein
+
+        self._nodes[key] = "protein"
+
+        if 'protein' not in self._colors:
+            self._colors['protein'] = typed.List.empty_list(types.unicode_type)
+
+        self._colors['protein'].append(
+            key
         )
 
-        self._nodes[key] = node
+    def add_peptide(self, key, peptide):
 
-        if color:
+        self._peptides[key] = peptide
 
-            if color not in self._colors:
-                self._colors[color] = list()
+        self._nodes[key] = "peptide"
 
-            self._colors[color].append(
-                key
-            )
+        if 'peptide' not in self._colors:
+            self._colors['peptide'] = typed.List.empty_list(types.unicode_type)
 
-        return node
+        self._colors['peptide'].append(
+            key
+        )
 
-    def get_node(self, key):
+    def add_peakgroup(self, key, peakgroup):
 
-        if key in self._nodes:
+        self._peakgroups[key] = peakgroup
 
-            return self._nodes[key]
+        self._nodes[key] = "peakgroup"
 
-        else:
-            print(key)
+        if 'peakgroup' not in self._colors:
+            self._colors['peakgroup'] = typed.List.empty_list(types.unicode_type)
 
-            raise MissingNodeException(key)
+        self._colors['peakgroup'].append(
+            key
+        )
 
-    def __getitem__(self, key):
+    def get_peakgroup(self, key):
 
-        if key in self._nodes:
+        return self._peakgroups[key]
 
-            return self._nodes[key]
+    def get_peptide(self, key):
 
-    def add_edge(self, node_from, node_to, weight=0.0, directed=True):
+        return self._peptides[key]
 
-        if node_from not in self._nodes:
+    def get_protein(self, key):
 
-            raise MissingNodeException
+        return self._proteins[key]
 
-        elif node_to not in self._nodes:
-
-            raise MissingNodeException
-
-        else:
-
-            self._nodes[node_from].add_edge(
-                key=node_to,
-                weight=weight
-            )
-
-            if not directed:
-
-                self._nodes[node_to].add_edge(
-                    key=node_from,
-                    weight=weight
-                )
-
-    def update_edge_weight(self, node_from, node_to, weight=0.0, directed=True):
+    def add_edge(self, node_from, node_to, weight=0.0, bidirectional=False):
 
         if node_from not in self._nodes:
 
-            raise MissingNodeException
+            raise Exception("Missing node")
 
         elif node_to not in self._nodes:
 
-            raise MissingNodeException
+            raise Exception("Missing node")
 
         else:
 
-            self._nodes[node_from].update_weight(
-                key=node_to,
-                weight=weight
-            )
+            node_from_color = self._nodes[node_from]
+            node_to_color = self._nodes[node_to]
 
-            if not directed:
+            if node_from_color == "protein":
 
-                self._nodes[node_to].update_weight(
-                    key=node_from,
+                self._proteins[node_from].add_edge(
+                    key=node_to,
                     weight=weight
                 )
+
+            elif node_from_color == "peptide":
+
+                self._peptides[node_from].add_edge(
+                    key=node_to,
+                    weight=weight
+                )
+
+            elif node_from_color == "peakgroup":
+
+                self._peakgroups[node_from].add_edge(
+                    key=node_to,
+                    weight=weight
+                )
+
+            if bidirectional:
+
+                if node_to_color == "protein":
+
+                    self._proteins[node_to].add_edge(
+                        key=node_from,
+                        weight=weight
+                    )
+
+                elif node_to_color == "peptide":
+
+                    self._peptides[node_to].add_edge(
+                        key=node_from,
+                        weight=weight
+                    )
+
+                elif node_to_color == "peakgroup":
+
+                    self._peakgroups[node_to].add_edge(
+                        key=node_from,
+                        weight=weight
+                    )
+
+    def update_peakgroup_scores(self, testing_indices, testing_scores, score_name):
+
+        counter = 0
+
+        for key in testing_indices:
+
+            peakgroup = self._peakgroups[key]
+
+            peakgroup.scores[score_name] = testing_scores[counter]
+
+            counter += 1
+
+
+    def update_edge_weight(self, node_from, node_to, weight=0.0, bidirectional=False):
+
+        if node_from not in self._nodes:
+
+            raise Exception("Missing node")
+
+        elif node_to not in self._nodes:
+
+            raise Exception("Missing node")
+
+        else:
+
+            node_from_color = self._nodes[node_from]
+            node_to_color = self._nodes[node_to]
+
+            if node_from_color == "protein":
+
+                self._proteins[node_from].update_weight(
+                    key=node_to,
+                    weight=weight
+                )
+
+            elif node_from_color == "peptide":
+
+                self._peptides[node_from].update_weight(
+                    key=node_to,
+                    weight=weight
+                )
+
+            elif node_from_color == "peakgroup":
+
+                self._peakgroups[node_from].update_weight(
+                    key=node_to,
+                    weight=weight
+                )
+
+            if bidirectional:
+
+                if node_to_color == "protein":
+
+                    self._proteins[node_to].update_weight(
+                        key=node_from,
+                        weight=weight
+                    )
+
+                elif node_to_color == "peptide":
+
+                    self._peptides[node_to].update_weight(
+                        key=node_from,
+                        weight=weight
+                    )
+
+                elif node_to_color == "peakgroup":
+
+                    self._peakgroups[node_to].update_weight(
+                        key=node_from,
+                        weight=weight
+                    )
 
     def get_nodes(self, color=''):
 
+        return_nodes = typed.List()
+
         if color:
 
-            return self._colors[color]
+            return_nodes = self._colors[color]
 
         else:
 
-            return self._nodes.keys()
+            for key in self._nodes.keys():
+                return_nodes.append(key)
 
-    def __contains__(self, key):
+        return return_nodes
+
+    def contains(self, key):
 
         return key in self._nodes
 
-    def iter(self, color='', keys=[]):
+    def get_highest_ranking_peakgroups_by_peptide_list(self, node_list, rank):
 
-        if color:
+        nodes_by_rank = typed.List()
 
-            for key in self._colors[color]:
+        for peptide_key in node_list:
 
-                yield self._nodes[key]
+            peptide = self._peptides[peptide_key]
 
-        elif keys:
-
-            for key in keys:
-
-                yield self._nodes[key]
-
-        else:
-
-            for node in self._nodes.values():
-
-                yield node
-
-    def query_nodes(self, color='', rank=0, return_all=False, query=''):
-
-        comparisons = {
-            "<": op.lt,
-            "<=": op.le,
-            "==": op.eq,
-            "!=": op.ne,
-            ">": op.gt,
-            ">=": op.ge
-        }
-
-        if self._colors:
-
-            nodes_by_rank = list()
-
-            for node in self.iter(color=color):
-
-                if return_all:
-
-                    for edge in node.get_edges():
-
-                        nodes_by_rank.append(edge)
-
-                else:
-                    ranked_node = node.get_edge_by_ranked_weight(
-                        rank=rank
-                    )
-
-                    if ranked_node:
-
-                        if query:
-
-                            field_name, operator, comparison_value = query.split(" ")
-
-                            comparison_value = float(comparison_value)
-
-                            node = self.get_node(ranked_node)
-
-                            if field_name in node.data.sub_scores:
-
-                                field_value = node.data.sub_scores[field_name]
-
-                            elif field_name in node.data.scores:
-
-                                field_value = node.data.scores[field_name]
-
-                            if comparisons[operator](field_value, comparison_value):
-
-                                nodes_by_rank.append(
-                                    ranked_node
-                                )
-
-                        else:
-
-                            nodes_by_rank.append(
-                                ranked_node
-                            )
-
-        else:
-
-            raise NonColorOperationException(
-                message="Cannot perform partite operation on graph with no partite elements."
+            ranked_peakgroup_key = peptide.get_edge_by_ranked_weight(
+                rank
             )
 
-        return nodes_by_rank
+            ranked_peakgroup = self._peakgroups[ranked_peakgroup_key]
 
-    def get_ranked_nodes_by_node_list(self, node_list=[], rank=0, return_all=False):
-
-        nodes_by_rank = list()
-
-        for node in self.iter(keys=node_list):
-
-            if return_all:
-
-                for edge in node.get_edges():
-                    nodes_by_rank.append(edge)
-
-            else:
-                ranked_node = node.get_edge_by_ranked_weight(
-                    rank=rank
-                )
-
-                if ranked_node:
-                    nodes_by_rank.append(
-                        ranked_node
-                    )
+            nodes_by_rank.append(ranked_peakgroup)
 
         return nodes_by_rank
