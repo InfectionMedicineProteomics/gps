@@ -1,37 +1,17 @@
-import sys
-
-from numba import types, typed
-from numba.experimental import jitclass
-
 import numpy as np
 
-edge_kv_types = (types.unicode_type, types.float64)
-score_kv_types = (types.unicode_type, types.float64)
-
-sub_score_spec = [
-    ('sub_scores', types.DictType(*edge_kv_types))
-]
-
-score_spec = [
-    ('scores', types.DictType(*edge_kv_types))
-]
-
-
-node_spec = [
-    ('_edges', types.DictType(*edge_kv_types))
-]
 
 class Node:
 
     key: str
     color: str
-    _edges: types.DictType(*edge_kv_types)
+    _edges: dict()
 
     def __init__(self, key, color):
 
         self.key = key
         self.color = color
-        self._edges = typed.Dict.empty(*edge_kv_types)
+        self._edges = dict()
 
     def add_edge(self, key, weight=0.0):
 
@@ -43,7 +23,7 @@ class Node:
 
     def get_edges(self):
 
-        edges = typed.List()
+        edges = list()
 
         for edge in self._edges.keys():
             edges.append(edge)
@@ -63,7 +43,7 @@ class Node:
 
     def get_edge_by_ranked_weight(self, reverse=True, rank=1):
 
-        weights = typed.List()
+        weights = list()
 
         for weight in self._edges.values():
             weights.append(weight)
@@ -83,7 +63,7 @@ class Node:
         return self._edges[key]
 
 
-@jitclass(score_spec)
+
 class Protein(Node):
     protein_accession: str
     decoy: int
@@ -97,10 +77,9 @@ class Protein(Node):
 
         self.decoy = decoy
 
-        self.scores = typed.Dict.empty(*score_kv_types)
+        self.scores = dict()
 
 
-@jitclass(score_spec)
 class Peptide(Node):
     sequence: str
     modified_sequence: str
@@ -118,10 +97,9 @@ class Peptide(Node):
         self.charge = charge
         self.decoy = decoy
         self.target = abs(decoy - 1)
-        self.scores = typed.Dict.empty(*score_kv_types)
+        self.scores = dict()
 
 
-@jitclass(score_spec + sub_score_spec)
 class PeakGroup(Node):
     mz: float
     rt: float
@@ -146,8 +124,8 @@ class PeakGroup(Node):
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
-        self.sub_scores = typed.Dict.empty(*score_kv_types)
-        self.scores = typed.Dict.empty(*score_kv_types)
+        self.sub_scores = dict()
+        self.scores = dict()
 
         self.delta_rt = 0.0
         self.start_rt = 0.0
@@ -163,7 +141,7 @@ class PeakGroup(Node):
 
     def get_score_columns(self):
 
-        score_columns = typed.List()
+        score_columns = list()
 
         for score_column in self.sub_scores.keys():
             score_columns.append(score_column)
@@ -172,7 +150,7 @@ class PeakGroup(Node):
 
     def get_sub_score_column_array(self, include_score_columns=True):
 
-        score_values = typed.List()
+        score_values = list()
 
         for score_value in self.sub_scores.values():
             score_values.append(score_value)

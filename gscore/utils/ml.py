@@ -63,47 +63,47 @@ def reformat_data(peakgroups, include_score_columns=False):
     return scores, score_labels, score_indices
 
 
-def get_peakgroups(graph, node_list, rank=0, return_all=False):
-
-    nodes_by_rank = list()
-
-    for peptide_key in node_list:
-
-        peptide = graph.get_peptide(peptide_key)
-
-        if return_all:
-
-            for peakgroup_key in peptide.get_edges():
-
-                nodes_by_rank.append(
-                    graph.get_peakgroup(peakgroup_key)
-                )
-
-        else:
-
-            if rank > 1:
-
-                if not peptide.get_num_edges() < 2:
-
-
-
-                    ranked_peakgroup_key = peptide.get_edge_by_ranked_weight(
-                        True,
-                        rank
-                    )
-
-            else:
-
-                ranked_peakgroup_key = peptide.get_edge_by_ranked_weight(
-                    True,
-                    rank
-                )
-
-            ranked_peakgroup = graph.get_peakgroup(ranked_peakgroup_key)
-
-            nodes_by_rank.append(ranked_peakgroup)
-
-    return nodes_by_rank
+# def get_peakgroups(graph, node_list, rank=0, return_all=False):
+#
+#     nodes_by_rank = list()
+#
+#     for peptide_key in node_list:
+#
+#         peptide = graph.get_node(peptide_key)
+#
+#         if return_all:
+#
+#             for peakgroup_key in peptide.get_edges():
+#
+#                 nodes_by_rank.append(
+#                     graph.get_node(peakgroup_key)
+#                 )
+#
+#         else:
+#
+#             if rank > 1:
+#
+#                 if not peptide.get_num_edges() < 2:
+#
+#
+#
+#                     ranked_peakgroup_key = peptide.get_edge_by_ranked_weight(
+#                         True,
+#                         rank
+#                     )
+#
+#             else:
+#
+#                 ranked_peakgroup_key = peptide.get_edge_by_ranked_weight(
+#                     True,
+#                     rank
+#                 )
+#
+#             ranked_peakgroup = graph.get_node(ranked_peakgroup_key)
+#
+#             nodes_by_rank.append(ranked_peakgroup)
+#
+#     return nodes_by_rank
 
 
 def preprocess_data(graph, node_list, return_all=False, use_decoys=False):
@@ -112,8 +112,7 @@ def preprocess_data(graph, node_list, return_all=False, use_decoys=False):
 
     if return_all:
 
-        all_peakgroups = get_peakgroups(
-            graph,
+        all_peakgroups = graph.get_nodes_by_list(
             node_list=node_list,
             return_all=True
         )
@@ -122,8 +121,7 @@ def preprocess_data(graph, node_list, return_all=False, use_decoys=False):
 
     else:
 
-        training_top_ranked = get_peakgroups(
-            graph,
+        training_top_ranked = graph.get_nodes_by_list(
             node_list=node_list,
             rank=1
         )
@@ -132,8 +130,7 @@ def preprocess_data(graph, node_list, return_all=False, use_decoys=False):
 
         if not use_decoys:
 
-            training_second_ranked = get_peakgroups(
-                graph,
+            training_second_ranked = graph.get_nodes_by_list(
                 node_list=node_list,
                 rank=2
             )

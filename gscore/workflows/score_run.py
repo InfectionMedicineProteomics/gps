@@ -77,7 +77,7 @@ def prepare_denoise_record_additions(graph):
 
     for peakgroup_key in peakgroup_node_keys:
 
-        peakgroup = graph.get_peakgroup(peakgroup_key)
+        peakgroup = graph.get_node(peakgroup_key)
 
         record = {
             'feature_id': peakgroup.key,

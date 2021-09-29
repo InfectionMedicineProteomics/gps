@@ -11,7 +11,6 @@ from gscore.peakgroups import (
     Protein
 )
 
-
 from gscore.datastructures.graph import Graph
 
 
@@ -148,8 +147,6 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
 
             query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
 
-        counter = 0
-
         for record in conn.iterate_records(query):
 
             protein_key = str(record['protein_accession'])
@@ -171,7 +168,7 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
 
             peakgroup_key = str(record['feature_id'])
 
-            if not graph.contains(protein_key):
+            if protein_key not in graph:
                 protein = Protein(
 
                     key=protein_key,
@@ -180,12 +177,13 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                     decoy=int(record['protein_decoy'])
                 )
 
-                graph.add_protein(
+                graph.add_node(
                     protein.key,
-                    protein
+                    protein,
+                    "protein"
                 )
 
-            if not graph.contains(peptide_key):
+            if peptide_key not in graph:
                 peptide = Peptide(
                     key=peptide_key,
                     color='peptide',
@@ -195,9 +193,10 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                     decoy=int(record['protein_decoy'])
                 )
 
-                graph.add_peptide(
+                graph.add_node(
                     peptide.key,
-                    peptide
+                    peptide,
+                    "peptide"
                 )
 
                 graph.add_edge(
@@ -207,7 +206,7 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                     False
                 )
 
-            if not graph.contains(peakgroup_key):
+            if peakgroup_key not in graph:
 
                 peakgroup = PeakGroup(
                     key=peakgroup_key,
@@ -237,13 +236,14 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                             float(column_value)
                         )
 
-                    elif column_name == 'ghost_score_id':
+                    # elif column_name == 'ghost_score_id':
+                    #
+                    #     peakgroup.add_ghost_score_id(str(column_value))
 
-                        peakgroup.add_ghost_score_id(str(column_value))
-
-                graph.add_peakgroup(
+                graph.add_node(
                     peakgroup.key,
-                    peakgroup
+                    peakgroup,
+                    "peakgroup"
                 )
 
                 if peakgroup_weight_column in [
@@ -265,15 +265,11 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                 else:
 
                     graph.add_edge(
-                        peptide_key,
-                        peakgroup_key,
-                        peakgroup.sub_scores[peakgroup_weight_column],
-                        True
+                        node_from=peptide_key,
+                        node_to=peakgroup_key,
+                        weight=peakgroup.sub_scores[peakgroup_weight_column],
+                        bidirectional=True
                     )
-            counter += 1
-
-            if counter == 10000:
-                break
 
     return graph
 
