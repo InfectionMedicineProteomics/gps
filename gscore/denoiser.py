@@ -1,4 +1,5 @@
 import numpy as np
+from numba import typed
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
@@ -150,13 +151,13 @@ def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
         print("Updating peakgroups")
 
         graph.update_peakgroup_scores(
-            list(testing_keys),
+            typed.List(testing_keys),
             vote_percentages,
             "vote_percentage"
         )
 
         graph.update_peakgroup_scores(
-            list(testing_keys),
+            typed.List(testing_keys),
             probabilities,
             "probability"
         )

@@ -1,5 +1,7 @@
+from typing import List
+
 import numba
-from numba import types, typed
+from numba import types, typed, void
 from numba.experimental import jitclass
 
 from gscore.peakgroups import (
@@ -148,7 +150,8 @@ class Graph:
                         weight=weight
                     )
 
-    def update_peakgroup_scores(self, testing_indices, testing_scores, score_name):
+
+    def update_peakgroup_scores(self, testing_indices: List[str], testing_scores, score_name):
 
         counter = 0
 
