@@ -47,6 +47,7 @@ def fetch_chromatogram_training_data(osw_path, osw_query, peakgroup_weight_colum
 
                 peptide = Peptide(
                     key=peptide_key,
+                    color='peptide',
                     sequence=record['peptide_sequence'],
                     modified_sequence=record['modified_peptide_sequence'],
                     charge=int(record['charge']),
@@ -130,22 +131,30 @@ def fetch_chromatogram_training_data(osw_path, osw_query, peakgroup_weight_colum
 
 
 
-def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
+def fetch_peakgroup_graph(osw_path, use_decoys=False, query=None, peakgroup_weight_column='var_xcorr_shape_weighted', peptide_index='transition_group_id'):
 
     graph = Graph()
+
+    none_peak_groups = list()
 
     with Connection(osw_path) as conn:
 
         for sql_index in CreateIndex.ALL_INDICES:
             conn.run_raw_sql(sql_index)
 
-        if use_decoys:
+        if query:
 
-            query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS
+            query = query
 
         else:
 
-            query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
+            if use_decoys:
+
+                query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS
+
+            else:
+
+                query = SelectPeakGroups.FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE
 
         for record in conn.iterate_records(query):
 
@@ -218,6 +227,10 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                     decoy=int(record['protein_decoy'])
                 )
 
+                peakgroup.start_rt = record['left_width']
+                peakgroup.end_rt = record['right_width']
+                peakgroup.delta_rt = record['delta_rt']
+
                 for column_name, column_value in record.items():
 
                     column_name = column_name.lower()
@@ -231,10 +244,19 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                     elif column_name in ['vote_percentage', 'probability', 'logit_probability', 'd_score',
                                          'weighted_d_score', 'q_value']:
 
+                        if column_value != None:
+
+                            column_value = float(column_value)
+
+                        else:
+
+                            none_peak_groups.append(record)
+
                         peakgroup.add_score_column(
                             column_name,
-                            float(column_value)
+                            column_value
                         )
+
 
                     # elif column_name == 'ghost_score_id':
                     #
@@ -271,7 +293,7 @@ def fetch_peakgroup_graph(osw_path, use_decoys, peakgroup_weight_column='var_xco
                         bidirectional=True
                     )
 
-    return graph
+    return graph, none_peak_groups
 
 
 def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):

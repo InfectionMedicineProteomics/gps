@@ -1,6 +1,10 @@
 from enum import Enum
 
-import PyMSNumpress
+from pynumpress import (
+    decode_slof,
+    decode_linear,
+    decode_pic
+)
 import zlib
 
 import numpy as np
@@ -49,6 +53,9 @@ class Chromatograms:
 
         return self.chromatogram_records.items()
 
+    def __getitem__(self, key):
+
+        return self.chromatogram_records[key]
 
     def __get_chromatogram_lengths(self):
 
@@ -89,7 +96,7 @@ class Chromatograms:
             )
 
             if len(decompressed) > 0:
-                PyMSNumpress.decodeLinear(decompressed, decoded_data)
+                decoded_data = decode_linear(decompressed)
             else:
                 decoded_data = [0]
 
@@ -102,7 +109,7 @@ class Chromatograms:
             )
 
             if len(decompressed) > 0:
-                PyMSNumpress.decodeSlof(decompressed, decoded_data)
+                decoded_data = decode_slof(decompressed)
             else:
                 decoded_data = [0]
 
