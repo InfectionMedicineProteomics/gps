@@ -131,6 +131,10 @@ class PeakGroup(Node):
         self.start_rt = 0.0
         self.end_rt = 0.0
 
+        self.scaled_rt_start = 0.0
+        self.scaled_rt_apex = 0.0
+        self.scaled_rt_end = 0.0
+
     def add_score_column(self, key, value):
 
         self.scores[key] = value

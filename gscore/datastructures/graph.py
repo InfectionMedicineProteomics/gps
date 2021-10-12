@@ -1,3 +1,5 @@
+import operator
+
 class MissingNodeException(Exception):
 
     def __init__(self, message=''):
@@ -167,3 +169,91 @@ class Graph:
         for index, score in zip(keys, scores):
 
             self[index].scores[score_name] = score
+
+
+    def scale_peakgroup_retention_times(self):
+
+        self.min_rt_val = 0.0
+        self.max_rt_val = 0.0
+
+        a, b = 0.0, 100.0
+
+        for peakgroup_id in self._colors['peakgroup']:
+
+            peakgroup = self.get_node(peakgroup_id)
+
+            if peakgroup.end_rt > self.max_rt_val:
+
+                self.max_rt_val = peakgroup.end_rt
+
+        for peakgroup_id in self._colors['peakgroup']:
+
+            peakgroup = self.get_node(peakgroup_id)
+
+            peakgroup.scaled_rt_start = a + (
+                ((peakgroup.start_rt - self.min_rt_val) * (b - a)) / (self.max_rt_val - self.min_rt_val)
+            )
+
+            peakgroup.scaled_rt_apex = a + (
+                    ((peakgroup.rt - self.min_rt_val) * (b - a)) / (self.max_rt_val - self.min_rt_val)
+            )
+
+            peakgroup.scaled_rt_end = a + (
+                    ((peakgroup.end_rt - self.min_rt_val) * (b - a)) / (self.max_rt_val - self.min_rt_val)
+            )
+
+    def get_ranked_peakgroups(self, rank: int = 1, target: int = 1):
+
+        ranked_peakgroups = list()
+
+        for node in self._colors['peptide']:
+
+            peptide_node = self._nodes[node]
+
+            if peptide_node.target == target:
+
+                ranked_peakgroup_key = peptide_node.get_edge_by_ranked_weight(rank=rank)
+
+                ranked_peakgroup = self._nodes[ranked_peakgroup_key]
+
+                ranked_peakgroups.append(ranked_peakgroup)
+
+        return ranked_peakgroups
+
+
+    def filter_ranked_peakgroups(self, rank: int = 1, score_column: str = '', value: float = 0.0, user_operator: str = '', target: int = 1):
+
+        ranked_peakgroups = list()
+
+        operators = {
+            "<": operator.lt,
+            "<=": operator.le,
+            "==": operator.eq,
+            "!=": operator.ne,
+            ">": operator.gt,
+            ">=": operator.ge
+        }
+
+        for node in self._colors['peptide']:
+
+            peptide_node = self._nodes[node]
+
+            if peptide_node.target == target:
+
+                ranked_peakgroup_key = peptide_node.get_edge_by_ranked_weight(rank=rank)
+
+                ranked_peakgroup = self._nodes[ranked_peakgroup_key]
+
+                score = ranked_peakgroup.scores[score_column]
+
+                ## TODO: this is only because some probabilities are None, need to fix this
+                if score:
+                    if operators[user_operator](score, value):
+
+                        ranked_peakgroups.append(ranked_peakgroup)
+
+        return ranked_peakgroups
+
+
+
+

@@ -250,6 +250,7 @@ def fetch_peakgroup_graph(osw_path, use_decoys=False, query=None, peakgroup_weig
 
                         else:
 
+                            ## TODO: fix bug where probability is not calculated for all peakgroups
                             none_peak_groups.append(record)
 
                         peakgroup.add_score_column(

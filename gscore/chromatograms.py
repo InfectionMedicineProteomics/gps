@@ -11,6 +11,7 @@ import numpy as np
 
 from gscore.parsers.sqmass import fetch_chromatograms
 
+import numpy as np
 
 class CompressionType(Enum):
     NO = 0
@@ -38,6 +39,46 @@ class Chromatogram:
         self.mz = 0.0
         self.rts = None
         self.intensities = None
+        self.charge = 0
+
+    def _mean_intensity(self):
+
+        return np.mean(self.intensities)
+
+    def _stdev_intensity(self):
+
+        return np.std(self.intensities)
+
+    def normalized_intensities(self, add_min_max: tuple =None):
+
+        if not self.intensities.any():
+
+            return self.intensities
+
+        normalized_values = (self.intensities - self._mean_intensity()) / self._stdev_intensity()
+
+        if self._stdev_intensity() == 0.0:
+
+            print(self._stdev_intensity())
+            print(self.intensities)
+
+        if add_min_max:
+
+            min_val, max_val = add_min_max
+
+            normalized_values = min_val + (
+                    ((normalized_values - normalized_values.min()) * (max_val - min_val)) / (normalized_values.max() - normalized_values.min())
+            )
+
+        return normalized_values
+
+    def scaled_rts(self, min_val, max_val, a=0.0, b=100.0):
+
+        return a + (
+            ((self.rts - min_val) * (b - a)) / (max_val - min_val)
+        )
+
+
 
 
 class Chromatograms:
@@ -59,7 +100,7 @@ class Chromatograms:
 
     def __get_chromatogram_lengths(self):
 
-        chrom_lengths = list()
+        chrom_lengths = set()
 
         for peptide_id, peptide_chromatograms in self.chromatogram_records.items():
 
@@ -68,7 +109,7 @@ class Chromatograms:
                 if record.type != "precursor":
                     chrom_length = len(record.rts)
 
-                    chrom_lengths.append(chrom_length)
+                    chrom_lengths.add(chrom_length)
                     break
 
         return chrom_lengths
@@ -149,6 +190,7 @@ class Chromatograms:
 
                 chromatogram_record.mz = record['PRODUCT_ISOLATION_TARGET']
                 chromatogram_record.precursor_mz = record['PRECURSOR_ISOLATION_TARGET']
+                chromatogram_record.charge = int(record['CHARGE'])
 
                 chromatogram_ids[peptide_id][chromatogram_record.id] = chromatogram_record
 
