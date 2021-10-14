@@ -13,41 +13,107 @@ from gscore import distributions
 from gscore import peakgroups
 from gscore.parsers import osw, queries
 
+from gscore.distributions import LabelDistribution, ScoreDistribution
+
 
 def plot_distributions(
-        all_scores,
         target_distribution,
         null_distribution,
+        x_axis,
         all_targets_distribution,
         fig_path
 ):
 
     fig, ax = plt.subplots()
-    plt.hist(all_scores, bins='auto', density=True)
     sns.lineplot(
-        x=target_distribution.x_axis,
-        y=target_distribution.values,
+        x=x_axis,
+        y=target_distribution,
         ax=ax,
         label='Targets'
     )
     sns.lineplot(
-        x=null_distribution.x_axis,
-        y=null_distribution.values,
+        x=x_axis,
+        y=null_distribution,
         ax=ax,
         label='False Targets'
-    )
-    sns.lineplot(
-        x=all_targets_distribution.x_axis,
-        y=all_targets_distribution.values,
-        ax=ax,
-        label='All Targets'
     )
     plt.savefig(fig_path)
 
 
+def get_target_and_decoy_scores(input_graphs, level):
+
+    target_scores = dict()
+    decoy_scores = dict()
+
+    for graph in input_graphs:
+
+        for key in graph.get_nodes(level):
+
+            node = graph[key]
+
+            if node.target == 1:
+
+                if key not in target_scores:
+
+                    target_scores[key] = node.scores['d_score']
+
+                if node.scores["d_score"] > target_scores[key]:
+
+                    target_scores[key] = node.scores['d_score']
+            else:
+
+                if key not in decoy_scores:
+
+                    decoy_scores[key] = node.scores['d_score']
+
+                if node.scores["d_score"] > decoy_scores[key]:
+
+                    decoy_scores[key] = node.scores['d_score']
+
+    return target_scores, decoy_scores
+
+
+def fit_distributions(target_scores, decoy_scores):
+
+    combined_scores = np.concatenate([target_scores, decoy_scores])
+
+    axis_min = combined_scores.min()
+    axis_max = combined_scores.max()
+
+    x_plot = np.linspace(
+        start=axis_min - 3,
+        stop=axis_max + 3,
+        num=1000
+    )[:, np.newaxis]
+
+    print("Fitting Distributions.")
+
+    target_distribution = LabelDistribution(
+        axis_span=(x_plot.min() - 3, x_plot.max() + 3)
+    )
+    target_distribution.fit(
+        np.array(target_scores).reshape(-1, 1)
+    )
+
+    decoy_distribution = LabelDistribution(
+        axis_span=(x_plot.min() - 3, x_plot.max() + 3)
+    )
+    decoy_distribution.fit(
+        np.array(decoy_scores).reshape(-1, 1)
+    )
+
+    score_distribution = ScoreDistribution(
+        decoy_scores=decoy_distribution.values(x_plot),
+        target_scores=target_distribution.values(x_plot),
+        x_axis=x_plot
+    )
+
+    return score_distribution, target_distribution, decoy_distribution, x_plot
+
+
 def main(args):
 
-    print(f'Building {args.scoring_level} scoring model')
+    print(f'Building q-value scoring models')
 
     if args.use_decoys:
 
@@ -57,168 +123,57 @@ def main(args):
 
         osw_query = queries.SelectPeakGroups.FETCH_SCORED_DATA_DECOY_FREE
 
+    input_graphs = []
 
-    if args.scoring_level == 'peptide':
+    print(len(args.input_files))
 
-        print('Parsing files to graph')
+    for input_file in args.input_files:
 
-        full_graph = osw.fetch_peptide_level_global_graph(
-            args.input_files,
-            osw_query,
-            args.score_column
+        print(f"Parsing input file {input_file}")
+
+        graph, _ = osw.fetch_peakgroup_graph(
+            osw_path=input_file,
+            query=queries.SelectPeakGroups.FETCH_ALL_SCORED_DATA
         )
 
-        peakgroups.calc_score_grouped_by_level(
-            full_graph,
-            function=np.median,
-            level='peptide',
-            score_column=args.score_column,
-            new_column_name=f'median_{args.score_column}'
+        graph.calculate_global_level_scores(
+            function=np.max,
+            level="peptide",
+            score_column="d_score",
+            new_column_name="d_score"
         )
 
-        true_targets = full_graph.query_nodes(
-            color='peptide',
-            rank=1,
-            query=f"probability >= {args.true_target_cutoff}"
+        graph.calculate_global_level_scores(
+            function=np.max,
+            level="protein",
+            score_column="d_score",
+            new_column_name="d_score"
         )
 
-        false_targets = full_graph.query_nodes(
-            color='peptide',
-            rank=1,
-            query=f"probability < {args.false_target_cutoff}"
-        )
+        input_graphs.append(graph)
 
-        all_targets = full_graph.query_nodes(
-            color='peptide',
-            rank=1
-        )
+    peakgroup_target_scores, peakgroup_decoy_scores = get_target_and_decoy_scores(input_graphs, "peakgroup")
 
-    elif args.scoring_level == 'protein':
+    peptide_target_scores, peptide_decoy_scores = get_target_and_decoy_scores(input_graphs, "peptide")
 
-        print('Parsing files to graph')
+    protein_target_scores, protein_decoy_scores = get_target_and_decoy_scores(input_graphs, "protein")
 
-        full_graph = osw.fetch_protein_level_global_graph(
-            args.input_files,
-            osw_query,
-            args.score_column
-        )
-
-        peakgroups.calc_score_grouped_by_level(
-            full_graph,
-            function=np.median,
-            level='protein',
-            score_column=args.score_column,
-            new_column_name=f'median_{args.score_column}'
-        )
-
-        true_targets = full_graph.query_nodes(
-            color='protein',
-            rank=1,
-            query=f"probability >= {args.true_target_cutoff}"
-        )
-
-        false_targets = full_graph.query_nodes(
-            color='protein',
-            rank=1,
-            query=f"probability < {args.false_target_cutoff}"
-        )
-
-        all_targets = full_graph.query_nodes(
-            color='protein',
-            rank=1
-        )
-
-    target_scores = peakgroups.get_score_array(
-        graph=full_graph,
-        node_list=true_targets,
-        score_column=f'median_{args.score_column}'
+    peakgroup_score_distribution, peakgroup_target_distribution, peakgroup_decoy_destribution, peakgroup_x_plot = fit_distributions(
+        list(peakgroup_target_scores.values()),
+        list(peakgroup_decoy_scores.values())
     )
 
-    false_target_scores = peakgroups.get_score_array(
-        graph=full_graph,
-        node_list=false_targets,
-        score_column=f'median_{args.score_column}'
-    )
+    peptide_score_distribution, peptide_target_distribution, peptide_decoy_destribution, peptide_x_plot = fit_distributions(
+        list(peptide_target_scores.values()), list(peptide_decoy_scores.values()))
 
-    all_scores = peakgroups.get_score_array(
-        graph=full_graph,
-        node_list=all_targets,
-        score_column=f'median_{args.score_column}'
-    )
+    protein_score_distribution, protein_target_distribution, protein_decoy_destribution, protein_x_plot = fit_distributions(
+        list(protein_target_scores.values()), list(protein_decoy_scores.values()))
 
-    source_path = Path(args.input_files[0]).parent
+    with open(args.peptide_model_output, 'wb') as pkl:
+        pickle.dump(peptide_score_distribution, pkl)
 
-    with open(f"{source_path}/full_graph.pkl", 'wb') as pkl:
-        pickle.dump(full_graph, pkl)
+    with open(args.protein_model_output, 'wb') as pkl:
+        pickle.dump(protein_score_distribution, pkl)
 
-    with open(f"{source_path}/true_targets.pkl", 'wb') as pkl:
-        pickle.dump(true_targets, pkl)
-
-    with open(f"{source_path}/false_targets.pkl", 'wb') as pkl:
-        pickle.dump(false_targets, pkl)
-
-    with open(f"{source_path}/all_targets.pkl", 'wb') as pkl:
-        pickle.dump(all_targets, pkl)
-
-    score_mixture_model = GeneralMixtureModel(
-        [
-            NormalDistribution(
-                false_target_scores.mean(),
-                false_target_scores.std()
-            ),
-            NormalDistribution(
-                target_scores.mean(),
-                target_scores.std()
-            )
-        ]
-    )
-
-    score_mixture_model.fit(all_scores)
-
-
-    target_distribution = distributions.LabelDistribution(
-        data=all_scores,
-        axis_span=(
-            all_scores.min() - 10,
-            all_scores.max() + 10,
-        ),
-        model=score_mixture_model.distributions[1]
-    )
-
-    false_target_distribution = distributions.LabelDistribution(
-        data=all_scores,
-        axis_span=(
-            all_scores.min() - 10,
-            all_scores.max() + 10,
-        ),
-        model = score_mixture_model.distributions[0]
-    )
-
-    all_targets_distribution = distributions.LabelDistribution(
-        data=all_scores,
-        axis_span=(
-            all_scores.min() - 10,
-            all_scores.max() + 10,
-        ),
-        model=score_mixture_model
-    )
-
-    plot_distributions(
-        all_scores,
-        target_distribution,
-        false_target_distribution,
-        all_targets_distribution,
-        fig_path=f"{source_path}/{args.scoring_level}.score_distribution.png"
-    )
-
-    score_distribution = distributions.ScoreDistribution(
-        null_distribution=false_target_distribution,
-        target_distribution=all_targets_distribution,
-    )
-
-    if args.model_output:
-
-        with open(args.model_output, 'wb') as pkl:
-            pickle.dump(score_distribution, pkl)
-
-    return score_distribution
+    with open(args.peakgroup_model_output, 'wb') as pkl:
+        pickle.dump(peakgroup_score_distribution, pkl)

@@ -21,6 +21,8 @@ from gscore import (
     scorer
 )
 
+from gscore.utils import ml
+
 
 def main(args, logger):
 
@@ -29,7 +31,12 @@ def main(args, logger):
     all_sample_data = list()
     all_sample_labels = list()
 
-    for input_path in input_files:
+    test_index = 3
+    for i, input_path in enumerate(input_files):
+
+        if i == test_index:
+
+            break
 
         logger.info(f"Processing {input_path}")
 
@@ -37,97 +44,38 @@ def main(args, logger):
 
         print(f"parsing {base_filename}")
 
-        peakgroup_graph = osw.fetch_peakgroup_graph(
+        peakgroup_graph, _ = osw.fetch_peakgroup_graph(
             osw_path=input_path,
-            osw_query=queries.SelectPeakGroups.FETCH_VOTED_DATA_DECOY_FREE,
-            peakgroup_weight_column='probability'
+            query=queries.SelectPeakGroups.FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA
         )
 
-        true_targets = peakgroup_graph.query_nodes(
-            color='peptide',
+        positive_labels = peakgroup_graph.filter_ranked_peakgroups(
             rank=1,
-            query=f"probability >= {args.true_target_cutoff}"
+            score_column='probability',
+            value=0.85,
+            user_operator='>',
+            target=1
         )
 
-        for node in peakgroup_graph.iter(keys=true_targets):
-
-            probability = node.data.scores['probability']
-
-            node.data.add_sub_score_column(
-                key='probability',
-                value=probability
-            )
-
-        false_targets = peakgroup_graph.query_nodes(
-            color='peptide',
+        negative_labels = peakgroup_graph.get_ranked_peakgroups(
             rank=1,
-            query=f"probability < {args.false_target_cutoff}"
+            target=0
         )
 
-        for node in peakgroup_graph.iter(keys=false_targets):
+        combined_data = positive_labels + negative_labels
 
-            probability = node.data.scores['probability']
-
-            node.data.add_sub_score_column(
-                key='probability',
-                value=probability
-            )
-
-        target_scores, target_labels, target_indices = peakgroups.parse_scores_labels_index(
-            graph=peakgroup_graph,
-            node_keys=true_targets,
-            is_decoy=False,
-            include_score_columns=False
-        )
-
-        false_target_scores, false_target_labels, false_target_indices = peakgroups.parse_scores_labels_index(
-            graph=peakgroup_graph,
-            node_keys=false_targets,
-            is_decoy=True,
-            include_score_columns=False
-        )
-
-        scores = np.concatenate(
-            [
-                target_scores,
-                false_target_scores
-            ]
-        )
-
-        score_labels = np.concatenate(
-            [
-                target_labels,
-                false_target_labels
-            ]
-        )
-
-        score_indices = np.concatenate(
-            [
-                target_indices,
-                false_target_indices
-            ]
-        )
-
-        sample_data, sample_labels, _ = shuffle(
-            scores, score_labels, score_indices,
-            random_state=42
-        )
-
-        all_sample_data.append(sample_data)
-        all_sample_labels.append(sample_labels)
+        all_sample_data.append(combined_data)
 
     all_data = np.concatenate(all_sample_data)
-    all_labels = np.concatenate(all_sample_labels)
 
-    pos_labels = (all_labels == 1.0).sum()
-    neg_labels = (all_labels == 0.0).sum()
-
-    print(f"Positive targets: {pos_labels}, Negative targets: {neg_labels}")
-
-    training_data, testing_data, training_labels, testing_labels = train_test_split(
-        all_data, all_labels,
-        test_size=0.1,
+    training_data, testing_data = train_test_split(
+        all_data,
+        test_size=0.2,
         shuffle=True
+    )
+
+    training_data_scores, training_data_labels, training_data_indices = ml.reformat_data(
+        training_data
     )
 
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -137,10 +85,10 @@ def main(args, logger):
         ('min_max_scaler', MinMaxScaler())
     ])
 
-    training_data = pipeline.fit_transform(training_data)
+    training_data_scores = pipeline.fit_transform(training_data_scores)
 
     dense_model = scorer.TargetScoringModel(
-        input_dim=training_data.shape[1:]
+        input_dim=training_data_scores.shape[1:]
     )
 
     dense_model.compile(
@@ -154,16 +102,16 @@ def main(args, logger):
 
     class_weights = class_weight.compute_class_weight(
         class_weight='balanced',
-        classes=np.unique(training_labels),
-        y=training_labels.ravel()
+        classes=np.unique(training_data_labels),
+        y=training_data_labels.ravel()
     )
 
     print(class_weights)
 
     dense_history = dense_model.fit(
-        training_data,
-        training_labels,
-        epochs=10,
+        training_data_scores,
+        training_data_labels,
+        epochs=5,
         validation_split=0.10,
         callbacks=[
             tf.keras.callbacks.EarlyStopping(
@@ -178,11 +126,15 @@ def main(args, logger):
         )
     )
 
-    testing_data = pipeline.transform(testing_data)
+    testing_data_scores, testing_data_labels, testing_data_indices = ml.reformat_data(
+        testing_data
+    )
+
+    testing_data_scores = pipeline.transform(testing_data_scores)
 
     dense_model.evaluate(
-        testing_data,
-        testing_labels
+        testing_data_scores,
+        testing_data_labels
     )
 
     print('saving trained model and scaler')

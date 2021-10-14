@@ -51,9 +51,15 @@ class ChromatogramModel:
 
         yhat = self.model(chroms, peakgroups)
 
-        val_loss = self.criterion(yhat, labels)
+        val_loss = self.criterion(yhat.reshape(-1), labels)
 
-        return val_loss
+        return val_loss.item()
+
+    def load(self, saved_model_path):
+
+        self.model.load_state_dict(
+            torch.load(saved_model_path)
+        )
 
     def eval_test_accuracy(self, testing_dataset):
 
@@ -85,17 +91,17 @@ class ChromatogramModel:
 
     def train(self, training_data, val_split=0.10, batch_size=32, n_epochs=50):
 
-        training_data, validation_data = self.train_val_split(training_data, val_split)
+        training_split, validation_split= self.train_val_split(training_data, val_split)
 
         training_loader = DataLoader(
-            training_data,
+            training_split,
             batch_size=batch_size,
             shuffle=True,
             num_workers=5
         )
 
         validation_loader = DataLoader(
-            validation_data,
+            validation_split,
             batch_size=batch_size,
             shuffle=True,
             num_workers=5
@@ -106,14 +112,15 @@ class ChromatogramModel:
             for epoch in range(1, n_epochs + 1):
 
                 losses = []
+                validation_losses = []
 
                 accuracies = []
 
                 for i, (peakgroups, chroms, labels) in enumerate(training_loader):
 
                     peakgroups = peakgroups.to(self.device)
-                    chroms = peakgroups.to(self.device)
-                    labels = peakgroups.to(self.device)
+                    chroms = chroms.to(self.device)
+                    labels = labels.to(self.device)
 
                     self.optimizer.zero_grad()
 
@@ -123,50 +130,53 @@ class ChromatogramModel:
 
                     loss.backward()
 
-                    optimizer.step()
+                    self.optimizer.step()
 
                     losses.append(loss.item())
 
+                    percentage = (i / len(training_loader)) * 100.0
+
+                    print("Epoch percentage: ", percentage, end='\r')
+
                 training_loss = np.mean(losses)
 
-                self.training_losses.append(training_loss)
-
-                percentage = (i / len(dataloader)) * 100.0
-
-                print("Epoch percentage: ", percentage, end='\r')
+                losses.append(training_loss)
 
                 with torch.no_grad():
 
-                    batch_val_losses = []
+                    val_losses = []
 
                     for i, (peakgroups, chroms, labels) in enumerate(validation_loader):
 
                         peakgroups = peakgroups.to(self.device)
-                        chroms = peakgroups.to(self.device)
-                        labels = peakgroups.to(self.device)
+                        chroms = chroms.to(self.device)
+                        labels = labels.to(self.device)
 
-                        val_loss = self.validation_step(chroms, labels)
+                        val_loss = self.validation_step(chroms, peakgroups, labels)
 
-                        batch_val_losses.append(val_loss)
+                        val_losses.append(val_loss)
 
                         predictions = self.model.predict(
                             chroms.double(),
                             peakgroups
                         )
 
-                        accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / 32.0).item()
+                        accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / predictions.shape[0]).item()
 
                         accuracies.append(accuracy)
 
-                    val_loss = np.mean(batch_val_losses)
+                    batch_val_loss = np.mean(val_losses)
 
-                    self.val_losses.append(val_loss)
+                    validation_losses.append(val_loss)
 
                 epoch_loss = np.mean(losses)
-                val_accuracy = np.mean(accuracies)
-                val_loss = np.mean(batch_val_losses)
+                epoch_val_accuracy = np.mean(accuracies)
+                epoch_val_loss = np.mean(validation_losses)
 
-                print(f'epoch {epoch + 1}, loss {epoch_loss}, val loss {val_loss}, val accuracy {epoch_accuracy}')
+                self.train_losses.append(epoch_loss)
+                self.val_losses.append(epoch_val_loss)
+
+                print(f'epoch {epoch}, loss {epoch_loss}, val loss {epoch_val_loss}, val accuracy {epoch_val_accuracy}')
 
         except Exception as e:
 
@@ -214,7 +224,6 @@ class ChromatogramProbabilityModel(nn.Module):
 
     def forward(self, chromatogram, peakgroup):
 
-        #print(chromatogram)
         batch_size, seq_len, _ = chromatogram.size()
 
         out = self.conv1d(chromatogram.double())
@@ -363,3 +372,84 @@ class ChromatogramDataset(Dataset):
         chromatograms_transformed = torch.tensor(chromatograms_transformed, dtype=torch.double)
 
         return torch.tensor(peakgroup_boundaries, dtype=torch.double), chromatograms_transformed.double().T, torch.tensor(label).double()
+
+
+if __name__ == '__main__':
+
+    from gscore.utils.connection import Connection
+    import pickle
+
+    import pandas as pd
+
+    from gscore.parsers import osw, queries
+
+    from gscore.denoiser import BaggedDenoiser
+    from sklearn.model_selection import train_test_split
+
+    from gscore.chromatograms import Chromatograms
+
+    from torch.utils.data import Dataset, DataLoader
+
+    from sklearn.model_selection import train_test_split
+
+    from torch.utils.data import Subset
+
+    import torch
+    from torch import nn
+
+
+    osw_path = '/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_172.osw'
+    chrom_path = '/home/aaron/projects/ghost/data/spike_in/chromatograms/AAS_P2009_172.sqMass'
+
+    chromatograms = Chromatograms().from_sqmass_file(chrom_path)
+
+    peakgroup_graph, none_peak_groups = osw.fetch_peakgroup_graph(
+        osw_path=osw_path,
+        query=queries.SelectPeakGroups.FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA
+    )
+
+    highest_ranked = peakgroup_graph.filter_ranked_peakgroups(
+        rank=1,
+        score_column='probability',
+        value=0.5,
+        user_operator='>',
+        target=1
+    )
+
+    decoy_ranked = peakgroup_graph.get_ranked_peakgroups(rank=1, target=0)
+
+    combined_data = highest_ranked + decoy_ranked
+
+    print(len(combined_data))
+
+    chromatogram_dataset = ChromatogramDataset(combined_data, chromatograms, peakgroup_graph)
+
+    train_idx, val_idx = train_test_split(
+        list(range(len(chromatogram_dataset))),
+        test_size=0.2
+    )
+
+    training_dataset = Subset(chromatogram_dataset, train_idx)
+    testing_dataset = Subset(chromatogram_dataset, val_idx)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    model = ChromatogramProbabilityModel(
+        7,
+        172
+    ).double().to(device)
+
+    chromatogram_model = ChromatogramModel(
+        model=model,
+        criterion=nn.BCEWithLogitsLoss(),
+        optimizer=torch.optim.Adam(model.parameters(), lr=0.005),
+        device=device
+    )
+
+    chromatogram_model.train(
+        training_data=training_dataset,
+        val_split=0.10,
+        batch_size=32,
+        n_epochs=2
+    )
+

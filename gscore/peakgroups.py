@@ -68,14 +68,14 @@ class Protein(Node):
     protein_accession: str
     decoy: int
 
-    __init__Node = Node.__init__
-
     def __init__(self, key, color, protein_accession, decoy):
-        self.__init__Node(key, color)
+
+        super().__init__(key, color)
 
         self.protein_accession = protein_accession
 
         self.decoy = decoy
+        self.target = abs(decoy - 1)
 
         self.scores = dict()
 
@@ -87,10 +87,8 @@ class Peptide(Node):
     decoy: int
     target: int
 
-    __init__Node = Node.__init__
-
     def __init__(self, key, color, sequence, modified_sequence, charge, decoy):
-        self.__init__Node(key, color)
+        super().__init__(key, color)
 
         self.sequence = sequence
         self.modified_sequence = modified_sequence
@@ -111,11 +109,9 @@ class PeakGroup(Node):
     start_rt: float
     end_rt: float
 
-    __init__Node = Node.__init__
-
     def __init__(self, key='', color='', mz=0.0, rt=0.0, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0):
 
-        self.__init__Node(key, color)
+        super().__init__(key, color)
 
         self.rt = rt
         self.mz = mz

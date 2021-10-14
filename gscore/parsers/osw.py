@@ -227,9 +227,10 @@ def fetch_peakgroup_graph(osw_path, use_decoys=False, query=None, peakgroup_weig
                     decoy=int(record['protein_decoy'])
                 )
 
-                peakgroup.start_rt = record['left_width']
-                peakgroup.end_rt = record['right_width']
-                peakgroup.delta_rt = record['delta_rt']
+                if "delta_rt" in record:
+                    peakgroup.start_rt = record['left_width']
+                    peakgroup.end_rt = record['right_width']
+                    peakgroup.delta_rt = record['delta_rt']
 
                 for column_name, column_value in record.items():
 
@@ -318,11 +319,42 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
                 peptide_key = str(record['transition_group_id'])
                 peakgroup_key = str(record['feature_id'])
 
+                protein = Protein(
+                    key=protein_key,
+                    color="protein",
+                    decoy=record['protein_decoy']
+                )
+
+                peptide = Peptide(
+                    key=peptide_key,
+                    color="peptide",
+                    sequence=record['peptide_sequence'],
+                    modified_sequence=record['modified_peptide_sequence'],
+                    charge=int(record['charge']),
+                    decoy=int(record['protein_decoy'])
+                )
+
+                peakgroup = PeakGroup(
+                    key=peakgroup_key,
+                    color="peakgroup",
+                    mz=record['mz'],
+                    rt=record['rt'],
+                    ms2_intensity=record['ms2_integrated_intensity'],
+                    ms1_intensity=record['ms1_integrated_intensity'],
+                    decoy=int(record['protein_decoy'])
+                )
+
+                for column_name, column_value in record.items():
+
+                    if column_name in ['vote_percentage', 'probability', 'logit_probability', 'weighted_d_score',
+                                       'd_score']:
+                        peakgroup.add_score_column(
+                            key=column_name,
+                            value=float(column_value)
+                        )
+
+
                 if protein_key not in full_graph:
-                    protein = Protein(
-                        key=protein_key,
-                        decoy=record['protein_decoy']
-                    )
 
                     full_graph.add_node(
                         key=protein_key,
@@ -331,10 +363,6 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
                     )
 
                 if protein_key not in graph:
-                    protein = Protein(
-                        key=protein_key,
-                        decoy=record['protein_decoy']
-                    )
 
                     graph.add_node(
                         key=protein_key,
@@ -343,13 +371,6 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
                     )
 
                 if peptide_key not in full_graph:
-                    peptide = Peptide(
-                        key=peptide_key,
-                        sequence=record['peptide_sequence'],
-                        modified_sequence=record['modified_peptide_sequence'],
-                        charge=int(record['charge']),
-                        decoy=int(record['protein_decoy'])
-                    )
 
                     full_graph.add_node(
                         key=peptide_key,
@@ -363,13 +384,6 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
                     )
 
                 if peptide_key not in graph:
-                    peptide = Peptide(
-                        key=peptide_key,
-                        sequence=record['peptide_sequence'],
-                        modified_sequence=record['modified_peptide_sequence'],
-                        charge=int(record['charge']),
-                        decoy=int(record['protein_decoy'])
-                    )
 
                     graph.add_node(
                         key=peptide_key,
@@ -383,23 +397,6 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
                     )
 
                 if peakgroup_key not in graph:
-
-                    peakgroup = PeakGroup(
-                        key=peakgroup_key,
-                        mz=record['mz'],
-                        rt=record['rt'],
-                        ms2_intensity=record['ms2_integrated_intensity'],
-                        ms1_intensity=record['ms1_integrated_intensity']
-                    )
-
-                    for column_name, column_value in record.items():
-
-                        if column_name in ['vote_percentage', 'probability', 'logit_probability', 'weighted_d_score',
-                                           'd_score']:
-                            peakgroup.add_score_column(
-                                key=column_name,
-                                value=float(column_value)
-                            )
 
                     graph.add_node(
                         key=peakgroup_key,
@@ -421,7 +418,7 @@ def fetch_peptide_level_global_graph(osw_paths, osw_query, score_column):
             rank=1
         )
 
-        for peakgroup in graph.iter(keys=highest_scoring_peak_groups):
+        for peakgroup_key in highest_scoring_peak_groups:
             full_graph.add_node(
                 key=peakgroup.key,
                 data=peakgroup.data,

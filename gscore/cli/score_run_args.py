@@ -105,6 +105,16 @@ def parse_args(parser):
     apply_static_model_group = parser.add_argument_group()
 
     apply_static_model_group.add_argument(
+        '--apply-model',
+        dest='apply_model',
+        help=(
+            'Set this flag if you want to apply a trained model to score your data. '
+        ),
+        default=False,
+        action='store_true'
+    )
+
+    apply_static_model_group.add_argument(
         '-m',
         '--model-path',
         dest='model_path',

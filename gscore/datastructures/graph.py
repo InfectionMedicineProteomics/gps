@@ -254,6 +254,50 @@ class Graph:
 
         return ranked_peakgroups
 
+    def get_peptide_nodes(self):
+
+        peptides = []
+
+        for peptide_key in self._colors['peptide']:
+
+            peptide = self._nodes[peptide_key]
+
+            peptides.append(peptide)
+
+        return peptides
+
+    def calculate_global_level_scores(self, function = None, level = '', score_column = '', new_column_name = ''):
+
+        for node_key in self._colors[level]:
+
+            node = self._nodes[node_key]
+
+            scores = list()
+
+            for key in node.get_edges():
+
+                child_node = self._nodes[key]
+
+                if level == "peptide":
+
+                    if child_node.color == "peakgroup":
+
+                        scores.append(
+                            self._nodes[key].scores[score_column]
+                        )
+
+                elif level == "protein":
+
+                    if child_node.color == "peptide":
+
+                        scores.append(
+                            self._nodes[key].scores[score_column]
+                        )
+
+            score = function(scores)
+
+            node.scores[score_column] = score
+
 
 
 
