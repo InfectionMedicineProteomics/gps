@@ -207,8 +207,10 @@ def calc_score_grouped_by_level(graph, function=None, level='', score_column='',
 
 def apply_scoring_model(graph, level, model, score_column):
 
-    for peakgroup_node in graph.iter(color='peakgroup'):
+    for peakgroup_node in graph.get_nodes("peakgroup"):
 
-        score = peakgroup_node.data.scores[score_column]
+        peakgroup_node = graph[peakgroup_node]
 
-        peakgroup_node.data.scores[f"{level}_q_value"] = model.calc_q_value(score)
+        score = peakgroup_node.scores["d_score"]
+
+        peakgroup_node.scores[f"{level}_q_value"] = model.calc_q_value(score)

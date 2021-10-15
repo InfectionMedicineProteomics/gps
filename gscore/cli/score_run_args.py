@@ -40,9 +40,7 @@ def parse_args(parser):
         action='store_true'
     )
 
-    denoising_classifier_group = parser.add_argument_group()
-
-    denoising_classifier_group.add_argument(
+    parser.add_argument(
         '-nc',
         '--num-classifiers',
         dest='num_classifiers',
@@ -51,7 +49,7 @@ def parse_args(parser):
         type=int
     )
 
-    denoising_classifier_group.add_argument(
+    parser.add_argument(
         '-f',
         '--num-folds',
         dest='num_folds',
@@ -60,7 +58,7 @@ def parse_args(parser):
         type=int
     )
 
-    denoising_classifier_group.add_argument(
+    parser.add_argument(
         '--vote-threshold',
         dest='vote_threshold',
         help='The probability threshold to consider for a positive vote',
@@ -68,7 +66,7 @@ def parse_args(parser):
         type=float
     )
 
-    denoising_classifier_group.add_argument(
+    parser.add_argument(
         '-sc',
         '--score-column',
         dest='score_column',
@@ -79,7 +77,7 @@ def parse_args(parser):
         default='d_score'
     )
 
-    denoising_classifier_group.add_argument(
+    parser.add_argument(
         '-t',
         '--threads',
         dest='threads',
@@ -88,9 +86,7 @@ def parse_args(parser):
         type=int
     )
 
-    denoise_only_group = parser.add_argument_group()
-
-    denoise_only_group.add_argument(
+    parser.add_argument(
         '-dn',
         '--denoise-only',
         dest='denoise_only',
@@ -102,9 +98,7 @@ def parse_args(parser):
         action='store_true'
     )
 
-    apply_static_model_group = parser.add_argument_group()
-
-    apply_static_model_group.add_argument(
+    parser.add_argument(
         '--apply-model',
         dest='apply_model',
         help=(
@@ -114,23 +108,21 @@ def parse_args(parser):
         action='store_true'
     )
 
-    apply_static_model_group.add_argument(
+    parser.add_argument(
         '-m',
         '--model-path',
         dest='model_path',
         help='Specify model path.',
     )
 
-    apply_static_model_group.add_argument(
+    parser.add_argument(
         '-s',
         '--scaler-path',
         dest='scaler_path',
         help='Specify scaler name',
     )
 
-    global_scoring_model_group = parser.add_argument_group()
-
-    global_scoring_model_group.add_argument(
+    parser.add_argument(
         '--apply-scoring-model',
         dest='apply_scoring_model',
         help=(
@@ -141,10 +133,11 @@ def parse_args(parser):
         action='store_true'
     )
 
-    global_scoring_model_group.add_argument(
-        '--scoring-model-path',
-        dest='scoring_model_path',
+    parser.add_argument(
+        '--peakgroup-scoring-model-path',
+        dest='peakgroup_scoring_model_path',
         help='Specify scoring model path.',
+        default='',
     )
 
     return parser

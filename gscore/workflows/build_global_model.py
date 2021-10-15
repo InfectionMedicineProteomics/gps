@@ -51,6 +51,12 @@ def get_target_and_decoy_scores(input_graphs, level):
 
             node = graph[key]
 
+            if level == 'peakgroup':
+
+                peptide_key = node.get_edges()[0]
+
+                key = f"{id(graph)}_{peptide_key}"
+
             if node.target == 1:
 
                 if key not in target_scores:

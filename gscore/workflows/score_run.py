@@ -68,17 +68,26 @@ def prepare_denoise_record_additions(graph):
 
     peakgroup_node_keys = graph.get_nodes('peakgroup')
 
+    counter = 0
+
     for peakgroup_key in peakgroup_node_keys:
 
         peakgroup = graph.get_node(peakgroup_key)
 
-        record = {
-            'feature_id': peakgroup.key,
-            'vote_percentage': peakgroup.scores['vote_percentage'],
-            'probability': peakgroup.scores['probability']
-        }
+        if 'probability' in peakgroup.scores:
 
-        record_updates.append(record)
+            record = {
+                'feature_id': peakgroup.key,
+                'probability': peakgroup.scores['probability']
+            }
+
+            record_updates.append(record)
+
+        else:
+
+            counter += 1
+
+    print(f"Found {counter} peakgroups with no probability scores.")
 
     return record_updates
 
@@ -87,9 +96,21 @@ def main(args, logger=None):
 
     if args.apply_model:
 
+        print(f"Loading peakgroups from {args.input}")
+
         peakgroup_graph, _ = osw.fetch_peakgroup_graph(
             osw_path=args.input,
-            query=queries.SelectPeakGroups.FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA
+            query=queries.SelectPeakGroups.FETCH_ALL_UNSCORED_DATA
+        )
+
+        print("Denoising.")
+
+        denoiser.denoise(
+            peakgroup_graph,
+            args.num_folds,
+            args.num_classifiers,
+            args.threads,
+            args.vote_threshold
         )
 
         print(f"Applying model to {args.input}")
@@ -112,6 +133,7 @@ def main(args, logger=None):
         print("Reformatting data")
         scores, labels, indices = reformat_data(
             peakgroups,
+            include_score_columns=True
         )
 
         print("Transforming data")
@@ -142,63 +164,75 @@ def main(args, logger=None):
                 directed=False
             )
 
-        target_peakgroups = peakgroup_graph.get_ranked_peakgroups(
-            rank=1,
-            target=1
-        )
+        if args.peakgroup_scoring_model_path:
 
-        decoy_peakgroups = peakgroup_graph.get_ranked_peakgroups(
-            rank=1,
-            target=0
-        )
+            print("Loading peakgroup scoring model.")
 
-        target_scores = [
-            target_peakgroup.scores['d_score'] for target_peakgroup in target_peakgroups
-        ]
+            with open(args.peakgroup_scoring_model_path, 'rb') as pkl:
 
-        decoy_scores = [
-            decoy_peakgroup.scores['d_score'] for decoy_peakgroup in decoy_peakgroups
-        ]
+                score_distribution = pickle.load(pkl)
 
-        combined_scores = np.concatenate([target_scores, decoy_scores])
+        else:
 
-        axis_min = combined_scores.min()
-        axis_max = combined_scores.max()
+            target_peakgroups = peakgroup_graph.get_ranked_peakgroups(
+                rank=1,
+                target=1
+            )
 
-        x_plot = np.linspace(
-            start=axis_min - 3,
-            stop=axis_max + 3,
-            num=1000
-        )[:, np.newaxis]
+            decoy_peakgroups = peakgroup_graph.get_ranked_peakgroups(
+                rank=1,
+                target=0
+            )
 
-        print("Fitting Distributions.")
+            target_scores = [
+                target_peakgroup.scores['d_score'] for target_peakgroup in target_peakgroups
+            ]
 
-        target_distribution = LabelDistribution(
-            axis_span=(x_plot.min() - 3, x_plot.max() + 3)
-        )
-        target_distribution.fit(
-            np.array(target_scores).reshape(-1, 1)
-        )
+            decoy_scores = [
+                decoy_peakgroup.scores['d_score'] for decoy_peakgroup in decoy_peakgroups
+            ]
 
-        decoy_distribution = LabelDistribution(
-            axis_span=(x_plot.min() - 3, x_plot.max() + 3)
-        )
-        decoy_distribution.fit(
-            np.array(decoy_scores).reshape(-1, 1)
-        )
+            combined_scores = np.concatenate([target_scores, decoy_scores])
 
-        score_distribution = ScoreDistribution(
-            decoy_scores=decoy_distribution.values(x_plot),
-            target_scores=target_distribution.values(x_plot),
-            x_axis=x_plot
-        )
+            axis_min = combined_scores.min()
+            axis_max = combined_scores.max()
 
-        plot_distributions(
-            target_distribution.values(x_plot),
-            decoy_distribution.values(x_plot),
-            x_plot.ravel(),
-            f"{args.input}.score_distribution.png"
-        )
+            x_plot = np.linspace(
+                start=axis_min - 3,
+                stop=axis_max + 3,
+                num=1000
+            )[:, np.newaxis]
+
+            print("Fitting Distributions.")
+
+            target_distribution = LabelDistribution(
+                axis_span=(x_plot.min() - 3, x_plot.max() + 3)
+            )
+            target_distribution.fit(
+                np.array(target_scores).reshape(-1, 1)
+            )
+
+            decoy_distribution = LabelDistribution(
+                axis_span=(x_plot.min() - 3, x_plot.max() + 3)
+            )
+            decoy_distribution.fit(
+                np.array(decoy_scores).reshape(-1, 1)
+            )
+
+            score_distribution = ScoreDistribution(
+                decoy_scores=decoy_distribution.values(x_plot),
+                target_scores=target_distribution.values(x_plot),
+                x_axis=x_plot
+            )
+
+            plot_distributions(
+                target_distribution.values(x_plot),
+                decoy_distribution.values(x_plot),
+                x_plot.ravel(),
+                f"{args.input}.score_distribution.png"
+            )
+
+        print("Calculating q-values.")
 
         for node_key in peakgroup_graph.get_nodes("peakgroup"):
 
@@ -251,6 +285,8 @@ def main(args, logger=None):
         record_updates = prepare_denoise_record_additions(
             peakgroup_graph
         )
+
+
 
         with Connection(args.input) as conn:
             conn.drop_table(

@@ -31,12 +31,7 @@ def main(args, logger):
     all_sample_data = list()
     all_sample_labels = list()
 
-    test_index = 3
     for i, input_path in enumerate(input_files):
-
-        if i == test_index:
-
-            break
 
         logger.info(f"Processing {input_path}")
 
@@ -75,7 +70,8 @@ def main(args, logger):
     )
 
     training_data_scores, training_data_labels, training_data_indices = ml.reformat_data(
-        training_data
+        training_data,
+        include_score_columns=True
     )
 
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -111,7 +107,7 @@ def main(args, logger):
     dense_history = dense_model.fit(
         training_data_scores,
         training_data_labels,
-        epochs=5,
+        epochs=10,
         validation_split=0.10,
         callbacks=[
             tf.keras.callbacks.EarlyStopping(
@@ -127,7 +123,8 @@ def main(args, logger):
     )
 
     testing_data_scores, testing_data_labels, testing_data_indices = ml.reformat_data(
-        testing_data
+        testing_data,
+        include_score_columns=True
     )
 
     testing_data_scores = pipeline.transform(testing_data_scores)

@@ -294,10 +294,13 @@ class Graph:
                             self._nodes[key].scores[score_column]
                         )
 
-            score = function(scores)
+
+            if scores:
+
+                score = function(scores)
+
+            else:
+
+                score = -20.0
 
             node.scores[score_column] = score
-
-
-
-

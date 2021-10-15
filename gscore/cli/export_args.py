@@ -40,6 +40,19 @@ def parse_args(parser):
     )
 
     parser.add_argument(
+
+        '--peptide-score-distribution',
+        dest='peptide_score_distribution',
+        help='Scored OSW files to export'
+    )
+
+    parser.add_argument(
+        '--protein-score-distribution',
+        dest='protein_score_distribution',
+        help='Scored OSW files to export'
+    )
+
+    parser.add_argument(
         '-f',
         '--input-files',
         dest='input_files',

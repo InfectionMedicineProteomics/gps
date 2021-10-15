@@ -554,21 +554,25 @@ def fetch_export_graph(osw_paths, osw_query):
                 peptide_key = str(record['transition_group_id'])
 
                 if protein_key not in graph:
+
                     protein = Protein(
                         key=protein_key,
-                        decoy=record['protein_decoy']
+                        color='protein',
+                        protein_accession=str(record['protein_accession']),
+                        decoy=int(record['protein_decoy'])
                     )
 
                     graph.add_node(
-                        key=protein_key,
-                        data=protein,
-                        color='protein'
+                        protein_key,
+                        protein,
+                        'protein'
                     )
 
                 if peptide_key not in graph:
 
                     peptide = Peptide(
                         key=peptide_key,
+                        color='peptide',
                         sequence=record['peptide_sequence'],
                         modified_sequence=record['modified_peptide_sequence'],
                         charge=int(record['charge']),
@@ -576,9 +580,9 @@ def fetch_export_graph(osw_paths, osw_query):
                     )
 
                     graph.add_node(
-                        key=peptide_key,
-                        data=peptide,
-                        color='peptide'
+                        peptide_key,
+                        peptide,
+                        'peptide'
                     )
 
                     graph.add_edge(
