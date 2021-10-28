@@ -2,18 +2,34 @@ import numpy as np
 
 from scipy.interpolate import InterpolatedUnivariateSpline
 
+from sklearn.neighbors import KernelDensity
+
 
 class LabelDistribution:
 
-    def __init__(self, data=np.array, axis_span=(), model=None):
+    def __init__(self, axis_span=()):
+
+        self.model = KernelDensity(
+            bandwidth=0.75
+        )
 
         self.x_axis = np.linspace(
             start=axis_span[0],
             stop=axis_span[1],
-            num=len(data)
-        )
+            num=1000
+        )[:, np.newaxis]
 
-        self.values = model.probability(self.x_axis)
+    def values(self, data):
+
+        log_density = self.model.score_samples(data)
+
+        return np.exp(log_density)
+
+    def fit(self, data):
+
+        self.model.fit(
+            np.array(data).reshape(-1, 1)
+        )
 
     @property
     def max_value(self):
@@ -26,36 +42,37 @@ class LabelDistribution:
 
 class ScoreDistribution:
 
-    def __init__(self, null_distribution=None, target_distribution=None):
+    def __init__(self, decoy_scores, target_scores, x_axis):
 
-        self.null_distribution = null_distribution
-        self.target_distribution = target_distribution
+        self.x_axis = x_axis
+        self.min_value = x_axis[0]
+        self.max_value = x_axis[-1]
 
         self.null_function = InterpolatedUnivariateSpline(
-            x=null_distribution.x_axis,
-            y=null_distribution.values,
+            x=x_axis,
+            y=decoy_scores,
             ext=1
         )
 
         self.target_function = InterpolatedUnivariateSpline(
-            x=target_distribution.x_axis,
-            y=target_distribution.values,
+            x=x_axis,
+            y=target_scores,
             ext=1
         )
 
     def calc_q_value(self, score):
 
-        if score >= self.target_distribution.max_value:
+        if score >= self.max_value:
             return 0.0
 
         null_area = self.null_function.integral(
             a=score,
-            b=self.null_distribution.max_value,
+            b=self.max_value,
         )
 
         target_area = self.target_function.integral(
             a=score,
-            b=self.target_distribution.max_value
+            b=self.max_value
         )
 
         total_area = null_area + target_area

@@ -1,8 +1,6 @@
 import pathlib
 
-from gscore.parsers.osw import osw
-from gscore.parsers.osw import queries
-
+from gscore.parsers import osw, queries
 
 from gscore.cli.common import PassArgs
 from gscore.workflows import build_global_model
@@ -13,6 +11,8 @@ from gscore.exportdata import (
     ExportData,
     PeptideExportRecord
 )
+
+import pickle
 
 
 def process_input_osws(args, peptide_score_distribution=None, protein_score_distribution=None):
@@ -25,10 +25,10 @@ def process_input_osws(args, peptide_score_distribution=None, protein_score_dist
 
         print(sample_name)
 
-        sample_graph = osw.fetch_peakgroup_graph(
+        sample_graph, _ = osw.fetch_peakgroup_graph(
             osw_path,
-            osw_query=queries.SelectPeakGroups.FETCH_PEPTIDE_MATRIX_EXPORT_DATA,
-            peakgroup_weight_column=args.score_column,
+            query=queries.SelectPeakGroups.FETCH_PEPTIDE_MATRIX_EXPORT_DATA,
+            peakgroup_weight_column="d_score",
             peptide_index=['modified_peptide_sequence', 'charge']
         )
 
@@ -58,7 +58,9 @@ def prepare_export_data(args, export_graph, sample_graphs):
 
     export_data = ExportData()
 
-    for protein_node in export_graph.iter(color='protein'):
+    for protein_node in export_graph.get_nodes('protein'):
+
+        protein_node = export_graph[protein_node]
 
         for peptide_node in protein_node.iter_edges(export_graph):
 
@@ -123,33 +125,46 @@ def main(args, logger):
 
     elif args.export_method == 'comprehensive':
 
-        peptide_model_args = PassArgs(
-            {
-                'input_files': args.input_files,
-                'model_output': args.model_output,
-                'scoring_level': 'peptide',
-                'use_decoys': args.use_decoys,
-                'score_column': args.score_column,
-                'true_target_cutoff': args.true_target_cutoff,
-                'false_target_cutoff': args.false_target_cutoff
-            }
-        )
+        # peptide_model_args = PassArgs(
+        #     {
+        #         'input_files': args.input_files,
+        #         'model_output': args.model_output,
+        #         'scoring_level': 'peptide',
+        #         'use_decoys': args.use_decoys,
+        #         'score_column': args.score_column,
+        #         'true_target_cutoff': args.true_target_cutoff,
+        #         'false_target_cutoff': args.false_target_cutoff
+        #     }
+        # )
+        #
+        # peptide_score_distribution = build_global_model.main(peptide_model_args)
+        #
+        # protein_model_args = PassArgs(
+        #     {
+        #         'input_files': args.input_files,
+        #         'model_output': args.model_output,
+        #         'scoring_level': 'protein',
+        #         'use_decoys': args.use_decoys,
+        #         'score_column': args.score_column,
+        #         'true_target_cutoff': args.true_target_cutoff,
+        #         'false_target_cutoff': args.false_target_cutoff
+        #     }
+        # )
+        #
+        # protein_score_distribution = build_global_model.main(protein_model_args)
 
-        peptide_score_distribution = build_global_model.main(peptide_model_args)
+        if args.peptide_score_distribution:
 
-        protein_model_args = PassArgs(
-            {
-                'input_files': args.input_files,
-                'model_output': args.model_output,
-                'scoring_level': 'protein',
-                'use_decoys': args.use_decoys,
-                'score_column': args.score_column,
-                'true_target_cutoff': args.true_target_cutoff,
-                'false_target_cutoff': args.false_target_cutoff
-            }
-        )
+            with open(args.peptide_score_distribution, 'rb') as pkl:
+                peptide_score_distribution = pickle.load(pkl)
 
-        protein_score_distribution = build_global_model.main(protein_model_args)
+        if args.protein_score_distribution:
+            with open(args.protein_score_distribution, 'rb') as pkl:
+                protein_score_distribution = pickle.load(pkl)
+
+        else:
+
+            protein_score_distribution = None
 
         sample_graphs = process_input_osws(
             args,

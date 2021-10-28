@@ -12,7 +12,7 @@ scripts = [
 install_requires = [
     'sklearn',
     'numpy',
-    'tensorflow',
+    #'tensorflow',
     'matplotlib',
     'seaborn',
     'pomegranate==0.14.0'
