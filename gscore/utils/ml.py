@@ -63,6 +63,57 @@ def reformat_data(peakgroups, include_score_columns=False):
     return scores, score_labels, score_indices
 
 
+def reformat_data_q_value_prediction(peakgroups, include_score_columns=False):
+
+    scores = list()
+    score_labels = list()
+    score_indices = list()
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        score_array = peakgroup.get_sub_score_column_array(
+            include_score_columns
+        )
+
+        scores.append(score_array)
+
+        score_labels.append(
+            [peakgroup.scores['q_value']]
+        )
+
+        score_indices.append(
+            peakgroup.key
+        )
+
+    scores = np.array(scores, dtype=np.float64)
+    score_labels = np.array(score_labels, dtype=np.float)
+    score_indices = np.array(score_indices, dtype=np.str)
+
+    return scores, score_labels, score_indices
+
+def reformat_data_q_value_prediction_unscored(peakgroups, include_score_columns=False):
+
+    scores = list()
+    score_indices = list()
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        score_array = peakgroup.get_sub_score_column_array(
+            include_score_columns
+        )
+
+        scores.append(score_array)
+
+        score_indices.append(
+            peakgroup.key
+        )
+
+    scores = np.array(scores, dtype=np.float64)
+    score_indices = np.array(score_indices, dtype=np.str)
+
+    return scores, score_indices
+
+
 # def get_peakgroups(graph, node_list, rank=0, return_all=False):
 #
 #     nodes_by_rank = list()
