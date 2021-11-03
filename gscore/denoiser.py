@@ -1,5 +1,4 @@
 import numpy as np
-from numba import typed
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier

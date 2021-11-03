@@ -509,3 +509,32 @@ class SelectPeakGroups:
             score_columns=SCORE_COLUMNS
         )
     )
+
+    FETCH_PYPROPHET_SCORED_DATA_FOR_EXPORT = (
+        """
+        select
+            FEATURE.ID feature_id,
+            FEATURE.PRECURSOR_ID precursor_id,
+            PEPTIDE.MODIFIED_SEQUENCE modified_sequence,
+            PRECURSOR.CHARGE charge,
+            PROTEIN.DECOY decoy,
+            PROTEIN.PROTEIN_ACCESSION protein_accession,
+            FEATURE.EXP_RT retention_time,
+            SCORE_MS2.QVALUE peakgroup_q_value,
+            SCORE_PEPTIDE.QVALUE global_peptide_q_value,
+            SCORE_PROTEIN.QVALUE global_protein_q_value,
+            FEATURE_MS2.AREA_INTENSITY intensity
+        from
+            SCORE_MS2
+        left join FEATURE on SCORE_MS2.FEATURE_ID = FEATURE.ID
+        left join FEATURE_MS2 on FEATURE.ID = FEATURE_MS2.FEATURE_ID
+        left join PRECURSOR on FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        left join PRECURSOR_PEPTIDE_MAPPING on PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID
+        left join PEPTIDE on PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID
+        left join PEPTIDE_PROTEIN_MAPPING on PEPTIDE.ID = PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID
+        left join PROTEIN on PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID = PROTEIN.ID
+        left join SCORE_PEPTIDE on PEPTIDE.ID = SCORE_PEPTIDE.PEPTIDE_ID
+        left join SCORE_PROTEIN on PROTEIN.ID = SCORE_PROTEIN.PROTEIN_ID
+        order by precursor_id;
+        """
+    )

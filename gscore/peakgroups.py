@@ -1,104 +1,45 @@
 import numpy as np
 
+class Protein:
 
-class Node:
-
-    key: str
-    color: str
-    _edges: dict()
-
-    def __init__(self, key, color):
-
-        self.key = key
-        self.color = color
-        self._edges = dict()
-
-    def add_edge(self, key, weight=0.0):
-
-        self._edges[key] = weight
-
-    def update_weight(self, key, weight):
-
-        self._edges[key] = weight
-
-    def get_edges(self):
-
-        edges = list()
-
-        for edge in self._edges.keys():
-            edges.append(edge)
-
-        return edges
-
-    def get_num_edges(self):
-
-        edges = self.get_edges()
-
-        return len(edges)
-
-    def iter_edges(self, graph):
-
-        for key, weight in self._edges.items():
-            yield graph[key]
-
-    def get_edge_by_ranked_weight(self, reverse=True, rank=1):
-
-        weights = list()
-
-        for weight in self._edges.values():
-            weights.append(weight)
-
-        weights.sort(reverse=reverse)
-
-        rank_index = rank - 1
-
-        rank_weight = weights[rank_index]
-
-        for key, weight in self._edges.items():
-
-            if rank_weight == weight:
-                return key
-
-    def get_weight(self, key):
-        return self._edges[key]
-
-
-
-class Protein(Node):
     protein_accession: str
     decoy: int
 
-    def __init__(self, key, color, protein_accession, decoy):
-
-        super().__init__(key, color)
+    def __init__(self, protein_accession='', decoy=0, q_value=None):
 
         self.protein_accession = protein_accession
 
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
+        self.q_value = q_value
+
         self.scores = dict()
 
 
-class Peptide(Node):
+class Precursor:
     sequence: str
     modified_sequence: str
     charge: int
     decoy: int
     target: int
 
-    def __init__(self, key, color, sequence, modified_sequence, charge, decoy):
-        super().__init__(key, color)
+    def __init__(self, sequence='', modified_sequence='', charge=0, decoy=0, q_value=None):
 
         self.sequence = sequence
         self.modified_sequence = modified_sequence
         self.charge = charge
         self.decoy = decoy
         self.target = abs(decoy - 1)
+
+        self.q_value = q_value
+
+        self.peakgroups = []
+
         self.scores = dict()
 
 
-class PeakGroup(Node):
+class PeakGroup:
     mz: float
     rt: float
     ms2_intensity: float
@@ -109,11 +50,12 @@ class PeakGroup(Node):
     start_rt: float
     end_rt: float
 
-    def __init__(self, key='', color='', mz=0.0, rt=0.0, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0):
+    def __init__(self, mz=0.0, rt=0.0, intensity=None, q_value=None, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0):
 
-        super().__init__(key, color)
+        self.retention_time = rt
+        self.intensity = intensity
+        self.q_value = q_value
 
-        self.rt = rt
         self.mz = mz
         self.ms2_intensity = ms2_intensity
         self.ms1_intensity = ms1_intensity

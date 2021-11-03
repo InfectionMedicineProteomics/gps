@@ -9,10 +9,78 @@ from gscore.peakgroups import (
 )
 from gscore.exportdata import (
     ExportData,
-    PeptideExportRecord
+    PeptideExportRecord,
+    PrecursorExportRecord
 )
 
 import pickle
+
+
+
+def process_pyprophet_export_data(osw_graphs):
+
+    export_data = ExportData()
+
+    for protein_graph in osw_graphs:
+
+        sample = pathlib.Path(protein_graph.graph['file_name']).name
+
+        export_data.samples.append(sample)
+
+        for node, node_data in protein_graph.nodes(data=True):
+
+            if node_data["bipartite"] == "precursor":
+
+                precursor_data = protein_graph.nodes(data=True)[node]['data']
+
+                precursor_data.peakgroups.sort(key=lambda x: x.q_value, reverse=False)
+
+                peakgroup = precursor_data.peakgroups[0]
+
+                precursor_id = f"{precursor_data.modified_sequence}_{precursor_data.charge}"
+
+                protein_ids = []
+
+                decoy = 0
+
+                protein_q_value = 0.0
+
+                peptide_q_value = precursor_data.q_value
+
+                for protein_node in protein_graph.neighbors(node):
+
+                    protein_ids.append(protein_node)
+
+                    protein_data = protein_graph.nodes(data=True)[protein_node]['data']
+
+                    protein_q_value = protein_data.q_value
+
+                    if protein_data.decoy == 1:
+                        decoy = 1
+
+                if precursor_id not in export_data:
+                    precursor_export_record = PrecursorExportRecord(
+
+                        modified_sequence=precursor_data.modified_sequence,
+                        charge=precursor_data.charge,
+                        decoy=decoy,
+                        protein_accession=protein_ids,
+                        rt=peakgroup.retention_time,
+                        protein_q_value=protein_q_value,
+                        peptide_q_value=peptide_q_value
+
+                    )
+
+                    export_data[precursor_id] = precursor_export_record
+
+                export_data[precursor_id].protein_accession.extend(protein_ids)
+
+                export_data[precursor_id].add_sample(
+                    sample_key=sample,
+                    peakgroup_record=peakgroup
+                )
+
+    return export_data
 
 
 def process_input_osws(args, peptide_score_distribution=None, protein_score_distribution=None):
@@ -122,6 +190,21 @@ def main(args, logger):
             sep='\t',
             index=False
         )
+
+    elif args.export_method == 'pyprophet':
+
+        print("Parsing OSW files.")
+
+        query = queries.SelectPeakGroups.FETCH_PYPROPHET_SCORED_DATA_FOR_EXPORT
+
+        osw_graphs = osw.fetch_export_graphs(args.input_pyprophet_osw_files, query)
+
+        print("Processing export data.")
+
+        export_data = process_pyprophet_export_data(osw_graphs)
+
+        print("Writing output file.")
+        export_data.write(path=args.output_file)
 
     elif args.export_method == 'comprehensive':
 

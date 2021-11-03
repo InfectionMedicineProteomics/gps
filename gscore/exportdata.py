@@ -4,6 +4,50 @@ from collections.abc import MutableMapping
 from csv import DictWriter
 
 
+class PrecursorExportRecord:
+
+    def __init__(
+            self,
+            modified_sequence: str,
+            charge: int,
+            decoy: bool,
+            protein_accession: list,
+            rt: float,
+            protein_q_value: float,
+            peptide_q_value: float
+    ):
+
+        self.modified_sequence = modified_sequence
+        self.charge = charge
+        self.decoy = decoy
+        self.protein_accession = protein_accession
+        self.protein_q_value = protein_q_value
+        self.peptide_q_value = peptide_q_value
+        self.samples = dict()
+
+    def add_sample(self, sample_key, peakgroup_record):
+
+        self.samples[sample_key] = peakgroup_record
+
+    def get_sample_intensity(self, sample_key=''):
+
+        if sample_key in self.samples:
+
+            return self.samples[sample_key].intensity
+
+        else:
+
+            return np.NaN
+
+    def retention_time(self):
+
+        rts = list()
+
+        for sample_key, data in self.samples.items():
+            rts.append(data.retention_time)
+
+        return np.median(rts)
+
 class PeptideExportRecord:
 
     def __init__(self, sequence='', charge=0, decoy=0, protein_accession=''):
@@ -83,6 +127,10 @@ class PeptideExportRecord:
 
             raise
 
+    def add_sample(self, sample_key, peakgroup_record):
+
+        self.sample_data[sample_key] = peakgroup_record
+
     def get_sample_intensity(self, sample_key='', intensity_type=''):
 
         if self.sample_data[sample_key]:
@@ -105,6 +153,7 @@ class ExportData(MutableMapping):
     def __init__(self, data=dict()):
 
         self._data = data
+        self.samples = []
 
     def __getitem__(self, key):
 
@@ -122,42 +171,43 @@ class ExportData(MutableMapping):
 
         return len(self._data)
 
-    def __iter__(self, sample_names=[], quant_type=''):
+    def __contains__(self, item):
+
+        return item in self._data
+
+    def __iter__(self):
 
         for peptide_key, record in self._data.items():
 
-            if len(record) > 0:
+            export_record = {
+                'PeptideSequence': record.modified_sequence,
+                'Charge': record.charge,
+                'Decoy': record.decoy,
+                'Protein': ';'.join(list(set(record.protein_accession))),
+                'RetentionTime': record.retention_time(),
+                'PeptideQValue': record.peptide_q_value,
+                'ProteinQValue': record.protein_q_value
+            }
 
-                export_record = {
-                    'sequence': record.sequence,
-                    'charge': record.charge,
-                    'decoy': record.decoy,
-                    'protein': record.protein_accession,
-                    'mz': record.mz(),
-                    'rt': record.rt(),
-                    'peptide_q_value': record.q_value(level='peptide'),
-                    'protein_q_value': record.q_value(level='protein')
-                }
+            for sample in self.samples:
 
-                for sample in sample_names:
-                    export_record[sample] = record.get_sample_intensity(
-                        sample_key=sample,
-                        intensity_type=quant_type
-                    )
+                export_record[sample] = record.get_sample_intensity(
+                    sample_key=sample
+                )
 
-                yield export_record
+            yield export_record
 
     def items(self):
 
         return self._data.items()
 
-    def write(self, path='', sample_names=[], quant_type=''):
+    def write(self, path='', quant_type=''):
 
         with open(path, 'w') as outfile:
 
             first_line = True
 
-            for record in self.__iter__(sample_names=sample_names, quant_type=quant_type):
+            for record in self:
 
                 if first_line:
 
