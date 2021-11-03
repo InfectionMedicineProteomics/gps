@@ -4,11 +4,11 @@ import argparse
 from gscore.workflows import (
     build_scorer,
     score_run,
-    export,
     build_global_model
 )
 from gscore.utils.logger import Logger
 
+from gscore import export
 
 from gscore.cli import (
     build_scoring_model_args,
