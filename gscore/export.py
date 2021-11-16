@@ -202,7 +202,7 @@ def main(args, logger):
 
         print("Processing export data.")
 
-        export_data = process_pyprophet_export_data(osw_graphs)
+        export_data = process_pyprophet_export_data(osw_graphs, args)
 
         print("Writing output file.")
         export_data.write(path=args.output_file)
