@@ -16,7 +16,7 @@ from gscore.peakgroups import (
 import pickle
 
 
-def process_pyprophet_export_data(osw_graphs):
+def process_pyprophet_export_data(osw_graphs, args):
 
     export_data = ExportData()
 
@@ -36,48 +36,50 @@ def process_pyprophet_export_data(osw_graphs):
 
                 peakgroup = precursor_data.peakgroups[0]
 
-                precursor_id = f"{precursor_data.modified_sequence}_{precursor_data.charge}"
+                if peakgroup.q_value <= args.max_peakgroup_q_value:
 
-                protein_ids = []
+                    precursor_id = f"{precursor_data.modified_sequence}_{precursor_data.charge}"
 
-                decoy = 0
+                    protein_ids = []
 
-                protein_q_value = 0.0
+                    decoy = 0
 
-                peptide_q_value = precursor_data.q_value
+                    protein_q_value = 0.0
 
-                for protein_node in protein_graph.neighbors(node):
+                    peptide_q_value = precursor_data.q_value
 
-                    protein_ids.append(protein_node)
+                    for protein_node in protein_graph.neighbors(node):
 
-                    protein_data = protein_graph.nodes(data=True)[protein_node]['data']
+                        protein_ids.append(protein_node)
 
-                    protein_q_value = protein_data.q_value
+                        protein_data = protein_graph.nodes(data=True)[protein_node]['data']
 
-                    if protein_data.decoy == 1:
-                        decoy = 1
+                        protein_q_value = protein_data.q_value
 
-                if precursor_id not in export_data:
-                    precursor_export_record = PrecursorExportRecord(
+                        if protein_data.decoy == 1:
+                            decoy = 1
 
-                        modified_sequence=precursor_data.modified_sequence,
-                        charge=precursor_data.charge,
-                        decoy=decoy,
-                        protein_accession=protein_ids,
-                        rt=peakgroup.retention_time,
-                        protein_q_value=protein_q_value,
-                        peptide_q_value=peptide_q_value
+                    if precursor_id not in export_data:
+                        precursor_export_record = PrecursorExportRecord(
 
+                            modified_sequence=precursor_data.modified_sequence,
+                            charge=precursor_data.charge,
+                            decoy=decoy,
+                            protein_accession=protein_ids,
+                            rt=peakgroup.retention_time,
+                            protein_q_value=protein_q_value,
+                            peptide_q_value=peptide_q_value
+
+                        )
+
+                        export_data[precursor_id] = precursor_export_record
+
+                    export_data[precursor_id].protein_accession.extend(protein_ids)
+
+                    export_data[precursor_id].add_sample(
+                        sample_key=sample,
+                        peakgroup_record=peakgroup
                     )
-
-                    export_data[precursor_id] = precursor_export_record
-
-                export_data[precursor_id].protein_accession.extend(protein_ids)
-
-                export_data[precursor_id].add_sample(
-                    sample_key=sample,
-                    peakgroup_record=peakgroup
-                )
 
     return export_data
 

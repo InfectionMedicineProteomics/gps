@@ -17,19 +17,11 @@ def parse_args(parser):
     )
 
     parser.add_argument(
-        '--max-global-peptide-q-value',
-        dest='max_global_peptide_q_value',
-        help='Max peptide level global q-value cutoff',
+        '--max-peakgroup-q-value',
+        dest='max_peakgroup_q_value',
+        help="Max q-value for peakgroup inclusion in the output matrix",
         type=float,
-        default=0.01
-    )
-
-    parser.add_argument(
-        '--max-global-protein-q-value',
-        dest='max_global_protein_q_value',
-        help='Max protein level global q-value cutoff',
-        type=float,
-        default=0.01
+        default=0.05
     )
 
     parser.add_argument(
