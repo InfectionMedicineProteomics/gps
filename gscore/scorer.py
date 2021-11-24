@@ -58,7 +58,7 @@ class SGDScorer(Scorer):
 
     model: SGDClassifier
 
-    def __init__(self, class_weights: ndarray):
+    def __init__(self, class_weights: np.ndarray):
 
         self.model = SGDClassifier(
             alpha=1e-05,
