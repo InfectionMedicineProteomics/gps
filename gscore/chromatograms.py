@@ -5,6 +5,7 @@ from pynumpress import (
     decode_linear,
     decode_pic
 )
+
 import zlib
 
 import numpy as np

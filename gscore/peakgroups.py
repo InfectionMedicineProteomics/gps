@@ -1,20 +1,83 @@
+from typing import List
+
 import numpy as np
+import networkx as nx
 
-class Protein:
-
-    protein_accession: str
+class PeakGroup:
+    ghost_score_id: str
+    idx: str
+    mz: float
+    rt: float
+    ms2_intensity: float
+    ms1_intensity: float
     decoy: int
+    target: int
+    delta_rt: float
+    start_rt: float
+    end_rt: float
 
-    def __init__(self, protein_accession='', decoy=0, q_value=None):
+    def __init__(self, ghost_score_id='', idx='', mz=0.0, rt=0.0, intensity=None, q_value=None, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0,
+                 delta_rt = 0.0, start_rt = 0.0, end_rt = 0.0):
 
-        self.protein_accession = protein_accession
+        self.ghost_score_id = ghost_score_id
+        self.idx = idx
 
+        self.retention_time = rt
+        self.intensity = intensity
+        self.q_value = q_value
+
+        self.mz = mz
+        self.ms2_intensity = ms2_intensity
+        self.ms1_intensity = ms1_intensity
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
-        self.q_value = q_value
-
+        self.sub_scores = dict()
         self.scores = dict()
+
+        self.delta_rt = delta_rt
+        self.start_rt = start_rt
+        self.end_rt = end_rt
+
+        self.scaled_rt_start = 0.0
+        self.scaled_rt_apex = 0.0
+        self.scaled_rt_end = 0.0
+
+    def __repr__(self):
+
+        return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.sub_scores=}"
+
+    def add_score_column(self, key, value):
+
+        self.scores[key] = value
+
+    def add_sub_score_column(self, key, value):
+
+        self.sub_scores[key] = value
+
+    def get_score_columns(self):
+
+        score_columns = list()
+
+        for score_column in self.sub_scores.keys():
+
+            score_columns.append(score_column)
+
+        return score_columns
+
+    def get_sub_score_column_array(self, include_score_columns=True):
+
+        score_values = list()
+
+        for score_value in self.sub_scores.values():
+            score_values.append(score_value)
+
+        if include_score_columns:
+
+            for score_value in self.scores.values():
+                score_values.append(score_value)
+
+        return np.asarray(score_values, dtype=np.double)
 
 
 class Precursor:
@@ -38,71 +101,115 @@ class Precursor:
 
         self.scores = dict()
 
+    def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
-class PeakGroup:
-    mz: float
-    rt: float
-    ms2_intensity: float
-    ms1_intensity: float
+        self.peakgroups.sort(
+            key=lambda x: x.sub_scores[key],
+            reverse=reverse
+        )
+
+        rank = rank - 1
+
+        return self.peakgroups[rank]
+
+
+class Protein:
+
+    protein_accession: str
     decoy: int
-    target: int
-    delta_rt: float
-    start_rt: float
-    end_rt: float
 
-    def __init__(self, mz=0.0, rt=0.0, intensity=None, q_value=None, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0):
+    def __init__(self, protein_accession='', decoy=0, q_value=None):
 
-        self.retention_time = rt
-        self.intensity = intensity
-        self.q_value = q_value
+        self.protein_accession = protein_accession
 
-        self.mz = mz
-        self.ms2_intensity = ms2_intensity
-        self.ms1_intensity = ms1_intensity
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
-        self.sub_scores = dict()
+        self.q_value = q_value
+
         self.scores = dict()
 
-        self.delta_rt = 0.0
-        self.start_rt = 0.0
-        self.end_rt = 0.0
 
-        self.scaled_rt_start = 0.0
-        self.scaled_rt_apex = 0.0
-        self.scaled_rt_end = 0.0
+def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:
 
-    def add_score_column(self, key, value):
+    filtered_peakgroups = []
 
-        self.scores[key] = value
+    for node, node_data in graph.nodes(data=True):
 
-    def add_sub_score_column(self, key, value):
+        if node_data["bipartite"] == "precursor":
 
-        self.sub_scores[key] = value
+            precursor_data = node_data['data']
 
-    def get_score_columns(self):
+            precursor_data.peakgroups.sort(key=lambda x: x.scores[sort_key], reverse=True)
 
-        score_columns = list()
+            if use_second_ranked:
 
-        for score_column in self.sub_scores.keys():
-            score_columns.append(score_column)
+                peakgroup = precursor_data.peakgroups[1]
 
-        return score_columns
+                peakgroup.target = 0
+                peakgroup.decoy = 1
 
-    def get_sub_score_column_array(self, include_score_columns=True):
+                if peakgroup.target == 1:
 
-        score_values = list()
+                    filtered_peakgroups.append(peakgroup)
 
-        for score_value in self.sub_scores.values():
-            score_values.append(score_value)
+            else:
 
-        if include_score_columns:
+                peakgroup = precursor_data.peakgroups[0]
 
-            for score_value in self.scores.values():
-                score_values.append(score_value)
+                filtered_peakgroups.append(peakgroup)
 
-        return np.asarray(score_values, dtype=np.double)
+    return filtered_peakgroups
+
+
+def filter_target_peakgroups(graph: nx.Graph, rank: int, sort_key: str, filter_key: str, value: float) -> List[PeakGroup]:
+
+    filtered_peakgroups = []
+
+    rank = rank - 1
+
+    for node, node_data in graph.nodes(data=True):
+
+        if node_data["bipartite"] == "precursor":
+
+            precursor_data = node_data['data']
+
+            precursor_data.peakgroups.sort(key=lambda x: x.scores[sort_key], reverse=True)
+
+            peakgroup = precursor_data.peakgroups[rank]
+
+            if peakgroup.target == 1 and peakgroup.scores[filter_key] >= value:
+
+                filtered_peakgroups.append(peakgroup)
+
+    return filtered_peakgroups
+
+
+def get_peakgroups_by_list(graph: nx.Graph, node_list: List[str], rank: int = 0, score_key: str = '', reverse: bool = True, return_all: bool = False) -> List[PeakGroup]:
+
+    nodes_by_rank = list()
+
+    for node_key in node_list:
+
+        node = graph.nodes[node_key]
+
+        if not return_all:
+
+            peakgroup = node['data'].get_peakgroup(
+                rank = 1,
+                key = score_key,
+                reverse = reverse
+            )
+
+            nodes_by_rank.append(peakgroup)
+
+        else:
+
+            peakgroups = node['data'].peakgroups
+
+            nodes_by_rank.extend(peakgroups)
+
+    return nodes_by_rank
 
 
 

@@ -16,8 +16,10 @@ from gscore.denoiser import Scaler, BaggedDenoiser
 from gscore.utils.connection import Connection
 from gscore.parsers import osw, queries
 from gscore import peakgroups, denoiser, distributions
-from gscore.utils.ml import get_peptide_id_folds, get_training_peptides, preprocess_data, reformat_data
 from gscore.distributions import LabelDistribution, ScoreDistribution
+
+import networkx as nx
+from typing import List, Dict
 
 def plot_distributions(
         target_distribution,
@@ -62,32 +64,25 @@ def prepare_qvalue_add_records(graph):
     return record_updates
 
 
-def prepare_denoise_record_additions(graph):
+def prepare_denoise_record_additions(graph: nx.Graph) -> List[Dict]:
 
     record_updates = list()
 
-    peakgroup_node_keys = graph.get_nodes('peakgroup')
+    for node, node_data in graph.nodes(data=True):
 
-    counter = 0
+        if node_data["bipartite"] == "precursor":
 
-    for peakgroup_key in peakgroup_node_keys:
+            precursor_data = node_data['data']
 
-        peakgroup = graph.get_node(peakgroup_key)
+            for peakgroup in precursor_data.peakgroups:
 
-        if 'probability' in peakgroup.scores:
+                record = {
+                    'feature_id': peakgroup.idx,
+                    'probability': peakgroup.scores['probability'],
+                    'vote_percentage': peakgroup.scores['vote_percentage']
+                }
 
-            record = {
-                'feature_id': peakgroup.key,
-                'probability': peakgroup.scores['probability']
-            }
-
-            record_updates.append(record)
-
-        else:
-
-            counter += 1
-
-    print(f"Found {counter} peakgroups with no probability scores.")
+                record_updates.append(record)
 
     return record_updates
 

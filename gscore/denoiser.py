@@ -11,7 +11,8 @@ from sklearn.preprocessing import (
 
 
 from gscore.utils.ml import *
-
+from gscore.utils import ml
+from gscore import peakgroups
 
 class BaggedDenoiser(BaggingClassifier):
 
@@ -84,26 +85,43 @@ class Scaler(Pipeline):
             ]
         )
 
-def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
+def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
 
-    peptide_folds = get_peptide_id_folds(graph, num_folds)
+    precursor_folds = ml.get_precursor_id_folds(graph, num_folds)
 
-    for fold_num, peptide_fold in enumerate(peptide_folds):
+    print(len(precursor_folds))
+
+    total_recall = []
+    total_precision = []
+
+    for fold_num, precursor_fold_ids in enumerate(precursor_folds):
 
         print(f"Processing fold {fold_num + 1}")
 
-        training_peptides = get_training_peptides(
-            peptide_folds=peptide_folds,
+        training_precursors = ml.get_training_data(
+            folds=precursor_folds,
             fold_num=fold_num
         )
 
-        scaler = Scaler()
-
-        train_data, train_labels, _ = preprocess_data(
-            graph,
-            training_peptides,
-            use_decoys=False
+        training_data_targets = peakgroups.get_peakgroups_by_list(
+            graph=graph,
+            node_list=training_precursors,
+            rank=1,
+            score_key='var_xcorr_shape_weighted',
+            reverse=True
         )
+
+        peakgroup_scores, peakgroup_labels, _ = ml.reformat_data(
+            peakgroups=training_data_targets
+        )
+
+        train_data, train_labels = shuffle(
+            peakgroup_scores,
+            peakgroup_labels,
+            random_state=42
+        )
+
+        scaler = Scaler()
 
         train_data = scaler.fit_transform(train_data)
 
@@ -121,11 +139,14 @@ def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
             train_labels.ravel()
         )
 
-        testing_scores, testing_labels, testing_keys = preprocess_data(
-            graph,
-            list(peptide_fold),
+        peakgroups_to_score = peakgroups.get_peakgroups_by_list(
+            graph=graph,
+            node_list=precursor_fold_ids,
             return_all=True
+        )
 
+        testing_scores, testing_labels, testing_keys = ml.reformat_data(
+            peakgroups=peakgroups_to_score
         )
 
         testing_scores = scaler.transform(
@@ -136,8 +157,6 @@ def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
             denoizer.classes_ == 1.0
         )[0][0]
 
-        print("Scoring data")
-
         vote_percentages = denoizer.vote(
             testing_scores,
             threshold=vote_threshold
@@ -147,24 +166,24 @@ def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
             testing_scores
         )[:, class_index]
 
-        print("Updating peakgroups")
+        print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
 
-        graph.update_node_scores(
-            typed.List(testing_keys),
-            vote_percentages,
-            "vote_percentage"
+        for idx, peakgroup in enumerate(peakgroups_to_score):
+
+            peakgroup.scores['probability'] = probabilities[idx]
+
+            peakgroup.scores['vote_percentage'] = vote_percentages[idx]
+
+        validation_data = peakgroups.get_peakgroups_by_list(
+            graph=graph,
+            node_list=precursor_fold_ids,
+            rank=1,
+            score_key='var_xcorr_shape_weighted',
+            reverse=True
         )
 
-        graph.update_node_scores(
-            typed.List(testing_keys),
-            probabilities,
-            "probability"
-        )
-
-        val_scores, val_labels, _ = preprocess_data(
-            graph,
-            list(peptide_fold),
-            use_decoys=False
+        val_scores, val_labels, _ = ml.reformat_data(
+            peakgroups=validation_data
         )
 
         val_scores = scaler.transform(
@@ -181,9 +200,16 @@ def denoise(graph, num_folds, num_classifiers, num_threads, vote_threshold):
             y_true=val_labels.ravel()
         )
 
+        total_recall.append(fold_recall)
+        total_precision.append(fold_precision)
+
         print(
             f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
         )
+
+    print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
+
+    return graph
 
 
 def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):

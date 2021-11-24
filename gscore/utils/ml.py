@@ -1,7 +1,9 @@
 import random
+from typing import List
 
 from sklearn.utils import shuffle
 
+import networkx as nx
 import numpy as np
 
 def get_peptide_id_folds(graph, num_folds):
@@ -18,20 +20,39 @@ def get_peptide_id_folds(graph, num_folds):
 
     return peptide_folds
 
+def get_precursor_id_folds(graph: nx.Graph, num_folds: int) -> List[np.ndarray]:
 
-def get_training_peptides(peptide_folds, fold_num):
+    precursor_ids = list(
+        {
+            node_key for node_key, data in graph.nodes(data=True)
+            if data["bipartite"] == 'precursor'
+        }
+    )
 
-    training_peptides = list()
+    random.seed(42)
+    random.shuffle(precursor_ids)
 
-    for training_fold_idx, peptide_ids in enumerate(peptide_folds):
+    folds = np.array_split(
+        precursor_ids,
+        num_folds
+    )
+
+    return folds
+
+
+def get_training_data(folds: List[np.ndarray], fold_num: int):
+
+    training_data = list()
+
+    for training_fold_idx, training_ids in enumerate(folds):
 
         if training_fold_idx != fold_num:
 
-            for peptide_id in peptide_ids:
+            for training_id in training_ids:
 
-                training_peptides.append(peptide_id)
+                training_data.append(training_id)
 
-    return training_peptides
+    return training_data
 
 
 def reformat_data(peakgroups, include_score_columns=False):
@@ -52,15 +73,18 @@ def reformat_data(peakgroups, include_score_columns=False):
             [peakgroup.target]
         )
 
-        score_indices.append(
-            peakgroup.key
-        )
+        score_indices.append(peakgroup.idx)
 
     scores = np.array(scores, dtype=np.float64)
     score_labels = np.array(score_labels, dtype=np.float)
     score_indices = np.array(score_indices, dtype=np.str)
 
     return scores, score_labels, score_indices
+
+def reformat_data_to_score(peakgroups):
+
+    scores = list()
+    score_labels = list()
 
 
 def reformat_data_q_value_prediction(peakgroups, include_score_columns=False):
@@ -157,52 +181,55 @@ def reformat_data_q_value_prediction_unscored(peakgroups, include_score_columns=
 #     return nodes_by_rank
 
 
-def preprocess_data(graph, node_list, return_all=False, use_decoys=False):
+def preprocess_data(graph: nx.Graph, node_list: List[str], return_all: bool = False, use_decoys: bool = False):
 
-    peakgroups = list()
-
-    if return_all:
-
-        all_peakgroups = graph.get_nodes_by_list(
-            node_list=node_list,
-            return_all=True
-        )
-
-        peakgroups.extend(all_peakgroups)
-
-    else:
-
-        training_top_ranked = graph.get_nodes_by_list(
-            node_list=node_list,
-            rank=1
-        )
-
-        peakgroups.extend(training_top_ranked)
-
-        if not use_decoys:
-
-            training_second_ranked = graph.get_nodes_by_list(
-                node_list=node_list,
-                rank=2
-            )
-
-            for peakgroup_node in training_second_ranked:
-
-                peakgroup_node.target = 0.0
-                peakgroup_node.decoy = 1.0
-
-                peakgroups.append(peakgroup_node)
-
-    peakgroup_scores, peakgroup_labels, peakgroup_keys = reformat_data(
-        peakgroups=peakgroups
-    )
+    pass
 
 
-    peakgroup_scores, peakgroup_labels, peakgroup_keys = shuffle(
-        peakgroup_scores,
-        peakgroup_labels,
-        peakgroup_keys,
-        random_state=42
-    )
-
-    return peakgroup_scores, peakgroup_labels, peakgroup_keys
+    # peakgroups = list()
+    #
+    # if return_all:
+    #
+    #     all_peakgroups = graph.get_nodes_by_list(
+    #         node_list=node_list,
+    #         return_all=True
+    #     )
+    #
+    #     peakgroups.extend(all_peakgroups)
+    #
+    # else:
+    #
+    #     training_top_ranked = graph.get_nodes_by_list(
+    #         node_list=node_list,
+    #         rank=1
+    #     )
+    #
+    #     peakgroups.extend(training_top_ranked)
+    #
+    #     if not use_decoys:
+    #
+    #         training_second_ranked = graph.get_nodes_by_list(
+    #             node_list=node_list,
+    #             rank=2
+    #         )
+    #
+    #         for peakgroup_node in training_second_ranked:
+    #
+    #             peakgroup_node.target = 0.0
+    #             peakgroup_node.decoy = 1.0
+    #
+    #             peakgroups.append(peakgroup_node)
+    #
+    # peakgroup_scores, peakgroup_labels, peakgroup_keys = reformat_data(
+    #     peakgroups=peakgroups
+    # )
+    #
+    #
+    # peakgroup_scores, peakgroup_labels, peakgroup_keys = shuffle(
+    #     peakgroup_scores,
+    #     peakgroup_labels,
+    #     peakgroup_keys,
+    #     random_state=42
+    # )
+    #
+    # return peakgroup_scores, peakgroup_labels, peakgroup_keys
