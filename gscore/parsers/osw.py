@@ -103,7 +103,9 @@ def fetch_export_graphs(osw_files, query):
 
 def fetch_peakgroup_data(osw_path: str, osw_query: str):
 
-    protein_graph = nx.Graph(file_name=osw_path)
+    #protein_graph = nx.Graph(file_name=osw_path)
+
+    protein_graph = Graph()
 
     with Connection(osw_path) as conn:
 
@@ -121,10 +123,10 @@ def fetch_peakgroup_data(osw_path: str, osw_query: str):
                     decoy=int(record['decoy'])
                 )
 
-                protein_graph.add_nodes_from(
-                    [record['protein_accession']],
-                    data=protein,
-                    bipartite='protein'
+                protein_graph.add_node(
+                    key=record['protein_accession'],
+                    node=protein,
+                    color='protein'
                 )
 
             if precursor_id not in protein_graph:
@@ -136,16 +138,16 @@ def fetch_peakgroup_data(osw_path: str, osw_query: str):
                     decoy=record['decoy']
                 )
 
-                protein_graph.add_nodes_from(
-                    [precursor_id],
-                    data=precursor,
-                    bipartite='precursor'
+                protein_graph.add_node(
+                    key=precursor_id,
+                    node=precursor,
+                    color='precursor'
                 )
 
-                protein_graph.add_edges_from(
-                    [
-                        (record['protein_accession'], precursor_id)
-                    ]
+                protein_graph.add_edge(
+                    node_from=record['protein_accession'],
+                    node_to=precursor_id,
+                    bidirectional=True
                 )
 
             peakgroup = PeakGroup(
@@ -191,7 +193,7 @@ def fetch_peakgroup_data(osw_path: str, osw_query: str):
                         value=float(column_value)
                     )
 
-            protein_graph.nodes[precursor_id]['data'].peakgroups.append(
+            protein_graph[precursor_id].peakgroups.append(
                 peakgroup
             )
 

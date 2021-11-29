@@ -16,7 +16,7 @@ from gscore.denoiser import Scaler, BaggedDenoiser
 from gscore.utils.connection import Connection
 from gscore.parsers import osw, queries
 from gscore import peakgroups, denoiser, distributions
-from gscore.distributions import LabelDistribution, ScoreDistribution
+from gscore.distributions import ScoreDistribution
 
 import networkx as nx
 from typing import List, Dict

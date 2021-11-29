@@ -142,14 +142,14 @@ def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool
 
             precursor_data.peakgroups.sort(key=lambda x: x.scores[sort_key], reverse=True)
 
-            if use_second_ranked:
+            if use_second_ranked and len(precursor_data.peakgroups) > 1:
 
                 peakgroup = precursor_data.peakgroups[1]
 
-                peakgroup.target = 0
-                peakgroup.decoy = 1
-
                 if peakgroup.target == 1:
+
+                    peakgroup.target = 0
+                    peakgroup.decoy = 1
 
                     filtered_peakgroups.append(peakgroup)
 
@@ -160,6 +160,22 @@ def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool
                 filtered_peakgroups.append(peakgroup)
 
     return filtered_peakgroups
+
+def get_all_peakgroups(graph: nx.Graph) -> List[PeakGroup]:
+
+    all_peakgroups = []
+
+    for node, node_data in graph.nodes(data=True):
+
+        if node_data['bipartite'] == "precursor":
+
+            precursor_data = node_data['data']
+
+            for peakgroup in precursor_data.peakgroups:
+
+                all_peakgroups.append(peakgroup)
+
+    return all_peakgroups
 
 
 def filter_target_peakgroups(graph: nx.Graph, rank: int, sort_key: str, filter_key: str, value: float) -> List[PeakGroup]:

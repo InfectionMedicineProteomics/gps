@@ -8,11 +8,13 @@ from sklearn.preprocessing import (
     RobustScaler,
     MinMaxScaler
 )
+from sklearn.utils import class_weight
 
 
 from gscore.utils.ml import *
 from gscore.utils import ml
 from gscore import peakgroups
+from gscore.scaler import Scaler
 
 class BaggedDenoiser(BaggingClassifier):
 
@@ -22,10 +24,12 @@ class BaggedDenoiser(BaggingClassifier):
             n_estimators=250,
             max_samples=3,
             n_jobs=5,
-            random_state=0
+            random_state=0,
+            class_weights: np.ndarray = None
     ):
 
         if not base_estimator:
+
             base_estimator = SGDClassifier(
                 alpha=1e-05,
                 average=True,
@@ -37,7 +41,8 @@ class BaggedDenoiser(BaggingClassifier):
                 learning_rate='adaptive',
                 eta0=0.001,
                 fit_intercept=True,
-                random_state=random_state
+                random_state=random_state,
+                class_weight=dict(enumerate(class_weights))
             )
 
         super().__init__(
@@ -71,19 +76,6 @@ class BaggedDenoiser(BaggingClassifier):
         )
 
         return vote_percentages
-
-
-class Scaler(Pipeline):
-
-
-    def __init__(self):
-
-        super(Scaler, self).__init__(
-            [
-                ('standard_scaler', RobustScaler()),
-                ('min_max_scaler', MinMaxScaler())
-            ]
-        )
 
 def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
 
@@ -127,11 +119,18 @@ def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: 
 
         n_samples = int(len(train_data) * 1.0)
 
+        class_weights = class_weight.compute_class_weight(
+            class_weight="balanced",
+            classes=np.unique(train_labels),
+            y=train_labels.ravel()
+        )
+
         denoizer = BaggedDenoiser(
             max_samples=n_samples,
             n_estimators=num_classifiers,
             n_jobs=num_threads,
-            random_state=42
+            random_state=42,
+            class_weights=class_weights
         )
 
         denoizer.fit(
