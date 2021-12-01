@@ -33,6 +33,24 @@ def get_training_data(folds: List[np.ndarray], fold_num: int):
 
     return training_data
 
+def reformat_distribution_data(peakgroups, score_column):
+
+    scores = list()
+    score_labels = list()
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        scores.append(peakgroup.scores['d_score'])
+
+        score_labels.append(
+            [peakgroup.target]
+        )
+
+    scores = np.array(scores, dtype=np.float64)
+    score_labels = np.array(score_labels, dtype=np.float)
+
+    return scores, score_labels
+
 
 def reformat_data(peakgroups, include_score_columns=False):
 

@@ -241,15 +241,85 @@ def score_run(precursors, model_path: str, scaler_path: str):
         include_score_columns=True
     )
 
-    all_data_scores = new_pipeline.transform(all_data_scores)
+    all_data_scores = pipeline.transform(all_data_scores)
 
-    model_scores = score(all_data_scores, scoring_model, new_pipeline)
+    model_scores = score(all_data_scores, scoring_model, pipeline)
 
     for idx, peakgroup in enumerate(all_peakgroups):
 
         peakgroup.scores['d_score'] = model_scores[idx]
 
     return precursors
+
+
+if __name__ == '__main__':
+    import glob
+
+    from gscore.parsers import osw
+    from gscore.parsers import queries
+    from gscore import peakgroups
+    from sklearn.utils import shuffle
+
+    from gscore.utils import ml
+    from gscore.denoiser import denoise
+
+    from gscore.scaler import Scaler
+
+    from gscore.workflows.score_run import prepare_denoise_record_additions
+
+    from gscore.utils.connection import Connection
+
+    from gscore.parsers.queries import (
+        CreateIndex,
+        SelectPeakGroups
+    )
+
+    from gscore.distributions import ScoreDistribution
+
+    all_sample_data = []
+
+    osw_files = glob.glob("/home/aaron/projects/ghost/data/spike_in/openswath/*.osw")
+
+    for osw_file in osw_files[:1]:
+
+        print(f"Processing {osw_file}")
+
+        with osw.OSWFile(osw_file) as conn:
+            precursors = conn.fetch_subscore_records(query=queries.SelectPeakGroups.FETCH_ALL_DENOIZED_DATA)
+
+        print("Scoring")
+
+        precursors = score_run(
+            precursors=precursors,
+            model_path="/home/aaron/projects/gscorer/notebooks/xgb_test.model",
+            scaler_path="/home/aaron/projects/gscorer/notebooks/scaler_pipeline.pkl"
+        )
+
+        target_peakgroups = precursors.get_target_peakgroups_by_rank(
+            rank=1,
+            score_key="d_score",
+            reverse=True
+        )
+
+        decoy_peakgroups = precursors.get_decoy_peakgroups(
+            sort_key="d_score"
+        )
+
+        modelling_peakgroups = target_peakgroups + decoy_peakgroups
+
+        all_data_scores, all_data_labels = ml.reformat_distribution_data(
+            modelling_peakgroups,
+            score_column="d_score"
+        )
+
+        score_distribution = ScoreDistribution()
+
+        score_distribution.fit(
+            all_data_scores,
+            all_data_labels
+        )
+
+        print("here")
 
 
 # from tensorflow import keras

@@ -173,6 +173,25 @@ class Precursors:
 
         return peakgroups
 
+    def get_target_peakgroups_by_rank(self, rank: int, score_key: str = '', reverse: bool = True):
+
+        filtered_peakgroups = []
+
+        rank = rank - 1
+
+        for precursor in self.precursors.values():
+
+            precursor.peakgroups.sort(key=lambda x: x.scores[score_key], reverse=reverse)
+
+            peakgroup = precursor.peakgroups[rank]
+
+            if peakgroup.target == 1:
+
+                filtered_peakgroups.append(peakgroup)
+
+        return filtered_peakgroups
+
+
     def filter_target_peakgroups(self, rank: int, sort_key: str, filter_key: str, value: float) -> List[PeakGroup]:
 
         filtered_peakgroups = []

@@ -50,7 +50,8 @@ class ScoreDistribution:
 
     def __init__(self):
 
-        pass
+        self.target_model = KernelDensity(bandwidth=0.75)
+        self.decoy_model = KernelDensity(bandwidth=0.75)
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
