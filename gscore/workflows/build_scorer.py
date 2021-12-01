@@ -144,3 +144,49 @@ def main(args, logger):
 
     with open(scaler_file_path, 'wb') as pkl:
         pickle.dump(pipeline, pkl)
+
+
+if __name__ == '__main__':
+    import glob
+
+    from gscore.parsers import osw
+    from gscore.parsers import queries
+    from gscore import peakgroups
+    from sklearn.utils import shuffle
+
+    from gscore.utils import ml
+    from gscore.denoiser import denoise
+
+    from gscore.scaler import Scaler
+
+    from gscore.workflows.score_run import prepare_denoise_record_additions
+
+    from gscore.utils.connection import Connection
+
+    from gscore.parsers.queries import (
+        CreateIndex,
+        SelectPeakGroups
+    )
+
+    osw_files = glob.glob("/home/aaron/projects/ghost/data/spike_in/openswath/*.osw")
+
+    all_sample_data = []
+
+    for osw_file in osw_files[:1]:
+        print(f"Processing {osw_file}")
+
+        with osw.OSWFile(osw_file) as conn:
+            precursors = conn.fetch_subscore_records(query=queries.SelectPeakGroups.FETCH_ALL_DENOIZED_DATA)
+
+        positive_labels = precursors.filter_target_peakgroups(
+            rank=1,
+            sort_key='probability',
+            filter_key='vote_percentage',
+            value=1.0
+        )
+
+        negative_labels = precursors.get_decoy_peakgroups(
+            sort_key='probability',
+            use_second_ranked=False
+        )
+

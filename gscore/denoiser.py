@@ -77,9 +77,9 @@ class BaggedDenoiser(BaggingClassifier):
 
         return vote_percentages
 
-def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
+def denoise(precursors, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
 
-    precursor_folds = ml.get_precursor_id_folds(graph, num_folds)
+    precursor_folds = ml.get_precursor_id_folds(list(precursors.keys()), num_folds)
 
     print(len(precursor_folds))
 
@@ -95,11 +95,10 @@ def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: 
             fold_num=fold_num
         )
 
-        training_data_targets = peakgroups.get_peakgroups_by_list(
-            graph=graph,
-            node_list=training_precursors,
+        training_data_targets = precursors.get_peakgroups_by_list(
+            precursor_list=training_precursors,
             rank=1,
-            score_key='var_xcorr_shape_weighted',
+            score_key='VAR_XCORR_SHAPE_WEIGHTED',
             reverse=True
         )
 
@@ -138,9 +137,8 @@ def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: 
             train_labels.ravel()
         )
 
-        peakgroups_to_score = peakgroups.get_peakgroups_by_list(
-            graph=graph,
-            node_list=precursor_fold_ids,
+        peakgroups_to_score = precursors.get_peakgroups_by_list(
+            precursor_list=precursor_fold_ids,
             return_all=True
         )
 
@@ -173,13 +171,13 @@ def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: 
 
             peakgroup.scores['vote_percentage'] = vote_percentages[idx]
 
-        validation_data = peakgroups.get_peakgroups_by_list(
-            graph=graph,
-            node_list=precursor_fold_ids,
+        validation_data = precursors.get_peakgroups_by_list(
+            precursor_list=precursor_fold_ids,
             rank=1,
-            score_key='var_xcorr_shape_weighted',
+            score_key='VAR_XCORR_SHAPE_WEIGHTED',
             reverse=True
         )
+
 
         val_scores, val_labels, _ = ml.reformat_data(
             peakgroups=validation_data
@@ -208,7 +206,7 @@ def denoise(graph: nx.Graph, num_folds: int, num_classifiers: int, num_threads: 
 
     print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
 
-    return graph
+    return precursors
 
 
 def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):
@@ -239,3 +237,51 @@ def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):
     )
 
     return denoizer, scaler
+
+if __name__ == '__main__':
+    import glob
+
+    from gscore.parsers import osw
+    from gscore.parsers import queries
+    from gscore import peakgroups
+    from sklearn.utils import shuffle
+
+    from gscore.utils import ml
+    from gscore.denoiser import denoise
+
+    from gscore.scaler import Scaler
+
+    from gscore.workflows.score_run import prepare_denoise_record_additions
+
+    from gscore.utils.connection import Connection
+
+    from gscore.parsers.queries import (
+        CreateIndex,
+        SelectPeakGroups
+    )
+
+    osw_files = glob.glob("/home/aaron/projects/ghost/data/spike_in/openswath/*.osw")
+
+    for osw_file in osw_files[:1]:
+
+        print(osw_file)
+
+        print(f"Processing {osw_file}")
+
+        with osw.OSWFile(osw_file) as conn:
+            precursors = conn.fetch_subscore_records(query=queries.SelectPeakGroups.FETCH_FEATURES)
+
+        denoized_graph = denoise(
+            precursors=precursors,
+            num_folds=10,
+            num_classifiers=10,
+            num_threads=10,
+            vote_threshold=0.8
+        )
+
+        record_updates = prepare_denoise_record_additions(
+            denoized_graph
+        )
+
+        print("Writing scores to file")
+        osw.update_score_records(osw_file, record_updates)

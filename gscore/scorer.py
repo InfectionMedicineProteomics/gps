@@ -26,32 +26,32 @@ MODELS = {
     "adaboost": AdaBoostClassifier
 }
 
-class Scorer(ABC):
+class Scorer:
 
-    @abstractmethod
-    def fit(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray, labels: np.ndarray):
 
-        raise NotImplementedError
+        self.model.fit(
+            data,
+            labels
+        )
 
-    @abstractmethod
     def probability(self, data: np.ndarray) -> np.ndarray:
 
-        raise NotImplementedError
+        return self.model.predict_proba(data)[:, 1]
 
-    @abstractmethod
-    def score(self) -> np.ndarray:
+    def score(self, data: np.ndarray) -> np.ndarray:
 
-        raise NotImplementedError
+        probabilities = self.model.predict_proba(data)[:, 1]
 
-    @abstractmethod
-    def save(self):
+        return np.log(probabilities / (1 - probabilities))
 
-        raise NotImplementedError
+    def save(self, model_path: str):
 
-    @abstractmethod
-    def load(self):
+        dump(self.model, model_path)
 
-        raise NotImplementedError
+    def load(self, model_path: str):
+
+        self.model = load(model_path)
 
 
 class SGDScorer(Scorer):
@@ -75,31 +75,6 @@ class SGDScorer(Scorer):
             class_weight=dict(enumerate(class_weights))
         )
 
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-
-        probabilities = self.model.predict_proba(data)[:, 1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-
-        self.model = load(model_path)
-
 
 class XGBoostScorer(Scorer):
 
@@ -115,31 +90,6 @@ class XGBoostScorer(Scorer):
             random_state=42,
             scale_pos_weight=scale_pos_weight
         )
-
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-
-        probabilities = self.model.predict_proba(data)[:, 1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-
-        self.model = load(model_path)
 
 
 class EasyEnsembleScorer(Scorer):
@@ -173,25 +123,6 @@ class EasyEnsembleScorer(Scorer):
             verbose=True
         )
 
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-        probabilities = self.model.predict_proba(data)[:, 1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-        self.model = load(model_path)
 
 
 
@@ -227,27 +158,6 @@ class BalancedBaggingScorer(Scorer):
             verbose=True
         )
 
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-        probabilities = self.model.predict_proba(data)[:, 1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-        self.model = load(model_path)
-
-
 
 class GradientBoostingScorer(Scorer):
 
@@ -256,31 +166,6 @@ class GradientBoostingScorer(Scorer):
     def __init__(self):
 
         self.model = GradientBoostingClassifier()
-
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-
-        probabilities = self.model.predict_proba(data)[:,1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-
-        self.model = load(model_path)
 
 
 class AdaBoostSGDScorer(Scorer):
@@ -313,31 +198,6 @@ class AdaBoostSGDScorer(Scorer):
             random_state=42
         )
 
-    def fit(self, data: np.ndarray, labels: np.ndarray):
-
-        self.model.fit(
-            data,
-            labels
-        )
-
-    def probability(self, data: np.ndarray) -> np.ndarray:
-
-        return self.model.predict_proba(data)[:, 1]
-
-    def score(self, data: np.ndarray) -> np.ndarray:
-
-        probabilities = self.model.predict_proba(data)[:,1]
-
-        return np.log(probabilities / (1 - probabilities))
-
-    def save(self, model_path: str):
-
-        dump(self.model, model_path)
-
-    def load(self, model_path: str):
-
-        self.model = load(model_path)
-
 
 def train_model(data: np.ndarray, labels: np.ndarray, model: str, scaling_pipeline: Pipeline) -> None:
 
@@ -363,6 +223,33 @@ def score(data: np.ndarray, model: Scorer, scaling_pipeline: Pipeline) -> np.nda
 
     return logit_scores
 
+
+def score_run(precursors, model_path: str, scaler_path: str):
+
+    scoring_model = Scorer()
+
+    scoring_model.load(model_path)
+
+    pipeline = Scaler()
+
+    pipeline.load(scaler_path)
+
+    all_peakgroups = precursors.get_all_peakgroups()
+
+    all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+        all_peakgroups,
+        include_score_columns=True
+    )
+
+    all_data_scores = new_pipeline.transform(all_data_scores)
+
+    model_scores = score(all_data_scores, scoring_model, new_pipeline)
+
+    for idx, peakgroup in enumerate(all_peakgroups):
+
+        peakgroup.scores['d_score'] = model_scores[idx]
+
+    return precursors
 
 
 # from tensorflow import keras

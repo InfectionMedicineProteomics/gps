@@ -64,25 +64,21 @@ def prepare_qvalue_add_records(graph):
     return record_updates
 
 
-def prepare_denoise_record_additions(graph: nx.Graph) -> List[Dict]:
+def prepare_denoise_record_additions(precursors) -> List[Dict]:
 
     record_updates = list()
 
-    for node, node_data in graph.nodes(data=True):
+    for precursor in precursors.precursors.values():
 
-        if node_data["bipartite"] == "precursor":
+        for peakgroup in precursor.peakgroups:
 
-            precursor_data = node_data['data']
+            record = {
+                'feature_id': peakgroup.idx,
+                'probability': peakgroup.scores['probability'],
+                'vote_percentage': peakgroup.scores['vote_percentage']
+            }
 
-            for peakgroup in precursor_data.peakgroups:
-
-                record = {
-                    'feature_id': peakgroup.idx,
-                    'probability': peakgroup.scores['probability'],
-                    'vote_percentage': peakgroup.scores['vote_percentage']
-                }
-
-                record_updates.append(record)
+            record_updates.append(record)
 
     return record_updates
 
@@ -149,15 +145,6 @@ def main(args, logger=None):
             peakgroup_graph[idx].scores['d_score'] = d_score
 
             peakgroup_graph[idx].scores['probability'] = probability
-
-            peptide_id = peakgroup_graph[idx].get_edges()[0]
-
-            peakgroup_graph.update_edge_weight(
-                node_from=peptide_id,
-                node_to=idx,
-                weight=d_score,
-                directed=False
-            )
 
         if args.peakgroup_scoring_model_path:
 

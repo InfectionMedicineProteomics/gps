@@ -6,28 +6,7 @@ from sklearn.utils import shuffle
 import networkx as nx
 import numpy as np
 
-def get_peptide_id_folds(graph, num_folds):
-
-    peptide_ids = list(graph.get_nodes('peptide'))
-
-    random.seed(42)
-    random.shuffle(peptide_ids)
-
-    peptide_folds = np.array_split(
-        peptide_ids,
-        num_folds
-    )
-
-    return peptide_folds
-
-def get_precursor_id_folds(graph: nx.Graph, num_folds: int) -> List[np.ndarray]:
-
-    precursor_ids = list(
-        {
-            node_key for node_key, data in graph.nodes(data=True)
-            if data["bipartite"] == 'precursor'
-        }
-    )
+def get_precursor_id_folds(precursor_ids: List[str], num_folds: int) -> List[np.ndarray]:
 
     random.seed(42)
     random.shuffle(precursor_ids)

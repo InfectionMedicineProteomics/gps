@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 import networkx as nx
@@ -32,7 +32,6 @@ class PeakGroup:
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
-        self.sub_scores = dict()
         self.scores = dict()
 
         self.delta_rt = delta_rt
@@ -45,37 +44,29 @@ class PeakGroup:
 
     def __repr__(self):
 
-        return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.sub_scores=}"
+        return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.scores=}"
 
     def add_score_column(self, key, value):
 
         self.scores[key] = value
 
-    def add_sub_score_column(self, key, value):
-
-        self.sub_scores[key] = value
-
-    def get_score_columns(self):
-
-        score_columns = list()
-
-        for score_column in self.sub_scores.keys():
-
-            score_columns.append(score_column)
-
-        return score_columns
-
-    def get_sub_score_column_array(self, include_score_columns=True):
+    def get_sub_score_column_array(self, include_score_columns=False):
 
         score_values = list()
-
-        for score_value in self.sub_scores.values():
-            score_values.append(score_value)
 
         if include_score_columns:
 
             for score_value in self.scores.values():
+
                 score_values.append(score_value)
+
+        else:
+
+            for score_column, score_value in self.scores.items():
+
+                if score_column not in ['probability', 'vote_percentage']:
+
+                    score_values.append(score_value)
 
         return np.asarray(score_values, dtype=np.double)
 
@@ -104,7 +95,7 @@ class Precursor:
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
         self.peakgroups.sort(
-            key=lambda x: x.sub_scores[key],
+            key=lambda x: x.scores[key],
             reverse=reverse
         )
 
@@ -128,6 +119,116 @@ class Protein:
         self.q_value = q_value
 
         self.scores = dict()
+
+
+
+class Precursors:
+
+    precursors: Dict[str, Precursor]
+
+    def __init__(self):
+
+        self.precursors = dict()
+
+    def __contains__(self, item):
+
+        return item in self.precursors
+
+    def add_peakgroup(self, precursor_id: str, peakgroup: PeakGroup) -> None:
+
+        self.precursors[precursor_id].peakgroups.append(peakgroup)
+
+    def keys(self):
+
+        return self.precursors.keys()
+
+    def __setitem__(self, key: str, value: Precursor):
+
+        self.precursors[key] = value
+
+    def get_peakgroups_by_list(self, precursor_list: List[str], rank: int = 0, score_key: str = '',
+                               reverse: bool = True, return_all: bool = False) -> List[PeakGroup]:
+
+        peakgroups = list()
+
+        for precursor_key in precursor_list:
+
+            precursor = self.precursors[precursor_key]
+
+            if not return_all:
+
+                peakgroup = precursor.get_peakgroup(
+                    rank=1,
+                    key=score_key,
+                    reverse=reverse
+                )
+
+                peakgroups.append(peakgroup)
+
+            else:
+
+                for peakgroup in precursor.peakgroups:
+
+                    peakgroups.append(peakgroup)
+
+        return peakgroups
+
+    def filter_target_peakgroups(self, rank: int, sort_key: str, filter_key: str, value: float) -> List[PeakGroup]:
+
+        filtered_peakgroups = []
+
+        rank = rank - 1
+
+        for precursor in self.precursors.values():
+
+            precursor.peakgroups.sort(key=lambda x: x.scores[sort_key], reverse=True)
+
+            peakgroup = precursor.peakgroups[rank]
+
+            if peakgroup.target == 1 and peakgroup.scores[filter_key] >= value:
+
+                filtered_peakgroups.append(peakgroup)
+
+        return filtered_peakgroups
+
+    def get_decoy_peakgroups(self, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:
+
+        filtered_peakgroups = []
+
+        for precursor in self.precursors.values():
+
+            precursor.peakgroups.sort(key=lambda x: x.scores[sort_key], reverse=True)
+
+            if use_second_ranked and len(precursor.peakgroups) > 1:
+
+                peakgroup = precursor.peakgroups[1]
+
+                if peakgroup.target == 1:
+
+                    peakgroup.target = 0
+                    peakgroup.decoy = 1
+
+                    filtered_peakgroups.append(peakgroup)
+
+            else:
+
+                peakgroup = precursor.peakgroups[0]
+
+                filtered_peakgroups.append(peakgroup)
+
+        return filtered_peakgroups
+
+    def get_all_peakgroups(self) -> List[PeakGroup]:
+
+        all_peakgroups = []
+
+        for precursor in self.precursors.values():
+
+            for peakgroup in precursor.peakgroups:
+
+                all_peakgroups.append(peakgroup)
+
+        return all_peakgroups
 
 
 def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:
