@@ -19,8 +19,11 @@ from sklearn.metrics import roc_auc_score
 
 from imblearn.ensemble import BalancedBaggingClassifier, EasyEnsembleClassifier
 
+from gscore.scaler import Scaler
 
 from xgboost import XGBClassifier
+
+from gscore.utils import ml
 
 MODELS = {
     "adaboost": AdaBoostClassifier
@@ -215,15 +218,6 @@ def evaluate_model(data: np.ndarray, labels: np.ndarray, model: Scorer, scaling_
     return roc_auc_score(labels, probabilities)
 
 
-def score(data: np.ndarray, model: Scorer, scaling_pipeline: Pipeline) -> np.ndarray:
-
-    data = scaling_pipeline.transform(data)
-
-    logit_scores = model.score(data)
-
-    return logit_scores
-
-
 def score_run(precursors, model_path: str, scaler_path: str):
 
     scoring_model = Scorer()
@@ -320,6 +314,10 @@ if __name__ == '__main__':
         )
 
         print("here")
+
+        q_values = score_distribution.calculate_q_vales(np.array([6.0]))
+
+        print(q_values)
 
 
 # from tensorflow import keras

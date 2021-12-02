@@ -3,6 +3,14 @@ from typing import List, Dict
 import numpy as np
 import networkx as nx
 
+from sklearn.utils import shuffle, class_weight
+from sklearn.metrics import precision_score, recall_score
+
+from gscore.utils import ml
+from gscore.scaler import Scaler
+from gscore.denoiser import BaggedDenoiser
+from gscore.scorer import Scorer
+
 class PeakGroup:
     ghost_score_id: str
     idx: str
@@ -248,6 +256,204 @@ class Precursors:
                 all_peakgroups.append(peakgroup)
 
         return all_peakgroups
+
+    def denoise(self, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
+
+        precursor_folds = ml.get_precursor_id_folds(list(self.keys()), num_folds)
+
+        print(len(precursor_folds))
+
+        total_recall = []
+        total_precision = []
+
+        for fold_num, precursor_fold_ids in enumerate(precursor_folds):
+
+            print(f"Processing fold {fold_num + 1}")
+
+            training_precursors = ml.get_training_data(
+                folds=precursor_folds,
+                fold_num=fold_num
+            )
+
+            training_data_targets = self.get_peakgroups_by_list(
+                precursor_list=training_precursors,
+                rank=1,
+                score_key='VAR_XCORR_SHAPE_WEIGHTED',
+                reverse=True
+            )
+
+            peakgroup_scores, peakgroup_labels, _ = ml.reformat_data(
+                peakgroups=training_data_targets
+            )
+
+            train_data, train_labels = shuffle(
+                peakgroup_scores,
+                peakgroup_labels,
+                random_state=42
+            )
+
+            scaler = Scaler()
+
+            train_data = scaler.fit_transform(train_data)
+
+            n_samples = int(len(train_data) * 1.0)
+
+            class_weights = class_weight.compute_class_weight(
+                class_weight="balanced",
+                classes=np.unique(train_labels),
+                y=train_labels.ravel()
+            )
+
+            denoizer = BaggedDenoiser(
+                max_samples=n_samples,
+                n_estimators=num_classifiers,
+                n_jobs=num_threads,
+                random_state=42,
+                class_weights=class_weights
+            )
+
+            denoizer.fit(
+                train_data,
+                train_labels.ravel()
+            )
+
+            peakgroups_to_score = self.get_peakgroups_by_list(
+                precursor_list=precursor_fold_ids,
+                return_all=True
+            )
+
+            testing_scores, testing_labels, testing_keys = ml.reformat_data(
+                peakgroups=peakgroups_to_score
+            )
+
+            testing_scores = scaler.transform(
+                testing_scores
+            )
+
+            class_index = np.where(
+                denoizer.classes_ == 1.0
+            )[0][0]
+
+            vote_percentages = denoizer.vote(
+                testing_scores,
+                threshold=vote_threshold
+            )
+
+            probabilities = denoizer.predict_proba(
+                testing_scores
+            )[:, class_index]
+
+            print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
+
+            for idx, peakgroup in enumerate(peakgroups_to_score):
+                peakgroup.scores['probability'] = probabilities[idx]
+
+                peakgroup.scores['vote_percentage'] = vote_percentages[idx]
+
+            validation_data = self.get_peakgroups_by_list(
+                precursor_list=precursor_fold_ids,
+                rank=1,
+                score_key='VAR_XCORR_SHAPE_WEIGHTED',
+                reverse=True
+            )
+
+            val_scores, val_labels, _ = ml.reformat_data(
+                peakgroups=validation_data
+            )
+
+            val_scores = scaler.transform(
+                val_scores
+            )
+
+            fold_precision = precision_score(
+                y_pred=denoizer.predict(val_scores),
+                y_true=val_labels.ravel()
+            )
+
+            fold_recall = recall_score(
+                y_pred=denoizer.predict(val_scores),
+                y_true=val_labels.ravel()
+            )
+
+            total_recall.append(fold_recall)
+            total_precision.append(fold_precision)
+
+            print(
+                f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+            )
+
+        print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
+
+        return self
+
+    def score_run(self, model_path: str, scaler_path: str):
+
+        scoring_model = Scorer()
+
+        scoring_model.load(model_path)
+
+        pipeline = Scaler()
+
+        pipeline.load(scaler_path)
+
+        all_peakgroups = self.get_all_peakgroups()
+
+        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+            all_peakgroups,
+            include_score_columns=True
+        )
+
+        all_data_scores = pipeline.transform(all_data_scores)
+
+        model_scores = scoring_model.score(all_data_scores)
+
+        for idx, peakgroup in enumerate(all_peakgroups):
+            peakgroup.scores['d_score'] = model_scores[idx]
+
+        return self
+
+    def calculate_q_values(self, sort_key: str, use_decoys: bool = True):
+
+        target_peakgroups = self.get_target_peakgroups_by_rank(
+            rank=1,
+            score_key=sort_key,
+            reverse=True
+        )
+
+        if use_decoys:
+
+            decoy_peakgroups = self.get_decoy_peakgroups(
+                sort_key=sort_key
+            )
+
+        else:
+
+            decoy_peakgroups = self.get_target_peakgroups_by_rank(
+                rank=2,
+                score_key=sort_key,
+                reverse=True
+            )
+
+        modelling_peakgroups = target_peakgroups + decoy_peakgroups
+
+        scores, labels = ml.reformat_distribution_data(
+            modelling_peakgroups,
+            score_column=sort_key
+        )
+
+        self.score_distribution = ScoreDistribution()
+
+        self.score_distribution.fit(
+            scores,
+            labels
+        )
+
+        q_values = score_distribution.calculate_q_vales(scores)
+
+        for idx, peakgroup in enumerate(modelling_peakgroups):
+            peakgroup.scores['q_value'] = q_values[idx]
+
+        return self
 
 
 def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:

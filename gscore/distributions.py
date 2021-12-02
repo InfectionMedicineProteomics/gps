@@ -4,6 +4,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 from sklearn.neighbors import KernelDensity
 
+from gscore.utils import ml
 
 # class LabelDistribution:
 #
@@ -50,8 +51,8 @@ class ScoreDistribution:
 
     def __init__(self):
 
-        self.target_model = KernelDensity(bandwidth=0.75)
-        self.decoy_model = KernelDensity(bandwidth=0.75)
+        self.target_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
+        self.decoy_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
@@ -115,12 +116,12 @@ class ScoreDistribution:
 
             decoy_area = self.decoy_function.integral(
                 a=score,
-                b=self.x_axis[0],
+                b=self.x_axis[-1],
             )
 
             target_area = self.target_function.integral(
                 a=score,
-                b=self.x_axis[0]
+                b=self.x_axis[-1]
             )
 
             target_areas.append(target_area)
@@ -134,3 +135,52 @@ class ScoreDistribution:
         q_values = decoy_areas / total_areas
 
         return q_values
+
+
+def calculate_q_values(precursors, sort_key: str, use_decoys: bool = True):
+
+    target_peakgroups = precursors.get_target_peakgroups_by_rank(
+        rank=1,
+        score_key=sort_key,
+        reverse=True
+    )
+
+    if use_decoys:
+
+        decoy_peakgroups = precursors.get_decoy_peakgroups(
+            sort_key=sort_key
+        )
+
+    else:
+
+        decoy_peakgroups = precursors.get_target_peakgroups_by_rank(
+            rank=2,
+            score_key=sort_key,
+            reverse=True
+        )
+
+    modelling_peakgroups = target_peakgroups + decoy_peakgroups
+
+    scores, labels = ml.reformat_distribution_data(
+        modelling_peakgroups,
+        score_column=sort_key
+    )
+
+    score_distribution = ScoreDistribution()
+
+    score_distribution.fit(
+        scores,
+        labels
+    )
+
+    q_values = score_distribution.calculate_q_vales(scores)
+
+    for idx, peakgroup in enumerate(modelling_peakgroups):
+
+        peakgroup.scores['q_value'] = q_values[idx]
+
+    return precursors
+
+
+
+

@@ -13,7 +13,6 @@ from sklearn.utils import class_weight
 
 from gscore.utils.ml import *
 from gscore.utils import ml
-from gscore import peakgroups
 from gscore.scaler import Scaler
 
 class BaggedDenoiser(BaggingClassifier):
@@ -77,136 +76,136 @@ class BaggedDenoiser(BaggingClassifier):
 
         return vote_percentages
 
-def denoise(precursors, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
-
-    precursor_folds = ml.get_precursor_id_folds(list(precursors.keys()), num_folds)
-
-    print(len(precursor_folds))
-
-    total_recall = []
-    total_precision = []
-
-    for fold_num, precursor_fold_ids in enumerate(precursor_folds):
-
-        print(f"Processing fold {fold_num + 1}")
-
-        training_precursors = ml.get_training_data(
-            folds=precursor_folds,
-            fold_num=fold_num
-        )
-
-        training_data_targets = precursors.get_peakgroups_by_list(
-            precursor_list=training_precursors,
-            rank=1,
-            score_key='VAR_XCORR_SHAPE_WEIGHTED',
-            reverse=True
-        )
-
-        peakgroup_scores, peakgroup_labels, _ = ml.reformat_data(
-            peakgroups=training_data_targets
-        )
-
-        train_data, train_labels = shuffle(
-            peakgroup_scores,
-            peakgroup_labels,
-            random_state=42
-        )
-
-        scaler = Scaler()
-
-        train_data = scaler.fit_transform(train_data)
-
-        n_samples = int(len(train_data) * 1.0)
-
-        class_weights = class_weight.compute_class_weight(
-            class_weight="balanced",
-            classes=np.unique(train_labels),
-            y=train_labels.ravel()
-        )
-
-        denoizer = BaggedDenoiser(
-            max_samples=n_samples,
-            n_estimators=num_classifiers,
-            n_jobs=num_threads,
-            random_state=42,
-            class_weights=class_weights
-        )
-
-        denoizer.fit(
-            train_data,
-            train_labels.ravel()
-        )
-
-        peakgroups_to_score = precursors.get_peakgroups_by_list(
-            precursor_list=precursor_fold_ids,
-            return_all=True
-        )
-
-        testing_scores, testing_labels, testing_keys = ml.reformat_data(
-            peakgroups=peakgroups_to_score
-        )
-
-        testing_scores = scaler.transform(
-            testing_scores
-        )
-
-        class_index = np.where(
-            denoizer.classes_ == 1.0
-        )[0][0]
-
-        vote_percentages = denoizer.vote(
-            testing_scores,
-            threshold=vote_threshold
-        )
-
-        probabilities = denoizer.predict_proba(
-            testing_scores
-        )[:, class_index]
-
-        print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
-
-        for idx, peakgroup in enumerate(peakgroups_to_score):
-
-            peakgroup.scores['probability'] = probabilities[idx]
-
-            peakgroup.scores['vote_percentage'] = vote_percentages[idx]
-
-        validation_data = precursors.get_peakgroups_by_list(
-            precursor_list=precursor_fold_ids,
-            rank=1,
-            score_key='VAR_XCORR_SHAPE_WEIGHTED',
-            reverse=True
-        )
-
-
-        val_scores, val_labels, _ = ml.reformat_data(
-            peakgroups=validation_data
-        )
-
-        val_scores = scaler.transform(
-            val_scores
-        )
-
-        fold_precision = precision_score(
-            y_pred=denoizer.predict(val_scores),
-            y_true=val_labels.ravel()
-        )
-
-        fold_recall = recall_score(
-            y_pred=denoizer.predict(val_scores),
-            y_true=val_labels.ravel()
-        )
-
-        total_recall.append(fold_recall)
-        total_precision.append(fold_precision)
-
-        print(
-            f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
-        )
-
-    print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
-
-    return precursors
+# def denoise(precursors, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
+#
+#     precursor_folds = ml.get_precursor_id_folds(list(precursors.keys()), num_folds)
+#
+#     print(len(precursor_folds))
+#
+#     total_recall = []
+#     total_precision = []
+#
+#     for fold_num, precursor_fold_ids in enumerate(precursor_folds):
+#
+#         print(f"Processing fold {fold_num + 1}")
+#
+#         training_precursors = ml.get_training_data(
+#             folds=precursor_folds,
+#             fold_num=fold_num
+#         )
+#
+#         training_data_targets = precursors.get_peakgroups_by_list(
+#             precursor_list=training_precursors,
+#             rank=1,
+#             score_key='VAR_XCORR_SHAPE_WEIGHTED',
+#             reverse=True
+#         )
+#
+#         peakgroup_scores, peakgroup_labels, _ = ml.reformat_data(
+#             peakgroups=training_data_targets
+#         )
+#
+#         train_data, train_labels = shuffle(
+#             peakgroup_scores,
+#             peakgroup_labels,
+#             random_state=42
+#         )
+#
+#         scaler = Scaler()
+#
+#         train_data = scaler.fit_transform(train_data)
+#
+#         n_samples = int(len(train_data) * 1.0)
+#
+#         class_weights = class_weight.compute_class_weight(
+#             class_weight="balanced",
+#             classes=np.unique(train_labels),
+#             y=train_labels.ravel()
+#         )
+#
+#         denoizer = BaggedDenoiser(
+#             max_samples=n_samples,
+#             n_estimators=num_classifiers,
+#             n_jobs=num_threads,
+#             random_state=42,
+#             class_weights=class_weights
+#         )
+#
+#         denoizer.fit(
+#             train_data,
+#             train_labels.ravel()
+#         )
+#
+#         peakgroups_to_score = precursors.get_peakgroups_by_list(
+#             precursor_list=precursor_fold_ids,
+#             return_all=True
+#         )
+#
+#         testing_scores, testing_labels, testing_keys = ml.reformat_data(
+#             peakgroups=peakgroups_to_score
+#         )
+#
+#         testing_scores = scaler.transform(
+#             testing_scores
+#         )
+#
+#         class_index = np.where(
+#             denoizer.classes_ == 1.0
+#         )[0][0]
+#
+#         vote_percentages = denoizer.vote(
+#             testing_scores,
+#             threshold=vote_threshold
+#         )
+#
+#         probabilities = denoizer.predict_proba(
+#             testing_scores
+#         )[:, class_index]
+#
+#         print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
+#
+#         for idx, peakgroup in enumerate(peakgroups_to_score):
+#
+#             peakgroup.scores['probability'] = probabilities[idx]
+#
+#             peakgroup.scores['vote_percentage'] = vote_percentages[idx]
+#
+#         validation_data = precursors.get_peakgroups_by_list(
+#             precursor_list=precursor_fold_ids,
+#             rank=1,
+#             score_key='VAR_XCORR_SHAPE_WEIGHTED',
+#             reverse=True
+#         )
+#
+#
+#         val_scores, val_labels, _ = ml.reformat_data(
+#             peakgroups=validation_data
+#         )
+#
+#         val_scores = scaler.transform(
+#             val_scores
+#         )
+#
+#         fold_precision = precision_score(
+#             y_pred=denoizer.predict(val_scores),
+#             y_true=val_labels.ravel()
+#         )
+#
+#         fold_recall = recall_score(
+#             y_pred=denoizer.predict(val_scores),
+#             y_true=val_labels.ravel()
+#         )
+#
+#         total_recall.append(fold_recall)
+#         total_precision.append(fold_precision)
+#
+#         print(
+#             f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+#         )
+#
+#     print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
+#
+#     return precursors
 
 
 def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):
@@ -237,51 +236,3 @@ def get_denoizer(graph, training_peptides, n_estimators=10, n_jobs=1):
     )
 
     return denoizer, scaler
-
-if __name__ == '__main__':
-    import glob
-
-    from gscore.parsers import osw
-    from gscore.parsers import queries
-    from gscore import peakgroups
-    from sklearn.utils import shuffle
-
-    from gscore.utils import ml
-    from gscore.denoiser import denoise
-
-    from gscore.scaler import Scaler
-
-    from gscore.workflows.score_run import prepare_denoise_record_additions
-
-    from gscore.utils.connection import Connection
-
-    from gscore.parsers.queries import (
-        CreateIndex,
-        SelectPeakGroups
-    )
-
-    osw_files = glob.glob("/home/aaron/projects/ghost/data/spike_in/openswath/*.osw")
-
-    for osw_file in osw_files[:1]:
-
-        print(osw_file)
-
-        print(f"Processing {osw_file}")
-
-        with osw.OSWFile(osw_file) as conn:
-            precursors = conn.fetch_subscore_records(query=queries.SelectPeakGroups.FETCH_FEATURES)
-
-        denoized_graph = denoise(
-            precursors=precursors,
-            num_folds=10,
-            num_classifiers=10,
-            num_threads=10,
-            vote_threshold=0.8
-        )
-
-        record_updates = prepare_denoise_record_additions(
-            denoized_graph
-        )
-
-        print("Writing scores to file")
-        osw.update_score_records(osw_file, record_updates)

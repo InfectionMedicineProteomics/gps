@@ -43,7 +43,7 @@ def reformat_distribution_data(peakgroups, score_column):
         scores.append(peakgroup.scores['d_score'])
 
         score_labels.append(
-            [peakgroup.target]
+            peakgroup.target
         )
 
     scores = np.array(scores, dtype=np.float64)
