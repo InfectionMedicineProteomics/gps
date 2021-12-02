@@ -10,6 +10,7 @@ from gscore.utils import ml
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
+from gscore.distributions import ScoreDistribution
 
 class PeakGroup:
     ghost_score_id: str
@@ -448,9 +449,17 @@ class Precursors:
             labels
         )
 
-        q_values = score_distribution.calculate_q_vales(scores)
+        all_peakgroups = self.get_all_peakgroups()
 
-        for idx, peakgroup in enumerate(modelling_peakgroups):
+        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+            all_peakgroups,
+            include_score_columns=True
+        )
+
+        q_values = self.score_distribution.calculate_q_vales(all_data_scores)
+
+        for idx, peakgroup in enumerate(all_peakgroups):
+
             peakgroup.scores['q_value'] = q_values[idx]
 
         return self
@@ -595,13 +604,3 @@ def calc_score_grouped_by_level(graph, function=None, level='', score_column='',
 
             graph[key].data.scores[new_column_name] = score
 
-
-def apply_scoring_model(graph, level, model, score_column):
-
-    for peakgroup_node in graph.get_nodes("peakgroup"):
-
-        peakgroup_node = graph[peakgroup_node]
-
-        score = peakgroup_node.scores["d_score"]
-
-        peakgroup_node.scores[f"{level}_q_value"] = model.calc_q_value(score)

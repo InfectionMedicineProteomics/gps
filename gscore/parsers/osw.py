@@ -192,6 +192,11 @@ class OSWFile:
 
                     peakgroup.scores[key] = value
 
+                elif key == "ghost_score_id":
+
+                    peakgroup.ghost_score_id = value
+
+
             precursors.add_peakgroup(record['precursor_id'], peakgroup)
 
         return precursors
@@ -310,13 +315,14 @@ class OSWFile:
         Key in records is the record id
         """
 
-        self.run_raw_sql(
-            Queries.CREATE_INDEX.format(
-                index_name=f"idx_{key_field}_{table_name}",
-                table_name=table_name,
-                column_list=key_field
-            )
+        index_query = Queries.CREATE_INDEX.format(
+            index_name=f"idx_{key_field}_{table_name}",
+            table_name=table_name,
+            column_list=key_field
+        )
 
+        self.run_raw_sql(
+            index_query
         )
 
         input_records = list()
@@ -357,6 +363,8 @@ class OSWFile:
                     record_id='?'
                 )
 
+                print(update_record_query)
+
                 cursor = self.conn.cursor()
 
                 try:
@@ -369,7 +377,7 @@ class OSWFile:
                 except sqlite3.OperationalError as e:
 
                     print(update_record_query)
-                    print(input_records)
+                    #print(input_records)
                     raise e
 
                 self.conn.commit()
@@ -461,165 +469,30 @@ class OSWFile:
             records=records
         )
 
-def fetch_export_graphs(osw_files, query):
+    def update_q_value_records(self, precursors):
 
-    osw_graphs = []
+        records = dict()
 
-    for osw_file in osw_files:
+        for precursor in precursors.precursors.values():
 
-        print(f"Parsing {osw_file}")
+            for peakgroup in precursor.peakgroups:
 
-        protein_graph = nx.Graph(file_name=osw_file)
+                records[peakgroup.ghost_score_id] = {
+                    'feature_id': peakgroup.idx,
+                    'd_score': peakgroup.scores['d_score'],
+                    'q_value': peakgroup.scores['q_value']
+                }
 
-        with Connection(osw_file) as conn:
+        # self.drop_table(
+        #     'ghost_score_table'
+        # )
 
-            for record in conn.iterate_records(query):
+        # self.create_table(
+        #     queries.CreateTable.CREATE_GHOSTSCORE_TABLE
+        # )
 
-                if record['protein_accession'] not in protein_graph:
-
-                    protein = Protein(
-                        protein_accession=record['protein_accession'],
-                        decoy=int(record['decoy']),
-                        q_value=record['global_protein_q_value']
-                    )
-
-                    protein_graph.add_nodes_from(
-                        [record['protein_accession']],
-                        data=protein,
-                        bipartite='protein'
-                    )
-
-                else:
-
-                    prec_id = f"{record['modified_sequence']}_{record['charge']}"
-
-                    if prec_id not in protein_graph:
-                        precursor = Precursor(
-                            sequence=record['modified_sequence'],
-                            modified_sequence=record['modified_sequence'],
-                            charge=record['charge'],
-                            q_value=record['global_peptide_q_value']
-                        )
-
-                        protein_graph.add_nodes_from(
-                            [prec_id],
-                            data=precursor,
-                            bipartite='precursor'
-                        )
-
-                        protein_graph.add_edges_from(
-                            [
-                                (record['protein_accession'], prec_id)
-                            ]
-                        )
-
-                    peakgroup = PeakGroup(
-                        rt=record['retention_time'],
-                        intensity=record['intensity'],
-                        q_value=record['peakgroup_q_value']
-                    )
-
-                    protein_graph.nodes[prec_id]['data'].peakgroups.append(peakgroup)
-
-        osw_graphs.append(protein_graph)
-
-    return osw_graphs
-
-def fetch_peakgroup_data(osw_path: str, osw_query: str):
-
-    #protein_graph = nx.Graph(file_name=osw_path)
-
-    protein_graph = Graph()
-
-    with Connection(osw_path) as conn:
-
-        for sql_index in CreateIndex.ALL_INDICES:
-            conn.run_raw_sql(sql_index)
-
-        for record in conn.iterate_records(osw_query):
-
-            precursor_id = f"{record['modified_sequence']}_{record['charge']}"
-
-            if record['protein_accession'] not in protein_graph:
-
-                protein = Protein(
-                    protein_accession=record['protein_accession'],
-                    decoy=int(record['decoy'])
-                )
-
-                protein_graph.add_node(
-                    key=record['protein_accession'],
-                    node=protein,
-                    color='protein'
-                )
-
-            if precursor_id not in protein_graph:
-
-                precursor = Precursor(
-                    sequence=record['modified_sequence'],
-                    modified_sequence=record['modified_sequence'],
-                    charge=record['charge'],
-                    decoy=record['decoy']
-                )
-
-                protein_graph.add_node(
-                    key=precursor_id,
-                    node=precursor,
-                    color='precursor'
-                )
-
-                protein_graph.add_edge(
-                    node_from=record['protein_accession'],
-                    node_to=precursor_id,
-                    bidirectional=True
-                )
-
-            peakgroup = PeakGroup(
-                idx=record['feature_id'],
-                mz=record['mz'],
-                rt=record['retention_time'],
-                ms2_intensity=record['ms2_intensity'],
-                ms1_intensity=record['ms1_intensity'],
-                decoy=record['decoy'],
-                start_rt=record['left_width'],
-                end_rt=record['right_width'],
-                delta_rt=record['delta_rt'],
-            )
-
-            if 'ghost_score_id' in record:
-
-                peakgroup.ghost_score_id = record['ghost_score_id']
-
-            for column_name, column_value in record.items():
-
-                column_name = column_name.lower()
-
-                if column_name.startswith('var_'):
-
-                    peakgroup.add_sub_score_column(
-                        key=column_name,
-                        value=float(column_value)
-                    )
-
-                elif column_name in [
-                    'vote_percentage',
-                    'probability',
-                    'logit_probability',
-                    'd_score',
-                    'weighted_d_score',
-                    'q_value',
-                    'transition_mass_dev_score',
-                    'precursor_mass_dev_score'
-                ]:
-
-                    peakgroup.add_score_column(
-                        key=column_name,
-                        value=float(column_value)
-                    )
-
-            protein_graph[precursor_id].peakgroups.append(
-                peakgroup
-            )
-
-    return protein_graph
-
+        self.update_records(
+            table_name='ghost_score_table',
+            key_field="ghost_score_id",
+            records=records
+        )

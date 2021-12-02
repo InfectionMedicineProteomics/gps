@@ -259,8 +259,6 @@ if __name__ == '__main__':
 
     from gscore.scaler import Scaler
 
-    from gscore.workflows.score_run import prepare_denoise_record_additions
-
     from gscore.utils.connection import Connection
 
     from gscore.parsers.queries import (

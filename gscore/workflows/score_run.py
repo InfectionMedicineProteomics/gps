@@ -64,25 +64,6 @@ def prepare_qvalue_add_records(graph):
     return record_updates
 
 
-def prepare_denoise_record_additions(precursors) -> List[Dict]:
-
-    record_updates = list()
-
-    for precursor in precursors.precursors.values():
-
-        for peakgroup in precursor.peakgroups:
-
-            record = {
-                'feature_id': peakgroup.idx,
-                'probability': peakgroup.scores['probability'],
-                'vote_percentage': peakgroup.scores['vote_percentage']
-            }
-
-            record_updates.append(record)
-
-    return record_updates
-
-
 def main(args, logger=None):
 
     if args.apply_model:
