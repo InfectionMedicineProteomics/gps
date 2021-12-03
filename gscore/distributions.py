@@ -66,9 +66,13 @@ class ScoreDistribution:
             np.argwhere(labels == 1.0)
         ]
 
+        self.target_data = target_data
+
         decoy_data = data[
             np.argwhere(labels == 0.0)
         ]
+
+        self.decoy_data = decoy_data
 
         self.target_model.fit(
             target_data
@@ -84,13 +88,13 @@ class ScoreDistribution:
         self.target_function = InterpolatedUnivariateSpline(
             x=self.x_axis,
             y=self.target_scores,
-            ext=0
+            ext=2
         )
 
         self.decoy_function = InterpolatedUnivariateSpline(
             x=self.x_axis,
             y=self.decoy_scores,
-            ext=0
+            ext=2
         )
 
 
@@ -114,15 +118,27 @@ class ScoreDistribution:
 
         for score in scores:
 
-            decoy_area = self.decoy_function.integral(
-                a=score,
-                b=self.x_axis[-1],
-            )
+            if score > self.decoy_data.max().item():
 
-            target_area = self.target_function.integral(
-                a=score,
-                b=self.x_axis[-1]
-            )
+                decoy_area = 0.0
+
+            else:
+
+                decoy_area = self.decoy_function.integral(
+                    a=score,
+                    b=self.x_axis[-1].item(),
+                )
+
+            if score >= self.target_data.max().item():
+
+                target_area = 1.0
+
+            else:
+
+                target_area = self.target_function.integral(
+                    a=score,
+                    b=self.x_axis[-1].item()
+                )
 
             target_areas.append(target_area)
             decoy_areas.append(decoy_area)

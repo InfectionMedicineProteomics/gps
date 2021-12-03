@@ -352,8 +352,10 @@ class OSWFile:
 
                 else:
 
-                    formatted_update_string_holder = '=?, '.join(
-                        field_names
+                    formatted_field_names = [f"{field_name}=?" for field_name in field_names]
+
+                    formatted_update_string_holder = ', '.join(
+                        formatted_field_names
                     )
 
                 update_record_query = Queries.UPDATE_RECORD.format(
@@ -362,8 +364,6 @@ class OSWFile:
                     key_field=key_field,
                     record_id='?'
                 )
-
-                print(update_record_query)
 
                 cursor = self.conn.cursor()
 
@@ -392,8 +392,10 @@ class OSWFile:
 
             else:
 
-                formatted_update_string_holder = '=?, '.join(
-                    field_names
+                formatted_field_names = [f"{field_name}=?" for field_name in field_names]
+
+                formatted_update_string_holder = ', '.join(
+                    formatted_field_names
                 )
 
             update_record_query = Queries.UPDATE_RECORD.format(
@@ -441,7 +443,7 @@ class OSWFile:
         cursor.execute(query)
 
 
-    def update_score_records(self, precursors):
+    def add_score_records(self, precursors):
 
         records = list()
 
@@ -478,7 +480,6 @@ class OSWFile:
             for peakgroup in precursor.peakgroups:
 
                 records[peakgroup.ghost_score_id] = {
-                    'feature_id': peakgroup.idx,
                     'd_score': peakgroup.scores['d_score'],
                     'q_value': peakgroup.scores['q_value']
                 }

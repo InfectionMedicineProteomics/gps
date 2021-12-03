@@ -409,7 +409,8 @@ class Precursors:
         model_scores = scoring_model.score(all_data_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
-            peakgroup.scores['d_score'] = model_scores[idx]
+
+            peakgroup.scores['d_score'] = model_scores[idx].item()
 
         return self
 
@@ -451,9 +452,9 @@ class Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
-        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+        all_data_scores, all_data_labels = ml.reformat_distribution_data(
             all_peakgroups,
-            include_score_columns=True
+            score_column=sort_key
         )
 
         q_values = self.score_distribution.calculate_q_vales(all_data_scores)
@@ -603,4 +604,3 @@ def calc_score_grouped_by_level(graph, function=None, level='', score_column='',
         for key in node.get_edges():
 
             graph[key].data.scores[new_column_name] = score
-
