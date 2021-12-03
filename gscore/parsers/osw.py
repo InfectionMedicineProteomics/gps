@@ -8,7 +8,7 @@ from gscore.parsers.queries import (
 from gscore.peakgroups import (
     PeakGroup,
     Precursor,
-    Protein, Proteins
+    Protein, Proteins, Peptides, Peptide
 )
 
 from gscore.parsers import queries
@@ -176,6 +176,26 @@ class OSWFile:
                 proteins[record['protein_accession']] = protein
 
         return proteins
+
+    def parse_to_peptides(self, query: str) -> Peptides:
+
+        peptides = Peptides()
+
+        for record in self.iterate_records(query):
+
+            if record['modified_sequence'] not in peptides:
+
+                peptide = Peptide(
+                    sequence=record['peptide_sequence'],
+                    modified_sequence=record['modified_sequence'],
+                    decoy=record['decoy'],
+                    q_value=record['q_value'],
+                    d_score=record['d_score']
+                )
+
+                peptides[record['modified_sequence']] = peptide
+
+        return peptides
 
     def parse_to_precursors(self, query: str) -> Precursors:
 

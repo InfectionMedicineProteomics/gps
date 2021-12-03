@@ -89,6 +89,8 @@ class Precursor:
 
     def __init__(self, sequence='', modified_sequence='', charge=0, decoy=0, q_value=None):
 
+        self.id = f"{modified_sequence}_{charge}"
+
         self.sequence = sequence
         self.modified_sequence = modified_sequence
         self.charge = charge
@@ -131,6 +133,8 @@ class Protein:
 
         self.scores = dict()
 
+
+
 class Proteins:
 
     proteins: Dict[str, Protein]
@@ -154,6 +158,49 @@ class Proteins:
             yield protein
 
 
+class Peptide:
+
+    sequence: str
+    modified_sequence: str
+    decoy: int
+    target: int
+    q_value: float
+    d_score: float
+
+    def __init__(self, sequence='', modified_sequence: str = "", decoy: int = 0, q_value: float = None, d_score: float = None):
+
+        self.sequence = sequence
+        self.modified_sequence = modified_sequence
+
+        self.decoy = decoy
+        self.target = abs(decoy - 1)
+
+        self.q_value = q_value
+        self.d_score = d_score
+        
+        
+class Peptides:
+
+    peptides: Dict[str, Peptide]
+
+    def __init__(self):
+
+        self.peptides = dict()
+
+    def __contains__(self, item):
+
+        return item in self.peptides
+
+    def __setitem__(self, key: str, peptide: Peptide):
+
+        self.peptides[key] = peptide
+
+    def __iter__(self):
+
+        for modified_peptide_sequence, peptide in self.peptides.items():
+
+            yield peptide
+
 
 class Precursors:
 
@@ -166,6 +213,12 @@ class Precursors:
     def __contains__(self, item):
 
         return item in self.precursors
+
+    def __iter__(self):
+
+        for precursor_id, precursor in self.precursors.items():
+
+            yield precursor
 
     def add_peakgroup(self, precursor_id: str, peakgroup: PeakGroup) -> None:
 
