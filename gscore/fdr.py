@@ -4,41 +4,9 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 from sklearn.neighbors import KernelDensity
 
-from gscore.utils import ml
+from typing import TypeVar, Generic, Dict, Tuple
 
-# class LabelDistribution:
-#
-#     def __init__(self, axis_span=()):
-#
-#         self.model = KernelDensity(
-#             bandwidth=0.75
-#         )
-#
-#         self.x_axis = np.linspace(
-#             start=axis_span[0],
-#             stop=axis_span[1],
-#             num=1000
-#         )[:, np.newaxis]
-#
-#     def values(self, data):
-#
-#         log_density = self.model.score_samples(data)
-#
-#         return np.exp(log_density)
-#
-#     def fit(self, data):
-#
-#         self.model.fit(
-#             np.array(data).reshape(-1, 1)
-#         )
-#
-#     @property
-#     def max_value(self):
-#         return self.x_axis[-1]
-#
-#     @property
-#     def min_value(self):
-#         return self.x_axis[0]
+T = TypeVar("T")
 
 
 class ScoreDistribution:
@@ -151,3 +119,54 @@ class ScoreDistribution:
         q_values = decoy_areas / total_areas
 
         return q_values
+
+
+class GlobalDistribution(Generic[T]):
+
+    features: Dict[str, T]
+    score_distribution: ScoreDistribution
+
+    def __init__(self) -> None:
+
+        self.features: Dict[str, T] = dict()
+
+    def __contains__(self, item) -> bool:
+
+        return item in self.features
+
+    def __setitem__(self, key: str, value: T) -> None:
+
+        self.features[key] = value
+
+    def compare_score(self, key: str, feature: T) -> None:
+
+        if feature.d_score > self.features[key].d_score:
+
+            self.features[key] = feature
+
+    def _parse_scores(self) -> Tuple[np.ndarray, np.ndarray]:
+
+        self.scores = []
+        self.labels = []
+
+        for feature_key, feature in self.features.items():
+
+            self.scores.append(feature.d_score)
+
+            self.labels.append(feature.target)
+
+        self.scores = np.array(self.scores, dtype=np.float64)
+        self.labels = np.array(self.labels, dtype=int)
+
+        return self.scores, self.labels
+
+    def fit(self) -> None:
+
+        scores, labels = self._parse_scores()
+
+        self.score_distribution = ScoreDistribution()
+
+        self.score_distribution.fit(
+            scores,
+            labels
+        )

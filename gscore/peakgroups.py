@@ -147,6 +147,13 @@ class Proteins:
 
         self.proteins[key] = protein
 
+    def __iter__(self):
+
+        for protein_accession, protein in self.proteins.items():
+
+            yield protein
+
+
 
 class Precursors:
 

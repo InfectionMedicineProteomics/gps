@@ -162,6 +162,10 @@ class OSWFile:
 
             if record['protein_accession'] not in proteins:
 
+                if not record['d_score']:
+
+                    print("is none")
+
                 protein = Protein(
                     protein_accession=record['protein_accession'],
                     decoy=record['decoy'],
