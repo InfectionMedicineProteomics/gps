@@ -151,6 +151,10 @@ class Proteins:
 
         self.proteins[key] = protein
 
+    def __getitem__(self, item: str) -> Protein:
+
+        return self.proteins[item]
+
     def __iter__(self):
 
         for protein_accession, protein in self.proteins.items():
@@ -194,6 +198,10 @@ class Peptides:
     def __setitem__(self, key: str, peptide: Peptide):
 
         self.peptides[key] = peptide
+
+    def __getitem__(self, key: str) -> Peptide:
+
+        return self.peptides[key]
 
     def __iter__(self):
 

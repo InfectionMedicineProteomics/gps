@@ -162,10 +162,6 @@ class OSWFile:
 
             if record['protein_accession'] not in proteins:
 
-                if not record['d_score']:
-
-                    print("is none")
-
                 protein = Protein(
                     protein_accession=record['protein_accession'],
                     decoy=record['decoy'],
@@ -174,6 +170,19 @@ class OSWFile:
                 )
 
                 proteins[record['protein_accession']] = protein
+
+            else:
+
+                if record['d_score'] > proteins[record['protein_accession']].d_score:
+
+                    protein = Protein(
+                        protein_accession=record['protein_accession'],
+                        decoy=record['decoy'],
+                        q_value=record['q_value'],
+                        d_score=record['d_score']
+                    )
+
+                    proteins[record['protein_accession']] = protein
 
         return proteins
 
@@ -194,6 +203,20 @@ class OSWFile:
                 )
 
                 peptides[record['modified_sequence']] = peptide
+
+            else:
+
+                if record['d_score'] > peptides[record['modified_sequence']].d_score:
+
+                    peptide = Peptide(
+                        sequence=record['peptide_sequence'],
+                        modified_sequence=record['modified_sequence'],
+                        decoy=record['decoy'],
+                        q_value=record['q_value'],
+                        d_score=record['d_score']
+                    )
+
+                    peptides[record['modified_sequence']] = peptide
 
         return peptides
 

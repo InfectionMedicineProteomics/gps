@@ -6,7 +6,13 @@ from sklearn.neighbors import KernelDensity
 
 from typing import TypeVar, Generic, Dict, Tuple
 
+from joblib import dump, load
+
+from __future__ import annotations
+
 T = TypeVar("T")
+
+G = TypeVar("G", )
 
 
 class ScoreDistribution:
@@ -170,3 +176,14 @@ class GlobalDistribution(Generic[T]):
             scores,
             labels
         )
+
+    def save(self, file_path: str) -> None:
+
+        dump(self, file_path)
+
+    @staticmethod
+    def load(file_path: str) -> GlobalDistribution:
+
+        return load(file_path)
+
+
