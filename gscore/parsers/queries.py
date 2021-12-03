@@ -267,6 +267,26 @@ class SelectPeakGroups:
         )
     )
 
+    FETCH_ALL_SCORED_DATA = (
+        """
+        select
+            {base_columns},
+            gst.d_score,
+            gst.q_value
+        from precursor 
+        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
+        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
+        inner join feature on feature.precursor_id = precursor.id
+        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
+        left join ghost_score_table as gst on gst.feature_id = feature.id
+        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
+        inner join protein as protein on protein.id = pep_prot_map.protein_id
+        order by precursor.id;
+        """.format(
+            base_columns=BASE_COLUMNS
+        )
+    )
+
     FETCH_ALL_UNSCORED_DATA = (
         """
         select

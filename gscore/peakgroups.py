@@ -10,7 +10,7 @@ from gscore.utils import ml
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
-from gscore.distributions import ScoreDistribution
+from gscore.fdr import ScoreDistribution
 
 class PeakGroup:
     ghost_score_id: str
@@ -118,7 +118,7 @@ class Protein:
     protein_accession: str
     decoy: int
 
-    def __init__(self, protein_accession='', decoy=0, q_value=None):
+    def __init__(self, protein_accession='', decoy=0, q_value=None, d_score: float = None):
 
         self.protein_accession = protein_accession
 
@@ -127,8 +127,25 @@ class Protein:
 
         self.q_value = q_value
 
+        self.d_score = d_score
+
         self.scores = dict()
 
+class Proteins:
+
+    proteins: Dict[str, Protein]
+
+    def __init__(self):
+
+        self.proteins = dict()
+
+    def __contains__(self, item):
+
+        return item in self.proteins
+
+    def __setitem__(self, key: str, protein: Protein):
+
+        self.proteins[key] = protein
 
 
 class Precursors:

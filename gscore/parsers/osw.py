@@ -8,7 +8,7 @@ from gscore.parsers.queries import (
 from gscore.peakgroups import (
     PeakGroup,
     Precursor,
-    Protein
+    Protein, Proteins
 )
 
 from gscore.parsers import queries
@@ -140,7 +140,7 @@ class OSWFile:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.close()
 
-    def iterate_subscore_records(self, query):
+    def iterate_records(self, query):
 
         cursor = self.conn.cursor()
 
@@ -154,13 +154,32 @@ class OSWFile:
 
                 yield record
 
+    def parse_to_proteins(self, query: str) -> Proteins:
+
+        proteins = Proteins()
+
+        for record in self.iterate_records(query):
+
+            if record['protein_accession'] not in proteins:
+
+                protein = Protein(
+                    protein_accession=record['protein_accession'],
+                    decoy=record['decoy'],
+                    q_value=record['q_value'],
+                    d_score=record['d_score']
+                )
+
+                proteins[record['protein_accession']] = protein
+
+        return proteins
+
     def parse_to_precursors(self, query: str) -> Precursors:
 
         precursors = Precursors()
 
         score_columns = dict()
 
-        for record in self.iterate_subscore_records(query):
+        for record in self.iterate_records(query):
 
             if record['precursor_id'] not in precursors:
 
