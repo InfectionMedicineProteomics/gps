@@ -36,7 +36,7 @@ class Build:
                         query=queries.SelectPeakGroups.FETCH_ALL_SCORED_DATA
                     )
 
-                print(f"Building {args.level} level scoring model...")
+                print(f"Comparing {args.level} level scores...")
 
                 for group in groups:
 
