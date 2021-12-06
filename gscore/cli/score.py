@@ -42,7 +42,10 @@ class Score:
                         subparser
     ):
 
-        self.parser = subparser.add_parser(self.name)
+        self.parser = subparser.add_parser(
+            self.name,
+            help="Commands to score and denoise OSW files"
+        )
 
         self.parser.add_argument(
             "-i",

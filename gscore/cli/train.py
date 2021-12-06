@@ -17,7 +17,10 @@ class Train:
                         subparser
     ):
 
-        self.parser = subparser.add_parser(self.name)
+        self.parser = subparser.add_parser(
+            self.name,
+            help="Training a scoring model from input data"
+        )
 
         self.parser.add_argument(
             '-i',

@@ -1,5 +1,5 @@
 import random
-from typing import List
+from typing import List, Tuple
 
 from sklearn.utils import shuffle
 
@@ -17,6 +17,13 @@ def get_precursor_id_folds(precursor_ids: List[str], num_folds: int) -> List[np.
     )
 
     return folds
+
+
+def get_training_data_from_npz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+
+    npzfile = np.load(file_path)
+
+    return npzfile['x'], npzfile['y']
 
 
 def get_training_data(folds: List[np.ndarray], fold_num: int):

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 
 from gscore.cli.score import Score
 from gscore.cli.train import Train
+from gscore.cli.export import Export
 
 if __name__ == '__main__':
 
@@ -11,16 +13,17 @@ if __name__ == '__main__':
     subcommands.extend(
         [
             Score(),
-            Train()
+            Train(),
+            Export()
         ]
     )
-
-    print(subcommands)
 
     parser = argparse.ArgumentParser()
 
     subparser = parser.add_subparsers(
-        dest="subcommand"
+        dest="subcommand",
+        title="subcommands",
+        description="CLI tools for scoring OSW files",
     )
 
     for subcommand in subcommands:
@@ -28,4 +31,12 @@ if __name__ == '__main__':
 
     command = parser.parse_args()
 
-    command.run(command)
+    if command.subcommand:
+
+        command.run(command)
+
+    else:
+
+        if len(sys.argv) == 1:
+
+            parser.print_help()

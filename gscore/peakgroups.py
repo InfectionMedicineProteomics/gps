@@ -573,7 +573,9 @@ class Precursors:
             include_score_columns=True
         )
 
-        dump((all_data_scores, all_data_labels), file_path)
+        with open(file_path, 'wb') as npfh:
+
+            np.savez(npfh, x=all_data_scores, y=all_data_labels)
 
 
 def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:
