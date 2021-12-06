@@ -56,6 +56,12 @@ class Scorer:
 
         self.model = load(model_path)
 
+    def evaluate(self, data: np.ndarray, labels: np.ndarray) -> float:
+
+        probabilities = self.probability(data)
+
+        return roc_auc_score(labels, probabilities)
+
 
 class SGDScorer(Scorer):
 
