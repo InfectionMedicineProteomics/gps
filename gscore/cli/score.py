@@ -16,26 +16,70 @@ class Score:
 
         print(f"Processing file {args.input}")
 
-        with OSWFile(args.input) as osw_conn:
+        if args.denoise_only:
 
-            precursors = osw_conn.parse_to_precursors(
-                query=SelectPeakGroups.FETCH_FEATURES
-            )
+            with OSWFile(args.input) as osw_conn:
 
-            print("Denoising...")
+                precursors = osw_conn.parse_to_precursors(
+                    query=SelectPeakGroups.FETCH_FEATURES
+                )
 
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_threshold=args.vote_threshold
-            )
+                print("Denoising...")
 
-            print("Writing scores to OSW file...")
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_threshold=args.vote_threshold
+                )
 
-            osw_conn.add_score_records(precursors)
+                print("Writing scores to OSW file...")
 
-            print("Done!")
+                osw_conn.add_score_records(precursors)
+
+                print("Done!")
+
+        elif args.apply_model:
+
+            with OSWFile(args.input) as osw_conn:
+
+                precursors = osw_conn.parse_to_precursors(
+                    query=SelectPeakGroups.FETCH_FEATURES
+                )
+
+                print("Denoising...")
+
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_threshold=args.vote_threshold
+                )
+
+                print("Writing denoise scores to OSW file...")
+
+                osw_conn.add_score_records(precursors)
+
+                print("Scoring...")
+
+                precursors.score_run(
+                    model_path=args.scoring_model,
+                    scaler_path=args.scaler
+                )
+
+                print("Calculating Q Values")
+
+                precursors.calculate_q_values(
+                    sort_key="d_score",
+                    use_decoys=True
+                )
+
+                print("Updating Q Values in PQP file")
+
+                osw_conn.update_q_value_records(
+                    precursors
+                )
+
 
 
     def build_subparser(self,
@@ -63,6 +107,30 @@ class Score:
             ),
             default=False,
             action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--apply-model",
+            dest="apply_model",
+            help=(
+                "Set this flag if you want to apply a trained scoring model to the data"
+            ),
+            default=False,
+            action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--scoring-model",
+            dest="scoring_model",
+            help="Path to scoring model to apply to data.",
+            type=str
+        )
+
+        self.parser.add_argument(
+            "--scaler",
+            dest="scaler",
+            help="Path to scaler to transform data.",
+            type=str
         )
 
         self.parser.add_argument(
