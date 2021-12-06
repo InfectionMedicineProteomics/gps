@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -8,7 +10,7 @@ from typing import TypeVar, Generic, Dict, Tuple
 
 from joblib import dump, load
 
-from __future__ import annotations
+
 
 T = TypeVar("T")
 

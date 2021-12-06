@@ -1,103 +1,31 @@
 #!/usr/bin/env python3
 import argparse
 
-from gscore.workflows import (
-    build_scorer,
-    score_run,
-    build_global_model
-)
-from gscore.utils.logger import Logger
-
-from gscore import export
-
-from gscore.cli import (
-    build_scoring_model_args,
-    score_run_args,
-    export_args,
-    build_global_model_args
-)
-
-
-def get_args():
-
-    base_parser = argparse.ArgumentParser()
-    
-    subparsers = base_parser.add_subparsers(
-        dest='tool_name'
-    )
-
-    build_scoring_model_parser = subparsers.add_parser(
-        'buildscorer',
-        help='build scorer help'
-    )
-
-    build_scoring_model_args.parse_args(
-        build_scoring_model_parser
-    )
-
-    score_run_parser = subparsers.add_parser(
-        'scorerun',
-        help='score individual run'
-    )
-
-    score_run_args.parse_args(
-        score_run_parser
-    )
-
-    build_global_model_parser = subparsers.add_parser(
-        'buildglobalmodel',
-        help='Build global scoring model based on the peptide or protein level'
-    )
-
-    build_global_model_args.parse_args(
-        build_global_model_parser
-    )
-
-    export_parser = subparsers.add_parser(
-        'export',
-        help='Export SQLite to tsv'
-    )
-
-    export_args.parse_args(
-        export_parser
-    )
-
-    args = base_parser.parse_args()
-
-    return args
-
+from gscore.cli.score import Score
+from gscore.cli.train import Train
 
 if __name__ == '__main__':
-    
-    args = get_args()
 
-    if args.tool_name == 'buildscorer':
+    subcommands = []
 
-        logger = Logger(
-            name="build_scorer",
-            level=args.verbosity_level
-        )
+    subcommands.extend(
+        [
+            Score(),
+            Train()
+        ]
+    )
 
-        build_scorer.main(args, logger)
+    print(subcommands)
 
-    elif args.tool_name == 'scorerun':
+    parser = argparse.ArgumentParser()
 
-        logger = Logger(
-            name="score_run",
-            level=args.verbosity_level
-        )
+    subparser = parser.add_subparsers(
+        dest="subcommand"
+    )
 
-        score_run.main(args, logger)
+    for subcommand in subcommands:
+        subcommand.build_subparser(subparser)
 
-    elif args.tool_name == 'export':
+    command = parser.parse_args()
 
-        logger = Logger(
-            name='export',
-            level=args.verbosity_level
-        )
-
-        export.main(args, logger)
-
-    elif args.tool_name == 'buildglobalmodel':
-
-        build_global_model.main(args)
+    command.run(command)
