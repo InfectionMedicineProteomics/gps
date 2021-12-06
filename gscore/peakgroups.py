@@ -12,6 +12,8 @@ from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
 from gscore.fdr import ScoreDistribution
 
+from joblib import dump
+
 class PeakGroup:
     ghost_score_id: str
     idx: str
@@ -549,6 +551,29 @@ class Precursors:
             peakgroup.scores['q_value'] = q_values[idx]
 
         return self
+
+    def dump_training_data(self, file_path: str) -> None:
+
+        positive_labels = self.filter_target_peakgroups(
+            rank=1,
+            sort_key="probability",
+            filter_key="vote_percentage",
+            value=1.0
+        )
+
+        negative_labels = self.get_decoy_peakgroups(
+            sort_key='probability',
+            use_second_ranked=False
+        )
+
+        combined = positive_labels + negative_labels
+
+        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+            combined,
+            include_score_columns=True
+        )
+
+        dump((all_data_scores, all_data_labels), file_path)
 
 
 def get_decoy_peakgroups(graph: nx.Graph, sort_key: str, use_second_ranked: bool = False) -> List[PeakGroup]:
