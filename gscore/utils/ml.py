@@ -47,7 +47,7 @@ def reformat_distribution_data(peakgroups, score_column):
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        scores.append(peakgroup.scores['d_score'])
+        scores.append(peakgroup.scores[score_column])
 
         score_labels.append(
             peakgroup.target

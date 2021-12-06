@@ -41,24 +41,32 @@ class Score:
 
         elif args.apply_model:
 
+            already_scored = False
+
             with OSWFile(args.input) as osw_conn:
 
-                precursors = osw_conn.parse_to_precursors(
-                    query=SelectPeakGroups.FETCH_FEATURES
-                )
+                if "ghost_score_table" in osw_conn:
 
-                print("Denoising...")
+                    already_scored = True
 
-                precursors.denoise(
-                    num_folds=args.num_folds,
-                    num_classifiers=args.num_classifiers,
-                    num_threads=args.threads,
-                    vote_threshold=args.vote_threshold
-                )
+                    precursors = osw_conn.parse_to_precursors(
+                        query=SelectPeakGroups.FETCH_ALL_DENOIZED_DATA
+                    )
 
-                print("Writing denoise scores to OSW file...")
+                else:
 
-                osw_conn.add_score_records(precursors)
+                    precursors = osw_conn.parse_to_precursors(
+                        query=SelectPeakGroups.FETCH_FEATURES
+                    )
+
+                    print("Denoising...")
+
+                    precursors.denoise(
+                        num_folds=args.num_folds,
+                        num_classifiers=args.num_classifiers,
+                        num_threads=args.threads,
+                        vote_threshold=args.vote_threshold
+                    )
 
                 print("Scoring...")
 
@@ -76,9 +84,17 @@ class Score:
 
                 print("Updating Q Values in PQP file")
 
-                osw_conn.update_q_value_records(
-                    precursors
-                )
+                if not already_scored:
+
+                    osw_conn.add_score_and_q_value_records(
+                        precursors
+                    )
+
+                else:
+
+                    osw_conn.update_q_value_records(
+                        precursors
+                    )
 
 
 

@@ -5,6 +5,7 @@ import sys
 from gscore.cli.score import Score
 from gscore.cli.train import Train
 from gscore.cli.export import Export
+from gscore.cli.build import Build
 
 if __name__ == '__main__':
 
@@ -14,7 +15,8 @@ if __name__ == '__main__':
         [
             Score(),
             Train(),
-            Export()
+            Export(),
+            Build()
         ]
     )
 

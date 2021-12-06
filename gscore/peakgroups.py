@@ -135,6 +135,11 @@ class Protein:
 
         self.scores = dict()
 
+    @property
+    def identifier(self):
+
+        return self.protein_accession
+
 
 
 class Proteins:
@@ -183,6 +188,11 @@ class Peptide:
 
         self.q_value = q_value
         self.d_score = d_score
+
+    @property
+    def identifier(self):
+
+        return self.modified_sequence
         
         
 class Peptides:
@@ -370,7 +380,7 @@ class Precursors:
                 reverse=True
             )
 
-            peakgroup_scores, peakgroup_labels, _ = ml.reformat_data(
+            peakgroup_scores, peakgroup_labels, peakgroup_indices = ml.reformat_data(
                 peakgroups=training_data_targets
             )
 
@@ -434,6 +444,7 @@ class Precursors:
             print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
 
             for idx, peakgroup in enumerate(peakgroups_to_score):
+
                 peakgroup.scores['probability'] = probabilities[idx]
 
                 peakgroup.scores['vote_percentage'] = vote_percentages[idx]
@@ -548,7 +559,7 @@ class Precursors:
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
-            peakgroup.scores['q_value'] = q_values[idx]
+            peakgroup.scores['q_value'] = q_values[idx].item()
 
         return self
 

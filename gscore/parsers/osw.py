@@ -508,6 +508,22 @@ class OSWFile:
 
         cursor.execute(query)
 
+    def __contains__(self, table_name: str) -> bool:
+
+        table_exists = False
+
+        query = (
+            """SELECT name FROM sqlite_master "
+            f"WHERE type='table' AND name='{table_name}';"""
+        ).format(table_name=table_name)
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(query)
+
+        result = cursor.fetchone()
+
+        return bool(result)
 
     def add_score_records(self, precursors):
 
@@ -537,6 +553,36 @@ class OSWFile:
             records=records
         )
 
+    def add_score_and_q_value_records(self, precursors):
+
+        records = list()
+
+        for precursor in precursors.precursors.values():
+
+            for peakgroup in precursor.peakgroups:
+                record = {
+                    'feature_id': peakgroup.idx,
+                    'probability': peakgroup.scores['probability'],
+                    'vote_percentage': peakgroup.scores['vote_percentage'],
+                    'd_score': peakgroup.scores['d_score'],
+                    'q_value': peakgroup.scores['q_value']
+                }
+
+                records.append(record)
+
+        self.drop_table(
+            'ghost_score_table'
+        )
+
+        self.create_table(
+            query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE
+        )
+
+        self.add_records(
+            table_name='ghost_score_table',
+            records=records
+        )
+
     def update_q_value_records(self, precursors):
 
         records = dict()
@@ -546,17 +592,11 @@ class OSWFile:
             for peakgroup in precursor.peakgroups:
 
                 records[peakgroup.ghost_score_id] = {
+                    'probability': peakgroup.scores['probability'],
+                    'vote_percentage': peakgroup.scores['vote_percentage'],
                     'd_score': peakgroup.scores['d_score'],
                     'q_value': peakgroup.scores['q_value']
                 }
-
-        # self.drop_table(
-        #     'ghost_score_table'
-        # )
-
-        # self.create_table(
-        #     queries.CreateTable.CREATE_GHOSTSCORE_TABLE
-        # )
 
         self.update_records(
             table_name='ghost_score_table',
