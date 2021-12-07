@@ -126,7 +126,7 @@ class SelectPeakGroups:
         protein.decoy protein_decoy,
         feature.LEFT_WIDTH rt_start,
         feature.exp_rt rt_apex,
-        feature.RIGHT_WIDTH rt_end,
+        feature.RIGHT_WIDTH rt_end
         """
     )
 
