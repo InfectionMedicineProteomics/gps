@@ -32,6 +32,10 @@ class ScoreDistribution:
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
+        if np.isposinf(data).any():
+
+            data[data == np.inf] = 25.0
+
         self.x_axis = np.linspace(
             start=data.min(),
             stop=data.max(),
