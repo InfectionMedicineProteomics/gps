@@ -18,3 +18,5 @@ notebooks/
 notebooks/*
 
 .ipynb_checkpoints
+
+.mypy*

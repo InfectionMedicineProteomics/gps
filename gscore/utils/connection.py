@@ -39,6 +39,30 @@ class Connection:
                 record_dict = {column: value for column, value in zip(row.keys(), row)}
                 
                 yield record_dict
+
+    def fetch_all_records(self, query):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(query)
+
+        fetching_records = True
+
+        records = []
+
+        while fetching_records:
+
+            record_batch = cursor.fetchmany(10000)
+
+            if record_batch:
+
+                records.extend(record_batch)
+
+            else:
+
+                fetching_records = False
+
+        return records
                 
     def add_records(self, table_name='', records=[]):
         

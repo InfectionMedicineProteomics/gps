@@ -1,103 +1,52 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 
-from gscore.workflows import (
-    build_scorer,
-    score_run,
-    export,
-    build_global_model
-)
-from gscore.utils.logger import Logger
-
-
-from gscore.cli import (
-    build_scoring_model_args,
-    score_run_args,
-    export_args,
-    build_global_model_args
-)
-
-
-def get_args():
-
-    base_parser = argparse.ArgumentParser()
-    
-    subparsers = base_parser.add_subparsers(
-        dest='tool_name'
-    )
-
-    build_scoring_model_parser = subparsers.add_parser(
-        'buildscorer',
-        help='build scorer help'
-    )
-
-    build_scoring_model_args.parse_args(
-        build_scoring_model_parser
-    )
-
-    score_run_parser = subparsers.add_parser(
-        'scorerun',
-        help='score individual run'
-    )
-
-    score_run_args.parse_args(
-        score_run_parser
-    )
-
-    build_global_model_parser = subparsers.add_parser(
-        'buildglobalmodel',
-        help='Build global scoring model based on the peptide or protein level'
-    )
-
-    build_global_model_args.parse_args(
-        build_global_model_parser
-    )
-
-    export_parser = subparsers.add_parser(
-        'export',
-        help='Export SQLite to tsv'
-    )
-
-    export_args.parse_args(
-        export_parser
-    )
-
-    args = base_parser.parse_args()
-
-    return args
-
+from gscore.cli.score import Score
+from gscore.cli.train import Train
+from gscore.cli.export import Export
+from gscore.cli.build import Build
+from gscore.cli.combine import Combine
 
 if __name__ == '__main__':
-    
-    args = get_args()
 
-    if args.tool_name == 'buildscorer':
+    subcommands = []
 
-        logger = Logger(
-            name="build_scorer",
-            level=args.verbosity_level
-        )
+    subcommands.extend(
+        [
+            Score(),
+            Train(),
+            Export(),
+            Build(),
+            Combine()
+        ]
+    )
 
-        build_scorer.main(args, logger)
+    parser = argparse.ArgumentParser()
 
-    elif args.tool_name == 'scorerun':
+    subparser = parser.add_subparsers(
+        dest="subcommand",
+        title="subcommands",
+        description="CLI tools for scoring OSW files",
+    )
 
-        logger = Logger(
-            name="score_run",
-            level=args.verbosity_level
-        )
+    for subcommand in subcommands:
+        subcommand.build_subparser(subparser)
 
-        score_run.main(args, logger)
+    command = parser.parse_args()
 
-    elif args.tool_name == 'export':
+    if command.subcommand:
 
-        logger = Logger(
-            name='export',
-            level=args.verbosity_level
-        )
+        if len(sys.argv) == 2:
 
-        export.main(args, logger)
+            parser.print_help()
 
-    elif args.tool_name == 'buildglobalmodel':
+        else:
 
-        build_global_model.main(args)
+            command.run(command)
+
+    else:
+
+        if len(sys.argv) == 1:
+
+            parser.print_help()

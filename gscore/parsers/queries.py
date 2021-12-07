@@ -115,21 +115,18 @@ class SelectPeakGroups:
         """
         feature.run_id run_id,
         precursor.id transition_group_id,
-        peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as peptide_charge,
+        peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as precursor_id,
         feature.id feature_id,
-        feature.exp_rt rt,
         precursor.PRECURSOR_MZ mz,
         precursor.CHARGE charge,
         precursor.DECOY decoy,
         peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-        peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
+        peptide.MODIFIED_SEQUENCE modified_sequence,
         protein.PROTEIN_ACCESSION protein_accession,
         protein.decoy protein_decoy,
-        ms1.AREA_INTENSITY ms1_integrated_intensity,
-        ms1.APEX_INTENSITY ms1_apex_intensity,
-        ms2.AREA_INTENSITY ms2_integrated_intensity,
-        feature.LEFT_WIDTH left_width,
-        feature.RIGHT_WIDTH right_width
+        feature.LEFT_WIDTH rt_start,
+        feature.exp_rt rt_apex,
+        feature.RIGHT_WIDTH rt_end
         """
     )
 
@@ -185,135 +182,6 @@ class SelectPeakGroups:
         base_columns=BASE_COLUMNS,
         score_columns=SCORE_COLUMNS)
 
-    FETCH_DECOY_PEAK_GROUPS = (
-        """
-        select
-            {base_columns},
-            {score_columns}
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id 
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        where precursor.DECOY == 1
-        order by precursor.id;
-        """
-    )
-
-    FETCH_UNSCORED_PEAK_GROUPS_DECOY_FREE = (
-        """
-        select
-            {base_columns},
-            {score_columns}
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id 
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        where precursor.DECOY == 0
-        order by transition_group_id;
-        """
-    ).format(
-        base_columns=BASE_COLUMNS,
-        score_columns=SCORE_COLUMNS)
-
-    FETCH_VOTED_DATA_DECOY_FREE = (
-        """
-        select
-            {base_columns},
-            {score_columns},
-            gst.vote_percentage,
-            gst.probability,
-            gst.ghost_score_id
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        where precursor.DECOY == 0
-        order by precursor.id;
-        """
-    ).format(
-        base_columns=BASE_COLUMNS,
-        score_columns=SCORE_COLUMNS)
-
-    FETCH_VOTED_DATA = (
-        """
-        select
-                {base_columns},
-                {score_columns},
-                gst.vote_percentage,
-                gst.vote_score
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """
-    ).format(
-        base_columns=BASE_COLUMNS,
-        score_columns=SCORE_COLUMNS)
-
-    FETCH_SCORED_DATA_DECOY_FREE = (
-        """
-        select
-            {base_columns},
-            gst.vote_percentage,
-            gst.probability,
-            gst.d_score,
-            gst.weighted_d_score,
-            gst.ghost_score_id
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        where precursor.DECOY == 0
-        order by precursor.id;
-        """
-    ).format(base_columns=BASE_COLUMNS)
-
-    FETCH_SCORED_DATA_ALL = (
-        """
-        select
-            {base_columns},
-            ms2.VAR_XCORR_SHAPE var_xcorr_shape,
-            gst.vote_percentage,
-            gst.vote_score,
-            gst.d_score,
-            gst.alt_d_score,
-            gst.ghost_score_id
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """
-    ).format(base_columns=BASE_COLUMNS)
 
     FETCH_TRIC_EXPORT_DATA = (
         """
@@ -351,63 +219,6 @@ class SelectPeakGroups:
         """
     )
 
-    FETCH_PEPTIDE_MATRIX_EXPORT_DATA = (
-        """
-        select
-            feature.run_id run_id,
-            precursor.id transition_group_id,
-            feature.id feature_id,
-            feature.exp_rt rt,
-            feature.norm_rt irt,
-            feature.delta_rt delta_rt,
-            precursor.PRECURSOR_MZ mz,
-            precursor.CHARGE charge,
-            precursor.DECOY decoy,
-            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-            peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
-            protein.PROTEIN_ACCESSION protein_accession,
-            protein.decoy protein_decoy,
-            ms1.AREA_INTENSITY ms1_integrated_intensity,
-            ms1.APEX_INTENSITY ms1_apex_intensity,
-            ms2.AREA_INTENSITY ms2_integrated_intensity,
-            feature.LEFT_WIDTH left_width,
-            feature.RIGHT_WIDTH right_width,
-            gst.q_value,
-            gst.d_score
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """
-    )
-
-    FETCH_EXPERIMENT_WIDE_PRECURSOR_DATA = (
-        """
-        select
-            precursor.id transition_group_id,
-            precursor.PRECURSOR_MZ mz,
-            precursor.CHARGE charge,
-            precursor.DECOY decoy,
-            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-            peptide.MODIFIED_SEQUENCE modified_peptide_sequence,
-            protein.PROTEIN_ACCESSION protein_accession,
-            protein.decoy protein_decoy
-        from precursor
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        group by PRECURSOR.ID
-        order by PRECURSOR.ID;
-        """
-    )
 
     FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA = (
         """
@@ -434,43 +245,49 @@ class SelectPeakGroups:
         )
     )
 
-    FETCH_Q_VALUE_PREDICTION_TRAINING_DATA = (
+    FETCH_ALL_DENOIZED_DATA = (
         """
         select
             {base_columns},
-            feature.delta_rt delta_rt,
-            ms2.VAR_MASSDEV_SCORE transition_mass_dev_score,
-            ms1.VAR_MASSDEV_SCORE precursor_mass_dev_score,
             gst.probability,
-            gst.q_value,
-            {score_columns}
+            gst.vote_percentage,
+            gst.ghost_score_id,
+            ms2.*
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
         inner join feature on feature.precursor_id = precursor.id
         left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
         left join ghost_score_table as gst on gst.feature_id = feature.id
         inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
         inner join protein as protein on protein.id = pep_prot_map.protein_id
         order by precursor.id;
         """.format(
-            base_columns=BASE_COLUMNS,
-            score_columns=SCORE_COLUMNS
+            base_columns=BASE_COLUMNS
         )
     )
 
     FETCH_ALL_SCORED_DATA = (
         """
         select
-            {base_columns},
-            feature.delta_rt delta_rt,
-            ms2.VAR_MASSDEV_SCORE transition_mass_dev_score,
-            ms1.VAR_MASSDEV_SCORE precursor_mass_dev_score,
-            gst.probability,
+            feature.run_id run_id,
+            precursor.id transition_group_id,
+            peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as precursor_id,
+            feature.id feature_id,
+            precursor.PRECURSOR_MZ mz,
+            precursor.CHARGE charge,
+            precursor.DECOY decoy,
+            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
+            peptide.MODIFIED_SEQUENCE modified_sequence,
+            protein.PROTEIN_ACCESSION protein_accession,
+            protein.decoy protein_decoy,
+            feature.LEFT_WIDTH rt_start,
+            feature.exp_rt rt_apex,
+            feature.RIGHT_WIDTH rt_end,
+            ms2.AREA_INTENSITY ms2_intensity,
+            ms1.AREA_INTENSITY ms1_intensity,
             gst.d_score,
-            gst.q_value,
-            {score_columns}
+            gst.q_value
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
@@ -482,8 +299,7 @@ class SelectPeakGroups:
         inner join protein as protein on protein.id = pep_prot_map.protein_id
         order by precursor.id;
         """.format(
-            base_columns=BASE_COLUMNS,
-            score_columns=SCORE_COLUMNS
+            base_columns=BASE_COLUMNS
         )
     )
 
@@ -492,9 +308,8 @@ class SelectPeakGroups:
         select
             {base_columns},
             feature.delta_rt delta_rt,
-            ms2.VAR_MASSDEV_SCORE transition_mass_dev_score,
-            ms1.VAR_MASSDEV_SCORE precursor_mass_dev_score,
-            {score_columns}
+            ms1.* ms1.*,
+            ms2.* ms2.*,
         from precursor 
         inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
@@ -508,4 +323,51 @@ class SelectPeakGroups:
             base_columns=BASE_COLUMNS,
             score_columns=SCORE_COLUMNS
         )
+    )
+
+    FETCH_FEATURES = (
+        """
+        select
+            {base_columns},
+            ms2.*
+        from precursor 
+        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
+        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
+        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
+        inner join protein as protein on protein.id = pep_prot_map.protein_id
+        inner join feature on feature.precursor_id = precursor.id
+        left join feature_ms2 as ms2 on ms2.feature_id = feature.id
+        order by precursor.id;
+        """.format(
+            base_columns=BASE_COLUMNS,
+        )
+    )
+
+    FETCH_PYPROPHET_SCORED_DATA_FOR_EXPORT = (
+        """
+        select
+            FEATURE.ID feature_id,
+            FEATURE.PRECURSOR_ID precursor_id,
+            PEPTIDE.MODIFIED_SEQUENCE modified_sequence,
+            PRECURSOR.CHARGE charge,
+            PROTEIN.DECOY decoy,
+            PROTEIN.PROTEIN_ACCESSION protein_accession,
+            FEATURE.EXP_RT retention_time,
+            SCORE_MS2.QVALUE peakgroup_q_value,
+            SCORE_PEPTIDE.QVALUE global_peptide_q_value,
+            SCORE_PROTEIN.QVALUE global_protein_q_value,
+            FEATURE_MS2.AREA_INTENSITY intensity
+        from
+            SCORE_MS2
+        left join FEATURE on SCORE_MS2.FEATURE_ID = FEATURE.ID
+        left join FEATURE_MS2 on FEATURE.ID = FEATURE_MS2.FEATURE_ID
+        left join PRECURSOR on FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        left join PRECURSOR_PEPTIDE_MAPPING on PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID
+        left join PEPTIDE on PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID
+        left join PEPTIDE_PROTEIN_MAPPING on PEPTIDE.ID = PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID
+        left join PROTEIN on PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID = PROTEIN.ID
+        left join SCORE_PEPTIDE on PEPTIDE.ID = SCORE_PEPTIDE.PEPTIDE_ID
+        left join SCORE_PROTEIN on PROTEIN.ID = SCORE_PROTEIN.PROTEIN_ID
+        order by precursor_id;
+        """
     )
