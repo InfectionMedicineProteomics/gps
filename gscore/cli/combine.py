@@ -19,7 +19,7 @@ class Combine:
 
     def __call__(self, args: argparse.Namespace):
 
-        export = PrecursorExport()
+        export = PrecursorExport(max_q_value=args.max_peakgroup_q_value)
 
         global_protein_model = GlobalDistribution.load(args.protein_model)
         global_peptide_model = GlobalDistribution.load(args.peptide_model)
@@ -54,11 +54,10 @@ class Combine:
 
                     peakgroup = precursor.get_peakgroup(rank=1, key="q_value")
 
-                    if peakgroup.scores['q_value'] <= args.max_peakgroup_q_value:
-                        export[precursor_id].add_sample(
-                            sample_key=sample_name,
-                            peakgroup=peakgroup
-                        )
+                    export[precursor_id].add_sample(
+                        sample_key=sample_name,
+                        peakgroup=peakgroup
+                    )
 
         print(f"Writing {args.output}...")
 

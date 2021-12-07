@@ -263,6 +263,13 @@ class OSWFile:
 
                     peakgroup.ghost_score_id = value
 
+                elif key == "ms1_intensity":
+
+                    peakgroup.ms1_intensity = value
+
+                elif key == "ms2_intensity":
+
+                    peakgroup.ms2_intensity = value
 
             precursors.add_peakgroup(record['precursor_id'], peakgroup)
 

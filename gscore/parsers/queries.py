@@ -126,7 +126,7 @@ class SelectPeakGroups:
         protein.decoy protein_decoy,
         feature.LEFT_WIDTH rt_start,
         feature.exp_rt rt_apex,
-        feature.RIGHT_WIDTH rt_end
+        feature.RIGHT_WIDTH rt_end,
         """
     )
 
@@ -270,7 +270,22 @@ class SelectPeakGroups:
     FETCH_ALL_SCORED_DATA = (
         """
         select
-            {base_columns},
+            feature.run_id run_id,
+            precursor.id transition_group_id,
+            peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as precursor_id,
+            feature.id feature_id,
+            precursor.PRECURSOR_MZ mz,
+            precursor.CHARGE charge,
+            precursor.DECOY decoy,
+            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
+            peptide.MODIFIED_SEQUENCE modified_sequence,
+            protein.PROTEIN_ACCESSION protein_accession,
+            protein.decoy protein_decoy,
+            feature.LEFT_WIDTH rt_start,
+            feature.exp_rt rt_apex,
+            feature.RIGHT_WIDTH rt_end,
+            ms2.AREA_INTENSITY ms2_intensity,
+            ms1.AREA_INTENSITY ms1_intensity,
             gst.d_score,
             gst.q_value
         from precursor 
@@ -278,6 +293,7 @@ class SelectPeakGroups:
         inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
         inner join feature on feature.precursor_id = precursor.id
         left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
+        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
         left join ghost_score_table as gst on gst.feature_id = feature.id
         inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
         inner join protein as protein on protein.id = pep_prot_map.protein_id
