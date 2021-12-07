@@ -88,8 +88,9 @@ class Precursor:
     charge: int
     decoy: int
     target: int
+    protein_accession: str
 
-    def __init__(self, sequence='', modified_sequence='', charge=0, decoy=0, q_value=None):
+    def __init__(self, sequence='', modified_sequence='', charge=0, decoy=0, q_value=None, protein_accession: str = ""):
 
         self.id = f"{modified_sequence}_{charge}"
 
@@ -98,6 +99,8 @@ class Precursor:
         self.charge = charge
         self.decoy = decoy
         self.target = abs(decoy - 1)
+
+        self.protein_accession = protein_accession
 
         self.q_value = q_value
 

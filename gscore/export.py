@@ -7,11 +7,6 @@ import pathlib
 
 from gscore.parsers import osw, queries
 
-from gscore.cli.common import PassArgs
-from gscore.workflows import build_global_model
-from gscore.peakgroups import (
-    apply_scoring_model
-)
 
 import pickle
 

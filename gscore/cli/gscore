@@ -6,6 +6,7 @@ from gscore.cli.score import Score
 from gscore.cli.train import Train
 from gscore.cli.export import Export
 from gscore.cli.build import Build
+from gscore.cli.combine import Combine
 
 if __name__ == '__main__':
 
@@ -16,7 +17,8 @@ if __name__ == '__main__':
             Score(),
             Train(),
             Export(),
-            Build()
+            Build(),
+            Combine()
         ]
     )
 
@@ -35,10 +37,18 @@ if __name__ == '__main__':
 
     if command.subcommand:
 
-        command.run(command)
+        if len(sys.argv) == 2:
+
+            parser.print_help()
+
+        else:
+
+            command.run(command)
 
     else:
 
         if len(sys.argv) == 1:
 
             parser.print_help()
+
+

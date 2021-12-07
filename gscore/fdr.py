@@ -152,32 +152,46 @@ class GlobalDistribution(Generic[T]):
 
             self.features[key] = feature
 
-    def _parse_scores(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _parse_scores(self) -> None:
 
-        self.scores = []
-        self.labels = []
+        scores = []
+        labels = []
+        feature_keys = []
 
         for feature_key, feature in self.features.items():
 
-            self.scores.append(feature.d_score)
+            scores.append(feature.d_score)
 
-            self.labels.append(feature.target)
+            labels.append(feature.target)
 
-        self.scores = np.array(self.scores, dtype=np.float64)
-        self.labels = np.array(self.labels, dtype=int)
+            feature_keys.append(feature_key)
 
-        return self.scores, self.labels
+        self.scores = np.array(scores, dtype=np.float64)
+        self.labels = np.array(labels, dtype=int)
+        self.feature_keys = np.array(feature_keys, dtype=np.str)
 
     def fit(self) -> None:
 
-        scores, labels = self._parse_scores()
+        self.q_value_map = dict()
+
+        self._parse_scores()
 
         self.score_distribution = ScoreDistribution()
 
         self.score_distribution.fit(
-            scores,
-            labels
+            self.scores,
+            self.labels
         )
+
+        self.q_values = self.score_distribution.calculate_q_vales(self.scores)
+
+        for idx in range(len(self.q_values)):
+
+            self.q_value_map[self.feature_keys[idx].item()] = self.q_values[idx].item()
+
+    def get_q_value(self, feature_key: str):
+
+        return self.q_value_map[feature_key]
 
     def save(self, file_path: str) -> None:
 

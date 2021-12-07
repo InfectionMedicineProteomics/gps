@@ -234,7 +234,8 @@ class OSWFile:
                     sequence=record['peptide_sequence'],
                     modified_sequence=record['modified_sequence'],
                     charge=record['charge'],
-                    decoy=record['decoy']
+                    decoy=record['decoy'],
+                    protein_accession=record['protein_accession']
                 )
 
                 precursors[record['precursor_id']] = precursor
@@ -254,7 +255,7 @@ class OSWFile:
 
                     peakgroup.scores[key] = value
 
-                elif key in ['probability', 'vote_percentage']:
+                elif key in ['probability', 'vote_percentage', 'd_score', 'q_value']:
 
                     peakgroup.scores[key] = value
 
