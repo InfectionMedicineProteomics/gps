@@ -6,13 +6,15 @@ from pynumpress import (
     decode_pic
 )
 
-import zlib
+import torch
+from torch.utils.data import Dataset
 
-import numpy as np
+import zlib
 
 from gscore.parsers.sqmass import fetch_chromatograms
 
 import numpy as np
+
 
 class CompressionType(Enum):
     NO = 0
@@ -213,42 +215,114 @@ class Chromatograms:
         return chromatograms
 
 
-if __name__ == '__main__':
+class ChromatogramDataset(Dataset):
 
+    def __init__(self, peakgroups, chromatograms, peakgroup_graph):
 
-    from gscore.parsers import osw, queries
+        self.peakgroups = peakgroups
 
-    osw_path = '/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_172.osw'
-    chrom_path = '/home/aaron/projects/ghost/data/spike_in/openswath/chromatograms/AAS_P2009_172.sqMass'
+        print("Scaling Retention Times...")
 
-    peakgroup_graph = osw.fetch_chromatogram_training_data(
-        osw_path=osw_path,
-        osw_query=queries.SelectPeakGroups.FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA
-    )
+        peakgroup_graph.scale_peakgroup_retention_times()
 
-    highest_ranking = peakgroup_graph.query_nodes(
-        color='peptide',
-        rank=1,
-        query=f"var_xcorr_shape_weighted >= 0.15"
-    )
+        self.chromatograms = chromatograms
 
-    chromatograms = Chromatograms().from_sqmass_file(chrom_path)
+        self.peakgroup_graph = peakgroup_graph
+        self.min_chromatogram_length = chromatograms.min_chromatogram_length()
 
+        self.interfering_chroms = []
 
-    chrom_lengths = list()
-    counts = dict()
-    for peptide_id, peptide_chromatograms in chromatograms.items():
+    def __len__(self):
 
-        for record_id, record in peptide_chromatograms.items():
+        return len(self.peakgroups)
 
-            if record.type != "precursor":
+    def __getitem__(self, idx):
 
-                chrom_length = len(record.rts)
+        peakgroup = self.peakgroups[idx]
 
-                if chrom_length not in counts:
+        peptide_id = ''
 
-                    counts[chrom_length] = 1
-                else:
-                    counts[chrom_length] += 1
-                chrom_lengths.append(chrom_length)
-                break
+        for edge_node in peakgroup.iter_edges(self.peakgroup_graph):
+
+            if edge_node.color == 'peptide':
+                peptide_id = f"{edge_node.sequence}_{edge_node.charge}"
+
+        peakgroup_boundaries = np.array(
+            [
+                peakgroup.scaled_rt_start,
+                peakgroup.scaled_rt_apex,
+                peakgroup.scaled_rt_end
+            ],
+            dtype=np.float64
+        )
+
+        label = peakgroup.target
+
+        transition_chromatograms = list()
+
+        rt_steps = list()
+        chrom_ids = list()
+
+        for native_id, chromatogram_records in self.chromatograms[peptide_id].items():
+
+            precursor_difference = abs(chromatogram_records.precursor_mz - peakgroup.mz)
+            #             print(precursor_difference)
+
+            rt_min = chromatogram_records.rts.min()
+            rt_max = chromatogram_records.rts.max()
+
+            if precursor_difference == 0.0:
+
+                if chromatogram_records.type == 'fragment':
+
+                    if not rt_steps:
+                        scaled_chrom_rt = chromatogram_records.scaled_rts(
+                            min_val=self.peakgroup_graph.min_rt_val,
+                            max_val=self.peakgroup_graph.max_rt_val
+                        )
+
+                        rt_steps = [scaled_chrom_rt[chrom_idx] for chrom_idx in range(self.min_chromatogram_length)]
+
+                        transition_chromatograms.append(np.asarray(rt_steps))
+
+                    transition_chromatogram = list()
+
+                    normalized_intensities = chromatogram_records.normalized_intensities(add_min_max=(0.0, 10.0))
+
+                    if np.isfinite(normalized_intensities).all():
+
+                        for chrom_idx in range(self.min_chromatogram_length):
+
+                            norm_intensity = normalized_intensities[chrom_idx]
+
+                            if np.isnan(norm_intensity):
+                                norm_intensity = 0.0
+
+                            transition_chromatogram.append(normalized_intensities[chrom_idx])
+                    else:
+
+                        for chrom_idx in range(self.min_chromatogram_length):
+                            transition_chromatogram.append(0)
+
+                    transition_chromatograms.append(np.asarray(transition_chromatogram))
+
+                    chrom_ids.append(native_id)
+
+        chromatograms_transformed = list()
+
+        if len(transition_chromatograms) > 7:
+            peptide_node = self.peakgroup_graph[peakgroup.get_edges()[0]]
+
+            self.interfering_chroms.append([chrom_ids, len(transition_chromatograms), peptide_id, idx, peakgroup.mz,
+                                            peptide_node.modified_sequence])
+
+            transition_chromatograms = transition_chromatograms[:7]
+
+        for row_transform in zip(*transition_chromatograms):
+            chromatogram_row = np.asarray(row_transform, dtype='double')
+
+            chromatograms_transformed.append(chromatogram_row)
+
+        chromatograms_transformed = torch.tensor(chromatograms_transformed, dtype=torch.double)
+
+        return torch.tensor(peakgroup_boundaries, dtype=torch.double), chromatograms_transformed.double().T, torch.tensor(label).double()

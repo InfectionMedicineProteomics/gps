@@ -1,26 +1,15 @@
-from gscore.utils.connection import Connection
-
 from gscore.parsers.queries import (
-    CreateIndex,
-    SelectPeakGroups
+    CreateIndex
 )
 
 from gscore.peakgroups import (
-    PeakGroup,
-    Precursor,
-    Protein, Proteins, Peptides, Peptide
+    Protein, Proteins, Peptides, Peptide, Precursors, Precursor, PeakGroup
 )
 
 from gscore.parsers import queries
 
-from gscore.datastructures.graph import Graph
 
-import networkx as nx
-
-from typing import List, Dict
-
-from gscore.peakgroups import Precursors, Precursor, PeakGroup
-
+from typing import  Dict
 
 import sqlite3
 
@@ -68,54 +57,6 @@ SELECT
 FROM FEATURE_MS1
 WHERE FEATURE_ID = {value};
 """
-
-class OSWPeakgroup:
-
-    transition_group_id: str
-    precursor_id: str
-    feature_id: str
-    mz: float
-    charge: int
-    decoy: int
-    target: int
-    peptide_sequence: str
-    modified_sequence: str
-    protein_accession: str
-    rt_start: float
-    rt_apex: float
-    rt_end: float
-    scores: Dict[str, float]
-
-    def __init__(self,
-        transition_group_id: str,
-        precursor_id: str,
-        feature_id: str,
-        mz: float,
-        charge: int,
-        decoy: int,
-        target: int,
-        peptide_sequence: str,
-        modified_sequence: str,
-        protein_accession: str,
-        rt_start: float,
-        rt_apex: float,
-        rt_end: float
-    ):
-        self.transition_group_id = transition_group_id
-        self.precursor_id = precursor_id
-        self.feature_id = feature_id
-        self.mz = mz
-        self.charge = charge
-        self.decoy = decoy
-        self.target = target
-        self.peptide_sequence = peptide_sequence
-        self.modified_sequence = modified_sequence
-        self.protein_accession = protein_accession
-        self.rt_start = rt_start
-        self.rt_apex = rt_apex
-        self.rt_end = rt_end
-        self.scores = Dict[str, float]
-
 
 
 class OSWFile:
@@ -308,28 +249,6 @@ class OSWFile:
             formatted_records.append(record)
 
         return formatted_records
-
-    def fetch_feature_subscores(self, query: str, use_ms1_scores: bool = False) -> List[OSWPeakgroup]:
-
-        records = self.fetch_all_records(query)
-
-        if use_ms1_scores:
-
-            ms1_scores = self.fetch_all_records(query=FETCH_MS1_SCORES)
-
-            ms1_scores = {record['FEATURE_ID']: record for record in ms1_scores}
-
-        for record in records:
-
-            if use_ms1_scores:
-
-                ms1_record_scores = {f"{key}_MS1": value for key, value in ms1_scores[record['feature_id']].items() if
-                                     key.startswith("VAR")}
-
-                record.update(ms1_record_scores)
-
-        return records
-
 
     def add_records(self, table_name='', records=[]):
 

@@ -1,29 +1,23 @@
-from functools import partial
-from typing import Tuple
-
-from abc import ABC, abstractmethod
-
 from joblib import dump, load
-
-import numpy as np
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.preprocessing import (
-    RobustScaler,
-    MinMaxScaler
-)
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score
 
 
 from imblearn.ensemble import BalancedBaggingClassifier, EasyEnsembleClassifier
-
-from gscore.scaler import Scaler
+from torch.utils.data import Subset, DataLoader
 
 from xgboost import XGBClassifier
 
-from gscore.utils import ml
+from torch.nn import functional as F
+from torch import nn
+
+import numpy as np
+
+import torch
 
 MODELS = {
     "adaboost": AdaBoostClassifier
@@ -208,154 +202,255 @@ class AdaBoostSGDScorer(Scorer):
         )
 
 
-def train_model(data: np.ndarray, labels: np.ndarray, model: str, scaling_pipeline: Pipeline) -> None:
 
-    data = scaling_pipeline.fit_transform(data)
+class ChromatogramModel:
 
-    model.fit(data, labels.ravel())
+    def __init__(self, model, criterion, optimizer, device):
+        self.model = model
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.device = device
+        self.train_losses = []
+        self.val_losses = []
 
+    def train_step(self, chroms, peakgroups, labels):
 
-def evaluate_model(data: np.ndarray, labels: np.ndarray, model: Scorer, scaling_pipeline: Pipeline) -> float:
+        self.optimizer.zero_grad()
 
-    data = scaling_pipeline.transform(data)
+        yhat = self.model(chroms, peakgroups)
 
-    probabilities = model.probability(data)
-
-    return roc_auc_score(labels, probabilities)
-
-
-def score_run(precursors, model_path: str, scaler_path: str):
-
-    scoring_model = Scorer()
-
-    scoring_model.load(model_path)
-
-    pipeline = Scaler()
-
-    pipeline.load(scaler_path)
-
-    all_peakgroups = precursors.get_all_peakgroups()
-
-    all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
-        all_peakgroups,
-        include_score_columns=True
-    )
-
-    all_data_scores = pipeline.transform(all_data_scores)
-
-    model_scores = score(all_data_scores, scoring_model, pipeline)
-
-    for idx, peakgroup in enumerate(all_peakgroups):
-
-        peakgroup.scores['d_score'] = model_scores[idx]
-
-    return precursors
-
-
-if __name__ == '__main__':
-    import glob
-
-    from gscore.parsers import osw
-    from gscore.parsers import queries
-    from gscore import peakgroups
-    from sklearn.utils import shuffle
-
-    from gscore.utils import ml
-    from gscore.denoiser import denoise
-
-    from gscore.scaler import Scaler
-
-    from gscore.utils.connection import Connection
-
-    from gscore.parsers.queries import (
-        CreateIndex,
-        SelectPeakGroups
-    )
-
-    from gscore.distributions import ScoreDistribution
-
-    all_sample_data = []
-
-    osw_files = glob.glob("/home/aaron/projects/ghost/data/spike_in/openswath/*.osw")
-
-    for osw_file in osw_files[:1]:
-
-        print(f"Processing {osw_file}")
-
-        with osw.OSWFile(osw_file) as conn:
-            precursors = conn.fetch_subscore_records(query=queries.SelectPeakGroups.FETCH_ALL_DENOIZED_DATA)
-
-        print("Scoring")
-
-        precursors = score_run(
-            precursors=precursors,
-            model_path="/home/aaron/projects/gscorer/notebooks/xgb_test.model",
-            scaler_path="/home/aaron/projects/gscorer/notebooks/scaler_pipeline.pkl"
+        loss = self.criterion(
+            yhat.reshape(-1),
+            labels.double()
         )
 
-        target_peakgroups = precursors.get_target_peakgroups_by_rank(
-            rank=1,
-            score_key="d_score",
-            reverse=True
+        loss.backward()
+
+        self.optimizer.step()
+
+        return loss.item()
+
+    def train_val_split(self, dataset, val_split=0.10):
+
+        train_idx, val_idx = train_test_split(
+            list(range(len(dataset))),
+            test_size=val_split
         )
 
-        decoy_peakgroups = precursors.get_decoy_peakgroups(
-            sort_key="d_score"
+        training_set = Subset(dataset, train_idx)
+        validation_set = Subset(dataset, val_idx)
+
+        return training_set, validation_set
+
+    def validation_step(self, chroms, peakgroups, labels):
+
+        yhat = self.model(chroms, peakgroups)
+
+        val_loss = self.criterion(yhat.reshape(-1), labels)
+
+        return val_loss.item()
+
+    def load(self, saved_model_path):
+
+        self.model.load_state_dict(
+            torch.load(saved_model_path)
         )
 
-        modelling_peakgroups = target_peakgroups + decoy_peakgroups
+    def eval_test_accuracy(self, testing_dataset):
 
-        all_data_scores, all_data_labels = ml.reformat_distribution_data(
-            modelling_peakgroups,
-            score_column="d_score"
+        testing_loader = DataLoader(
+            testing_dataset,
+            batch_size=32,
+            num_workers=5,
+            drop_last=True
         )
 
-        score_distribution = ScoreDistribution()
+        accuracies = []
 
-        score_distribution.fit(
-            all_data_scores,
-            all_data_labels
+        for i, (peakgroups, chroms, labels) in enumerate(testing_loader):
+
+            peakgroups = peakgroups.to(self.device)
+            chroms = chroms.to(self.device)
+            labels = labels.to(self.device)
+
+            with torch.no_grad():
+                predictions = self.model.predict(chroms.double(), peakgroups)
+
+                accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / labels.shape[0]).item()
+
+                accuracies.append(accuracy)
+
+            accuracies.append(accuracy)
+
+        return np.mean(accuracies)
+
+    def train(self, training_data, val_split=0.10, batch_size=32, n_epochs=50):
+
+        training_split, validation_split= self.train_val_split(training_data, val_split)
+
+        training_loader = DataLoader(
+            training_split,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=5
         )
 
-        print("here")
+        validation_loader = DataLoader(
+            validation_split,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=5
+        )
 
-        q_values = score_distribution.calculate_q_vales(np.array([6.0]))
+        try:
 
-        print(q_values)
+            for epoch in range(1, n_epochs + 1):
+
+                losses = []
+                validation_losses = []
+
+                accuracies = []
+
+                for i, (peakgroups, chroms, labels) in enumerate(training_loader):
+
+                    peakgroups = peakgroups.to(self.device)
+                    chroms = chroms.to(self.device)
+                    labels = labels.to(self.device)
+
+                    self.optimizer.zero_grad()
+
+                    yhat = self.model(chroms, peakgroups)
+
+                    loss = self.criterion(yhat.reshape(-1), labels.double())
+
+                    loss.backward()
+
+                    self.optimizer.step()
+
+                    losses.append(loss.item())
+
+                    percentage = (i / len(training_loader)) * 100.0
+
+                    print("Epoch percentage: ", percentage, end='\r')
+
+                training_loss = np.mean(losses)
+
+                losses.append(training_loss)
+
+                with torch.no_grad():
+
+                    val_losses = []
+
+                    for i, (peakgroups, chroms, labels) in enumerate(validation_loader):
+
+                        peakgroups = peakgroups.to(self.device)
+                        chroms = chroms.to(self.device)
+                        labels = labels.to(self.device)
+
+                        val_loss = self.validation_step(chroms, peakgroups, labels)
+
+                        val_losses.append(val_loss)
+
+                        predictions = self.model.predict(
+                            chroms.double(),
+                            peakgroups
+                        )
+
+                        accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / predictions.shape[0]).item()
+
+                        accuracies.append(accuracy)
+
+                    batch_val_loss = np.mean(val_losses)
+
+                    validation_losses.append(val_loss)
+
+                epoch_loss = np.mean(losses)
+                epoch_val_accuracy = np.mean(accuracies)
+                epoch_val_loss = np.mean(validation_losses)
+
+                self.train_losses.append(epoch_loss)
+                self.val_losses.append(epoch_val_loss)
+
+                print(f'epoch {epoch}, loss {epoch_loss}, val loss {epoch_val_loss}, val accuracy {epoch_val_accuracy}')
+
+        except Exception as e:
+
+            torch.save(self.model.state_dict(), './chrom.pth')
+
+            raise e
+
+        torch.save(self.model.state_dict(), './chrom.pth')
 
 
-# from tensorflow import keras
-#
-#
-# ADAM_OPTIMIZER = keras.optimizers.Adam(learning_rate=0.001)
-#
-# EARLY_STOPPING_CB = keras.callbacks.EarlyStopping(
-#     patience=5,
-#     restore_best_weights=True
-# )
-#
-#
-# class TargetScoringModel(keras.Model):
-#
-#     RegularizedDense = partial(
-#         keras.layers.Dense,
-#         activation='elu',
-#         kernel_initializer='he_normal',
-#         kernel_regularizer=keras.regularizers.l2(),
-#         dtype='float64'
-#     )
-#
-#     def __init__(self, input_dim, **kwargs):
-#         super().__init__(**kwargs)
-#         self.dense_1 = self.RegularizedDense(30, input_shape=input_dim)
-#         self.dense_2 = self.RegularizedDense(30)
-#         self.dense_3 = self.RegularizedDense(30)
-#         self.dense_4 = self.RegularizedDense(30)
-#         self.score_output = keras.layers.Dense(1, activation='sigmoid', dtype='float64')
-#
-#     def call(self, inputs):
-#         x = self.dense_1(inputs)
-#         x = self.dense_2(x)
-#         x = self.dense_3(x)
-#         x = self.dense_4(x)
-#         return self.score_output(x)
+class ChromatogramProbabilityModel(nn.Module):
+
+    def __init__(self, n_features, sequence_length):
+
+        super().__init__()
+
+        self.conv1d = nn.Conv1d(
+            in_channels=n_features,
+            out_channels=7,
+            kernel_size=(3,),
+            stride=(1,),
+            padding='same'
+        )
+
+        self.n_features = n_features
+        self.sequence_length = sequence_length
+
+        self.layer_dim = 2
+        self.hidden_dim = 20
+
+        self.rnn = nn.LSTM(
+            input_size=n_features,
+            hidden_size=self.hidden_dim,
+            num_layers=self.layer_dim,
+            batch_first=True,
+            dropout=0.2,
+            bidirectional=True
+        )
+
+        self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3, 42)
+        self.linear_2 = nn.Linear(42, 42)
+        self.linear_3 = nn.Linear(42, 42)
+        self.linear_4 = nn.Linear(42, 1)
+
+
+    def forward(self, chromatogram, peakgroup):
+
+        batch_size, seq_len, _ = chromatogram.size()
+
+        out = self.conv1d(chromatogram.double())
+
+        out = out.permute(0, 2, 1)
+
+        out, _ = self.rnn(out.double())
+
+        out = out.contiguous().view(batch_size, -1)
+
+        out = torch.cat((out, peakgroup), 1)
+
+        out = self.linear(out)
+
+        out = F.relu(out)
+
+        out = self.linear_2(out)
+
+        out = F.relu(out)
+
+        out = self.linear_3(out)
+
+        out = F.relu(out)
+
+        out = self.linear_4(out)
+
+        return out
+
+    def predict(self, data, peakgroup):
+
+        out = self.forward(data, peakgroup)
+
+        probabilities = torch.sigmoid(out)
+
+        return (probabilities > 0.5).double()
