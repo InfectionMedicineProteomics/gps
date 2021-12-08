@@ -340,9 +340,11 @@ class Precursors:
 
             else:
 
-                peakgroup = precursor.peakgroups[0]
+                if precursor.target == 0:
 
-                filtered_peakgroups.append(peakgroup)
+                    peakgroup = precursor.peakgroups[0]
+
+                    filtered_peakgroups.append(peakgroup)
 
         return filtered_peakgroups
 
