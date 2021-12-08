@@ -28,7 +28,9 @@ class Export:
                 print(f"Filtering and writing output.")
 
                 precursors.dump_training_data(
-                    args.output
+                    args.output,
+                    filter_field="probability",
+                    filter_value=0.70
                 )
 
     def build_subparser(self,

@@ -36,6 +36,10 @@ class Scorer:
 
         return self.model.predict_proba(data)[:, 1]
 
+    def predict_proba(self, data: np.ndarray) -> np.ndarray:
+
+        return self.model.predict_proba(data)[:, 1]
+
     def score(self, data: np.ndarray) -> np.ndarray:
 
         probabilities = self.model.predict_proba(data)[:, 1]
@@ -126,6 +130,30 @@ class EasyEnsembleScorer(Scorer):
             verbose=True
         )
 
+class XGBEnsembleScorer(Scorer):
+
+    model: EasyEnsembleClassifier
+    submodel: SGDClassifier
+
+    def __init__(self, scale_pos_weight: float):
+
+        self.submodel = XGBClassifier(
+            n_estimators=10,
+            verbosity=1,
+            objective="binary:logistic",
+            n_jobs=5,
+            random_state=42,
+            scale_pos_weight=scale_pos_weight
+        )
+
+        self.model = EasyEnsembleClassifier(
+            base_estimator=self.submodel,
+            n_estimators=10,
+            sampling_strategy='auto',
+            random_state=42,
+            n_jobs=2,
+            verbose=True
+        )
 
 
 

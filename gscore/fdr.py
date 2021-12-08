@@ -27,8 +27,8 @@ class ScoreDistribution:
 
     def __init__(self):
 
-        self.target_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
-        self.decoy_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
+        self.target_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
+        self.decoy_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 

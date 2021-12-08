@@ -568,13 +568,13 @@ class Precursors:
 
         return self
 
-    def dump_training_data(self, file_path: str) -> None:
+    def dump_training_data(self, file_path: str, filter_field: str, filter_value: float) -> None:
 
         positive_labels = self.filter_target_peakgroups(
             rank=1,
             sort_key="probability",
-            filter_key="vote_percentage",
-            value=1.0
+            filter_key=filter_field,
+            value=filter_value
         )
 
         negative_labels = self.get_decoy_peakgroups(
