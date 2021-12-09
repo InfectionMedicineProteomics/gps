@@ -29,8 +29,8 @@ class Export:
 
                 precursors.dump_training_data(
                     args.output,
-                    filter_field="probability",
-                    filter_value=0.70
+                    filter_field=args.filter_field,
+                    filter_value=args.filter_value
                 )
 
     def build_subparser(self,
@@ -65,6 +65,24 @@ class Export:
             ],
             default='comprehensive',
             help='Which format to export results'
+        )
+
+        self.parser.add_argument(
+            "--filter-field",
+            dest="filter_field",
+            choices=[
+                "probability", "vote_threshold"
+            ],
+            default="vote_threshold",
+            help="Field to filter the peakgroups for export as training data."
+        )
+
+        self.parser.add_argument(
+            "--filter-value",
+            dest="filter_value",
+            type=float,
+            default=1.0,
+            help="Set value by which the target peakgroups are filtered on the filter-field"
         )
 
         self.parser.add_argument(

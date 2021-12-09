@@ -2,6 +2,7 @@
 import argparse
 import sys
 
+from gscore.cli.denoise import Denoise
 from gscore.cli.score import Score
 from gscore.cli.train import Train
 from gscore.cli.export import Export
@@ -14,9 +15,10 @@ if __name__ == '__main__':
 
     subcommands.extend(
         [
+            Denoise(),
+            Export(),
             Score(),
             Train(),
-            Export(),
             Build(),
             Combine()
         ]

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from typing import List, Dict
 
 import numpy as np
 import networkx as nx
+from sklearn.linear_model import SGDClassifier
 
 from sklearn.utils import shuffle, class_weight
 from sklearn.metrics import precision_score, recall_score
@@ -11,6 +14,8 @@ from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
 from gscore.fdr import ScoreDistribution
+
+from cleanlab.classification import LearningWithNoisyLabels
 
 from joblib import dump
 
@@ -360,24 +365,34 @@ class Precursors:
 
         return all_peakgroups
 
-    def denoise(self, num_folds: int, num_classifiers: int, num_threads: int, vote_threshold: float) -> nx.Graph:
+    def denoise(self,
+                num_folds: int,
+                num_classifiers: int,
+                num_threads: int,
+                vote_threshold: float,
+                verbose: bool = False,
+                base_estimator = None) -> Precursors:
 
         precursor_folds = ml.get_precursor_id_folds(list(self.keys()), num_folds)
-
-        print(len(precursor_folds))
 
         total_recall = []
         total_precision = []
 
+        print("Denoising...")
+
         for fold_num, precursor_fold_ids in enumerate(precursor_folds):
 
-            print(f"Processing fold {fold_num + 1}")
+            if verbose:
+
+                print(f"Processing fold {fold_num + 1}...")
 
             training_precursors = ml.get_training_data(
                 folds=precursor_folds,
                 fold_num=fold_num
             )
 
+
+            #TODO: Pick better way to initially rank features
             training_data_targets = self.get_peakgroups_by_list(
                 precursor_list=training_precursors,
                 rank=1,
@@ -407,13 +422,26 @@ class Precursors:
                 y=train_labels.ravel()
             )
 
-            denoizer = BaggedDenoiser(
-                max_samples=n_samples,
-                n_estimators=num_classifiers,
-                n_jobs=num_threads,
-                random_state=42,
-                class_weights=class_weights
-            )
+            if base_estimator:
+
+                denoizer = BaggedDenoiser(
+                    base_estimator=base_estimator,
+                    max_samples=n_samples,
+                    n_estimators=num_classifiers,
+                    n_jobs=num_threads,
+                    random_state=42,
+                    class_weights=class_weights
+                )
+
+            else:
+
+                denoizer = BaggedDenoiser(
+                    max_samples=n_samples,
+                    n_estimators=num_classifiers,
+                    n_jobs=num_threads,
+                    random_state=42,
+                    class_weights=class_weights
+                )
 
             denoizer.fit(
                 train_data,
@@ -446,13 +474,17 @@ class Precursors:
                 testing_scores
             )[:, class_index]
 
-            print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
+
+            if verbose:
+
+                print("Updating peakgroups", len(probabilities), len(peakgroups_to_score))
 
             for idx, peakgroup in enumerate(peakgroups_to_score):
 
                 peakgroup.scores['probability'] = probabilities[idx]
 
                 peakgroup.scores['vote_percentage'] = vote_percentages[idx]
+
 
             validation_data = self.get_peakgroups_by_list(
                 precursor_list=precursor_fold_ids,
@@ -482,9 +514,11 @@ class Precursors:
             total_recall.append(fold_recall)
             total_precision.append(fold_precision)
 
-            print(
-                f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
-            )
+            if verbose:
+
+                print(
+                    f"Fold {fold_num + 1}: Precision = {fold_precision}, Recall = {fold_recall}"
+                )
 
         print(f"Mean recall: {np.mean(total_recall)}, Mean precision: {np.mean(total_precision)}")
 

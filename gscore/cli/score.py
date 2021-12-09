@@ -16,9 +16,19 @@ class Score:
 
         print(f"Processing file {args.input}")
 
-        if args.denoise_only:
+        already_scored = False
 
-            with OSWFile(args.input) as osw_conn:
+        with OSWFile(args.input) as osw_conn:
+
+            if "ghost_score_table" in osw_conn:
+
+                already_scored = True
+
+                precursors = osw_conn.parse_to_precursors(
+                    query=SelectPeakGroups.FETCH_ALL_DENOIZED_DATA
+                )
+
+            else:
 
                 precursors = osw_conn.parse_to_precursors(
                     query=SelectPeakGroups.FETCH_FEATURES
@@ -33,70 +43,35 @@ class Score:
                     vote_threshold=args.vote_threshold
                 )
 
-                print("Writing scores to OSW file...")
+            print("Scoring...")
 
-                osw_conn.add_score_records(precursors)
+            precursors.score_run(
+                model_path=args.scoring_model,
+                scaler_path=args.scaler
+            )
 
-                print("Done!")
+            print("Calculating Q Values")
 
-        elif args.apply_model:
+            precursors.calculate_q_values(
+                sort_key="d_score",
+                use_decoys=True
+            )
 
-            already_scored = False
+            print("Updating Q Values in PQP file")
 
-            with OSWFile(args.input) as osw_conn:
+            if not already_scored:
 
-                if "ghost_score_table" in osw_conn:
-
-                    already_scored = True
-
-                    precursors = osw_conn.parse_to_precursors(
-                        query=SelectPeakGroups.FETCH_ALL_DENOIZED_DATA
-                    )
-
-                else:
-
-                    precursors = osw_conn.parse_to_precursors(
-                        query=SelectPeakGroups.FETCH_FEATURES
-                    )
-
-                    print("Denoising...")
-
-                    precursors.denoise(
-                        num_folds=args.num_folds,
-                        num_classifiers=args.num_classifiers,
-                        num_threads=args.threads,
-                        vote_threshold=args.vote_threshold
-                    )
-
-                print("Scoring...")
-
-                precursors.score_run(
-                    model_path=args.scoring_model,
-                    scaler_path=args.scaler
+                osw_conn.add_score_and_q_value_records(
+                    precursors
                 )
 
-                print("Calculating Q Values")
+            else:
 
-                precursors.calculate_q_values(
-                    sort_key="d_score",
-                    use_decoys=True
+                osw_conn.update_q_value_records(
+                    precursors
                 )
 
-                print("Updating Q Values in PQP file")
-
-                if not already_scored:
-
-                    osw_conn.add_score_and_q_value_records(
-                        precursors
-                    )
-
-                else:
-
-                    osw_conn.update_q_value_records(
-                        precursors
-                    )
-
-
+            print("Done!")
 
     def build_subparser(self,
                         subparser
@@ -112,17 +87,6 @@ class Score:
             "--input",
             help="OSW file to process",
             type=str
-        )
-
-        self.parser.add_argument(
-            "--denoise-only",
-            dest="denoise_only",
-            help=(
-                "Set this flag if you want to only denoise the data, and not calculate the q-values. "
-                "This is done if you are training a new model."
-            ),
-            default=False,
-            action="store_true"
         )
 
         self.parser.add_argument(
@@ -150,35 +114,11 @@ class Score:
         )
 
         self.parser.add_argument(
-            '--num-classifiers',
-            dest='num_classifiers',
-            help='The number of ensemble learners used to denoise each fold',
-            default=10,
-            type=int
-        )
-
-        self.parser.add_argument(
-            '--num-folds',
-            dest='num_folds',
-            help='The number of folds used to denoise the target labels',
-            default=10,
-            type=int
-        )
-
-        self.parser.add_argument(
             '--threads',
             dest='threads',
             help='The number of threads to use',
             default=10,
             type=int
-        )
-
-        self.parser.add_argument(
-            "--vote-threshold",
-            dest="vote_threshold",
-            help="The minimum probability needed to be counted as a positive vote",
-            default=0.8,
-            type=float
         )
 
         self.parser.set_defaults(run=self)

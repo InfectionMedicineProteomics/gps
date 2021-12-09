@@ -1,3 +1,5 @@
+import numpy as np
+
 from gscore.parsers.queries import (
     CreateIndex
 )
@@ -462,7 +464,8 @@ class OSWFile:
                 record = {
                     'feature_id': peakgroup.idx,
                     'probability': peakgroup.scores['probability'],
-                    'vote_percentage': peakgroup.scores['vote_percentage']
+                    'vote_percentage': (peakgroup.scores['vote_percentage']
+                                        if "vote_percentage" in peakgroup.scores else np.NAN)
                 }
 
                 records.append(record)
