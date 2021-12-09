@@ -464,8 +464,7 @@ class OSWFile:
                 record = {
                     'feature_id': peakgroup.idx,
                     'probability': peakgroup.scores['probability'],
-                    'vote_percentage': (peakgroup.scores['vote_percentage']
-                                        if "vote_percentage" in peakgroup.scores else np.NAN)
+                    'vote_percentage': peakgroup.scores['vote_percentage']
                 }
 
                 records.append(record)
