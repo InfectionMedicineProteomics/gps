@@ -21,20 +21,20 @@ class Denoise:
                 query=SelectPeakGroups.FETCH_FEATURES
             )
 
-        print("Denoising...")
+            print("Denoising...")
 
-        precursors.denoise(
-            num_folds=args.num_folds,
-            num_classifiers=args.num_classifiers,
-            num_threads=args.threads,
-            vote_threshold=args.vote_threshold
-        )
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_threshold=args.vote_threshold
+            )
 
-        print("Writing scores to OSW file...")
+            print("Writing scores to OSW file...")
 
-        osw_conn.add_score_records(precursors)
+            osw_conn.add_score_records(precursors)
 
-        print("Done!")
+            print("Done!")
 
 
     def build_subparser(self,
