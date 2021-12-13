@@ -378,8 +378,6 @@ class Precursors:
         total_recall = []
         total_precision = []
 
-        print("Denoising...")
-
         for fold_num, precursor_fold_ids in enumerate(precursor_folds):
 
             if verbose:
