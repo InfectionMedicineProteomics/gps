@@ -326,9 +326,13 @@ class Precursors:
 
             except KeyError as e:
 
+                print(filter_key)
+
                 print("[WARNING] peakgroup found without correct subscore")
 
                 print(peakgroup.scores)
+
+                raise e
 
         return filtered_peakgroups
 
