@@ -318,9 +318,17 @@ class Precursors:
 
             peakgroup = precursor.peakgroups[rank]
 
-            if peakgroup.target == 1 and peakgroup.scores[filter_key] >= value:
+            try:
 
-                filtered_peakgroups.append(peakgroup)
+                if peakgroup.target == 1 and peakgroup.scores[filter_key] >= value:
+
+                    filtered_peakgroups.append(peakgroup)
+
+            except KeyError as e:
+
+                print("[WARNING] peakgroup found without correct subscore")
+
+                print(peakgroup.scores)
 
         return filtered_peakgroups
 
