@@ -381,7 +381,7 @@ class Precursors:
                 num_folds: int,
                 num_classifiers: int,
                 num_threads: int,
-                vote_threshold: float,
+                vote_percentage: float,
                 verbose: bool = False,
                 base_estimator = None) -> Precursors:
 
@@ -477,7 +477,7 @@ class Precursors:
 
             vote_percentages = denoizer.vote(
                 testing_scores,
-                threshold=vote_threshold
+                threshold=vote_percentage
             )
 
             probabilities = denoizer.predict_proba(

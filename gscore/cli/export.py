@@ -71,9 +71,9 @@ class Export:
             "--filter-field",
             dest="filter_field",
             choices=[
-                "probability", "vote_threshold"
+                "probability", "vote_percentage"
             ],
-            default="vote_threshold",
+            default="vote_percentage",
             help="Field to filter the peakgroups for export as training data."
         )
 

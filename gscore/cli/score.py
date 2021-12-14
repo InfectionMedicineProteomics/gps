@@ -40,7 +40,7 @@ class Score:
                     num_folds=args.num_folds,
                     num_classifiers=args.num_classifiers,
                     num_threads=args.threads,
-                    vote_threshold=args.vote_threshold
+                    vote_percentage=args.vote_percentage
                 )
 
             print("Scoring...")

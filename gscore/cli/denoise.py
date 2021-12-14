@@ -27,7 +27,7 @@ class Denoise:
                 num_folds=args.num_folds,
                 num_classifiers=args.num_classifiers,
                 num_threads=args.threads,
-                vote_threshold=args.vote_threshold
+                vote_percentage=args.vote_percentage
             )
 
             print("Writing scores to OSW file...")
@@ -79,8 +79,8 @@ class Denoise:
         )
 
         self.parser.add_argument(
-            "--vote-threshold",
-            dest="vote_threshold",
+            "--vote-percentage",
+            dest="vote_percentage",
             help="The minimum probability needed to be counted as a positive vote",
             default=0.8,
             type=float
