@@ -12,11 +12,11 @@ rule gscore_denoise:
     output:
         placeholder=f"{config['base_file_paths']['results']}/denoised/{{sample}}",
     params:
-        num_classifiers=10,
-        num_folds=10,
-        vote_percentage=0.5
+        num_classifiers=config['gscore']['denoise']['num_classifiers'],
+        num_folds=config['gscore']['denoise']['num_folds'],
+        vote_percentage=config['gscore']['denoise']['vote_percentage']
     threads:
-        4
+        config['gscore']['denoise']['threads']
     shell:
         (
             "gscore denoise "

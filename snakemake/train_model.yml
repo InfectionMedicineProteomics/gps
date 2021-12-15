@@ -5,3 +5,5 @@ base_file_paths:
 gscore:
   model_name: 'xgb.model'
   scaler_name: 'xgb.scaler'
+  denoise:
+    threads: 10
