@@ -27,13 +27,13 @@ class Build:
                 if args.level == "protein":
 
                     groups = osw_conn.parse_to_proteins(
-                        query=queries.SelectPeakGroups.FETCH_ALL_SCORED_DATA
+                        query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
                     )
 
                 elif args.level == "peptide":
 
                     groups = osw_conn.parse_to_peptides(
-                        query=queries.SelectPeakGroups.FETCH_ALL_SCORED_DATA
+                        query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
                     )
 
                 print(f"Comparing {args.level} level scores...")

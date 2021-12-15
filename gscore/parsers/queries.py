@@ -2,18 +2,15 @@ class CreateTable:
 
     CREATE_GHOSTSCORE_TABLE = (
         """
-        CREATE TABLE IF NOT EXISTS ghost_score_table (
-            ghost_score_id INTEGER PRIMARY KEY,
-            feature_id INTEGER not null,
-            vote_percentage REAL,
-            probability REAL,
-            d_score REAL,
-            q_value REAL,
-            peptide_q_value REAL,
-            protein_q_value REAL,
-            weighted_d_score REAL,
-            FOREIGN KEY (feature_id)
-                REFERENCES FEATURE (id)
+        CREATE TABLE IF NOT EXISTS GHOST_SCORE_TABLE (
+            GHOST_SCORE_ID INTEGER PRIMARY KEY,
+            FEATURE_ID INTEGER NOT NULL,
+            VOTE_PERCENTAGE REAL,
+            PROBABILITY REAL,
+            D_SCORE REAL,
+            Q_VALUE REAL,
+            FOREIGN KEY (FEATURE_ID)
+                REFERENCES FEATURE (ID)
         )
         """
     )
@@ -76,6 +73,13 @@ class CreateIndex:
         """
     )
 
+    CREATE_GHOST_SCORE_IDX = (
+        """
+        CREATE INDEX IF NOT EXISTS idx_ghost_score_feature
+        ON GHOST_SCORE_TABLE(FEATURE_ID)
+        """
+    )
+
     ALL_INDICES = [
         CREATE_PRECURSOR_IDX,
         CREATE_FEATURE_IDX,
@@ -111,263 +115,176 @@ class ChromatogramQueries:
 
 class SelectPeakGroups:
 
-    BASE_COLUMNS = (
+    FETCH_DENOIZED_REDUCED = (
         """
-        feature.run_id run_id,
-        precursor.id transition_group_id,
-        peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as precursor_id,
-        feature.id feature_id,
-        precursor.PRECURSOR_MZ mz,
-        precursor.CHARGE charge,
-        precursor.DECOY decoy,
-        peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-        peptide.MODIFIED_SEQUENCE modified_sequence,
-        protein.PROTEIN_ACCESSION protein_accession,
-        protein.decoy protein_decoy,
-        feature.LEFT_WIDTH rt_start,
-        feature.exp_rt rt_apex,
-        feature.RIGHT_WIDTH rt_end
-        """
-    )
-
-    SCORE_COLUMNS = (
-        """    
-        ms1.var_massdev_score var_massdev_score_ms1,
-        ms1.var_isotope_correlation_score var_isotope_correlation_score_ms1,
-        ms1.var_isotope_overlap_score var_isotope_overlap_score_ms1,
-        ms1.var_xcorr_coelution_contrast var_xcorr_coelution_contrast_ms1,
-        ms1.var_xcorr_coelution_combined var_xcorr_coelution_combined_ms1,
-        ms1.var_xcorr_shape_contrast var_xcorr_shape_contrast_ms1,
-        ms1.var_xcorr_shape_combined var_xcorr_shape_combined_ms1,
-        ms2.VAR_BSERIES_SCORE,
-        ms2.VAR_DOTPROD_SCORE,
-        ms2.VAR_INTENSITY_SCORE,
-        ms2.VAR_ISOTOPE_CORRELATION_SCORE,
-        ms2.VAR_ISOTOPE_OVERLAP_SCORE,
-        ms2.VAR_LIBRARY_CORR,
-        ms2.VAR_LIBRARY_DOTPROD,
-        ms2.VAR_LIBRARY_MANHATTAN,
-        ms2.VAR_LIBRARY_RMSD,
-        ms2.VAR_LIBRARY_ROOTMEANSQUARE,
-        ms2.VAR_LIBRARY_SANGLE,
-        ms2.VAR_LOG_SN_SCORE,
-        ms2.VAR_MANHATTAN_SCORE,
-        ms2.VAR_MASSDEV_SCORE,
-        ms2.VAR_MASSDEV_SCORE_WEIGHTED,
-        ms2.VAR_NORM_RT_SCORE,
-        ms2.VAR_XCORR_COELUTION,
-        ms2.VAR_XCORR_COELUTION_WEIGHTED,
-        ms2.VAR_XCORR_SHAPE,
-        ms2.VAR_XCORR_SHAPE_WEIGHTED,
-        ms2.VAR_YSERIES_SCORE
-        """
-    )
-
-    FETCH_UNSCORED_PEAK_GROUPS = (
-        """
-        select
-            {base_columns},
-            {score_columns}
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id 
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """
-    ).format(
-        base_columns=BASE_COLUMNS,
-        score_columns=SCORE_COLUMNS)
-
-
-    FETCH_TRIC_EXPORT_DATA = (
-        """
-        select
-            feature.run_id run_id,
-            precursor.id transition_group_id,
-            feature.id id,
-            feature.exp_rt RT,
-            feature.norm_rt iRT,
-            feature.delta_rt delta_rt,
-            precursor.PRECURSOR_MZ mz,
-            precursor.CHARGE Charge,
-            precursor.DECOY decoy,
-            peptide.UNMODIFIED_SEQUENCE Sequence,
-            peptide.MODIFIED_SEQUENCE FullPeptideName,
-            protein.PROTEIN_ACCESSION ProteinName,
-            protein.decoy protein_decoy,
-            ms1.AREA_INTENSITY aggr_prec_Peak_Area,
-            ms1.APEX_INTENSITY aggr_prec_Peak_Apex,
-            ms2.AREA_INTENSITY Intensity,
-            feature.LEFT_WIDTH leftWidth,
-            feature.RIGHT_WIDTH rightWidth,
-            gst.m_score m_score,
-            gst.weighted_d_score d_score
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
+        SELECT
+            *
+        FROM FEATURE_MS2
+        INNER JOIN(
+            SELECT
+                ID FEATURE_ID,
+                PRECURSOR_ID PRECURSOR_ID,
+                EXP_RT RT_APEX,
+                LEFT_WIDTH RT_START,
+                RIGHT_WIDTH RT_END
+            from FEATURE
+        ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+        INNER JOIN (
+            SELECT
+                ID,
+                CHARGE,
+                PRECURSOR_MZ MZ,
+                DECOY
+            FROM PRECURSOR
+        ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                FEATURE_ID MS1_FEATURE_ID,
+                AREA_INTENSITY AREA_INTENSITY_MS1,
+                APEX_INTENSITY APEX_INTENSITY_MS1,
+                VAR_MASSDEV_SCORE VAR_MASSDEV_SCORE_MS1,
+                VAR_MI_SCORE VAR_MI_SCORE_MS1,
+                VAR_MI_CONTRAST_SCORE VAR_MI_CONTRAST_SCORE_MS1,
+                VAR_MI_COMBINED_SCORE VAR_MI_COMBINED_SCORE_MS1,
+                VAR_ISOTOPE_CORRELATION_SCORE VAR_ISOTOPE_CORRELATION_SCORE_MS1,
+                VAR_ISOTOPE_OVERLAP_SCORE VAR_ISOTOPE_OVERLAP_SCORE_MS1,
+                VAR_IM_MS1_DELTA_SCORE,
+                VAR_XCORR_COELUTION VAR_XCORR_COELUTION_MS1,
+                VAR_XCORR_COELUTION_CONTRAST VAR_XCORR_COELUTION_CONTRAST_MS1,
+                VAR_XCORR_COELUTION_COMBINED VAR_XCORR_COELUTION_COMBINED_MS1,
+                VAR_XCORR_SHAPE VAR_XCORR_SHAPE_MS1,
+                VAR_XCORR_SHAPE_CONTRAST VAR_XCORR_SHAPE_CONTRAST_MS1,
+                VAR_XCORR_SHAPE_COMBINED VAR_XCORR_SHAPE_COMBINED_MS1
+            FROM FEATURE_MS1
+        ) FEATURE_MS1 ON FEATURE.FEATURE_ID = FEATURE_MS1.MS1_FEATURE_ID
+        INNER JOIN (
+            SELECT
+                GHOST_SCORE_ID,
+                PROBABILITY,
+                VOTE_PERCENTAGE,
+                FEATURE_ID
+            FROM GHOST_SCORE_TABLE
+        ) GHOST_SCORE_TABLE ON FEATURE.FEATURE_ID = GHOST_SCORE_TABLE.FEATURE_ID
+        ORDER BY PRECURSOR.ID ASC,
+                 FEATURE.RT_APEX ASC
         """
     )
 
-
-    FETCH_TRAIN_CHROMATOGRAM_SCORING_DATA = (
+    FETCH_PRECURSORS_FOR_EXPORT_REDUCED = (
         """
-        select
-            {base_columns},
-            feature.delta_rt delta_rt,
-            ms2.VAR_MASSDEV_SCORE transition_mass_dev_score,
-            ms1.VAR_MASSDEV_SCORE precursor_mass_dev_score,
-            gst.probability,
-            {score_columns}
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """.format(
-            base_columns=BASE_COLUMNS,
-            score_columns=SCORE_COLUMNS
-        )
+        SELECT
+            *
+        FROM FEATURE_MS2
+        INNER JOIN(
+            SELECT
+                ID FEATURE_ID,
+                PRECURSOR_ID PRECURSOR_ID,
+                EXP_RT RT_APEX,
+                LEFT_WIDTH RT_START,
+                RIGHT_WIDTH RT_END
+            from FEATURE
+        ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+        INNER JOIN (
+            SELECT
+                ID,
+                CHARGE,
+                PRECURSOR_MZ MZ,
+                DECOY
+            FROM PRECURSOR
+        ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                FEATURE_ID MS1_FEATURE_ID,
+                AREA_INTENSITY AREA_INTENSITY_MS1,
+                APEX_INTENSITY APEX_INTENSITY_MS1,
+                VAR_MASSDEV_SCORE VAR_MASSDEV_SCORE_MS1,
+                VAR_MI_SCORE VAR_MI_SCORE_MS1,
+                VAR_MI_CONTRAST_SCORE VAR_MI_CONTRAST_SCORE_MS1,
+                VAR_MI_COMBINED_SCORE VAR_MI_COMBINED_SCORE_MS1,
+                VAR_ISOTOPE_CORRELATION_SCORE VAR_ISOTOPE_CORRELATION_SCORE_MS1,
+                VAR_ISOTOPE_OVERLAP_SCORE VAR_ISOTOPE_OVERLAP_SCORE_MS1,
+                VAR_IM_MS1_DELTA_SCORE,
+                VAR_XCORR_COELUTION VAR_XCORR_COELUTION_MS1,
+                VAR_XCORR_COELUTION_CONTRAST VAR_XCORR_COELUTION_CONTRAST_MS1,
+                VAR_XCORR_COELUTION_COMBINED VAR_XCORR_COELUTION_COMBINED_MS1,
+                VAR_XCORR_SHAPE VAR_XCORR_SHAPE_MS1,
+                VAR_XCORR_SHAPE_CONTRAST VAR_XCORR_SHAPE_CONTRAST_MS1,
+                VAR_XCORR_SHAPE_COMBINED VAR_XCORR_SHAPE_COMBINED_MS1
+            FROM FEATURE_MS1
+        ) FEATURE_MS1 ON FEATURE.FEATURE_ID = FEATURE_MS1.MS1_FEATURE_ID
+        INNER JOIN (
+            SELECT
+                GHOST_SCORE_ID,
+                PROBABILITY,
+                VOTE_PERCENTAGE,
+                FEATURE_ID,
+                Q_VALUE,
+                D_SCORE
+            FROM GHOST_SCORE_TABLE
+        ) GHOST_SCORE_TABLE ON FEATURE.FEATURE_ID = GHOST_SCORE_TABLE.FEATURE_ID
+        INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                ID,
+                MODIFIED_SEQUENCE,
+                UNMODIFIED_SEQUENCE
+            FROM PEPTIDE
+        ) PEPTIDE ON PEPTIDE.ID = PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID
+        INNER JOIN PEPTIDE_PROTEIN_MAPPING ON PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID = PEPTIDE.ID
+        INNER JOIN (
+            SELECT
+                ID,
+                PROTEIN_ACCESSION
+            FROM PROTEIN
+        ) PROTEIN ON PROTEIN.ID = PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID
+        ORDER BY PRECURSOR.ID ASC,
+                 FEATURE.RT_APEX ASC
+        """
     )
 
-    FETCH_ALL_DENOIZED_DATA = (
+    FETCH_FEATURES_REDUCED = (
         """
-        select
-            {base_columns},
-            gst.probability,
-            gst.vote_percentage,
-            gst.ghost_score_id,
-            ms2.*
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """.format(
-            base_columns=BASE_COLUMNS
-        )
-    )
-
-    FETCH_ALL_SCORED_DATA = (
-        """
-        select
-            feature.run_id run_id,
-            precursor.id transition_group_id,
-            peptide.MODIFIED_SEQUENCE || '_' || precursor.CHARGE as precursor_id,
-            feature.id feature_id,
-            precursor.PRECURSOR_MZ mz,
-            precursor.CHARGE charge,
-            precursor.DECOY decoy,
-            peptide.UNMODIFIED_SEQUENCE peptide_sequence,
-            peptide.MODIFIED_SEQUENCE modified_sequence,
-            protein.PROTEIN_ACCESSION protein_accession,
-            protein.decoy protein_decoy,
-            feature.LEFT_WIDTH rt_start,
-            feature.exp_rt rt_apex,
-            feature.RIGHT_WIDTH rt_end,
-            ms2.AREA_INTENSITY ms2_intensity,
-            ms1.AREA_INTENSITY ms1_intensity,
-            gst.d_score,
-            gst.q_value
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        left join ghost_score_table as gst on gst.feature_id = feature.id
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """.format(
-            base_columns=BASE_COLUMNS
-        )
-    )
-
-    FETCH_ALL_UNSCORED_DATA = (
-        """
-        select
-            {base_columns},
-            feature.delta_rt delta_rt,
-            ms1.* ms1.*,
-            ms2.* ms2.*,
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id 
-        left join feature_ms1 as ms1 on ms1.feature_id = feature.id 
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        order by precursor.id;
-        """.format(
-            base_columns=BASE_COLUMNS,
-            score_columns=SCORE_COLUMNS
-        )
-    )
-
-    FETCH_FEATURES = (
-        """
-        select
-            {base_columns},
-            ms2.*
-        from precursor 
-        inner join PRECURSOR_PEPTIDE_MAPPING as pre_pep_map on pre_pep_map.precursor_id = precursor.id
-        inner join peptide as peptide on peptide.id = pre_pep_map.peptide_id
-        inner join PEPTIDE_PROTEIN_MAPPING as pep_prot_map on pep_prot_map.peptide_id = peptide.id
-        inner join protein as protein on protein.id = pep_prot_map.protein_id
-        inner join feature on feature.precursor_id = precursor.id
-        left join feature_ms2 as ms2 on ms2.feature_id = feature.id
-        order by precursor.id;
-        """.format(
-            base_columns=BASE_COLUMNS,
-        )
-    )
-
-    FETCH_PYPROPHET_SCORED_DATA_FOR_EXPORT = (
-        """
-        select
-            FEATURE.ID feature_id,
-            FEATURE.PRECURSOR_ID precursor_id,
-            PEPTIDE.MODIFIED_SEQUENCE modified_sequence,
-            PRECURSOR.CHARGE charge,
-            PROTEIN.DECOY decoy,
-            PROTEIN.PROTEIN_ACCESSION protein_accession,
-            FEATURE.EXP_RT retention_time,
-            SCORE_MS2.QVALUE peakgroup_q_value,
-            SCORE_PEPTIDE.QVALUE global_peptide_q_value,
-            SCORE_PROTEIN.QVALUE global_protein_q_value,
-            FEATURE_MS2.AREA_INTENSITY intensity
-        from
-            SCORE_MS2
-        left join FEATURE on SCORE_MS2.FEATURE_ID = FEATURE.ID
-        left join FEATURE_MS2 on FEATURE.ID = FEATURE_MS2.FEATURE_ID
-        left join PRECURSOR on FEATURE.PRECURSOR_ID = PRECURSOR.ID
-        left join PRECURSOR_PEPTIDE_MAPPING on PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID
-        left join PEPTIDE on PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID
-        left join PEPTIDE_PROTEIN_MAPPING on PEPTIDE.ID = PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID
-        left join PROTEIN on PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID = PROTEIN.ID
-        left join SCORE_PEPTIDE on PEPTIDE.ID = SCORE_PEPTIDE.PEPTIDE_ID
-        left join SCORE_PROTEIN on PROTEIN.ID = SCORE_PROTEIN.PROTEIN_ID
-        order by precursor_id;
+        SELECT
+            *
+        FROM FEATURE_MS2
+        INNER JOIN(
+            SELECT
+                ID FEATURE_ID,
+                PRECURSOR_ID PRECURSOR_ID,
+                EXP_RT RT_APEX,
+                LEFT_WIDTH RT_START,
+                RIGHT_WIDTH RT_END
+            from FEATURE
+            ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+        INNER JOIN (
+            SELECT
+                ID,
+                CHARGE,
+                PRECURSOR_MZ MZ,
+                DECOY
+            FROM PRECURSOR
+            ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                FEATURE_ID MS1_FEATURE_ID,
+                AREA_INTENSITY AREA_INTENSITY_MS1,
+                APEX_INTENSITY APEX_INTENSITY_MS1,
+                VAR_MASSDEV_SCORE VAR_MASSDEV_SCORE_MS1,
+                VAR_MI_SCORE VAR_MI_SCORE_MS1,
+                VAR_MI_CONTRAST_SCORE VAR_MI_CONTRAST_SCORE_MS1,
+                VAR_MI_COMBINED_SCORE VAR_MI_COMBINED_SCORE_MS1,
+                VAR_ISOTOPE_CORRELATION_SCORE VAR_ISOTOPE_CORRELATION_SCORE_MS1,
+                VAR_ISOTOPE_OVERLAP_SCORE VAR_ISOTOPE_OVERLAP_SCORE_MS1,
+                VAR_IM_MS1_DELTA_SCORE,
+                VAR_XCORR_COELUTION VAR_XCORR_COELUTION_MS1,
+                VAR_XCORR_COELUTION_CONTRAST VAR_XCORR_COELUTION_CONTRAST_MS1,
+                VAR_XCORR_COELUTION_COMBINED VAR_XCORR_COELUTION_COMBINED_MS1,
+                VAR_XCORR_SHAPE VAR_XCORR_SHAPE_MS1,
+                VAR_XCORR_SHAPE_CONTRAST VAR_XCORR_SHAPE_CONTRAST_MS1,
+                VAR_XCORR_SHAPE_COMBINED VAR_XCORR_SHAPE_COMBINED_MS1
+            FROM FEATURE_MS1
+        ) FEATURE_MS1 ON FEATURE.FEATURE_ID = FEATURE_MS1.MS1_FEATURE_ID
+        ORDER BY PRECURSOR.ID ASC,
+                 FEATURE.RT_APEX ASC
         """
     )

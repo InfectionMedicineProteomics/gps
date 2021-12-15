@@ -37,17 +37,12 @@ class PrecursorExportRecord:
 
         self.samples[sample_key] = peakgroup
 
-    def get_sample_intensity(self, sample_key='', quant_level: str = ""):
+    def get_sample_intensity(self, sample_key=''):
 
         if sample_key in self.samples:
 
-            if quant_level == "ms1":
+            return self.samples[sample_key].intensity
 
-                return self.samples[sample_key].ms1_intensity
-
-            elif quant_level == "ms2":
-
-                return self.samples[sample_key].ms2_intensity
         else:
 
             return np.NaN
@@ -64,14 +59,13 @@ class PrecursorExportRecord:
 
 class PrecursorExport(MutableMapping):
 
-    def __init__(self, data=None, quant_level: str = "ms2", max_q_value: float = 0.05):
+    def __init__(self, data=None, max_q_value: float = 0.05):
 
         if data is None:
             data = dict()
 
         self._data = data
         self.samples = []
-        self.quant_level = quant_level
         self.max_q_value = max_q_value
 
     def add_sample(self, sample_name: str) -> None:
@@ -116,11 +110,10 @@ class PrecursorExport(MutableMapping):
 
                 if sample in record:
 
-                    if record[sample].scores['q_value'] <= self.max_q_value:
+                    if record[sample].scores['Q_VALUE'] <= self.max_q_value:
 
                         export_record[sample] = record.get_sample_intensity(
-                            sample_key=sample,
-                            quant_level=self.quant_level
+                            sample_key=sample
                         )
 
                     else:

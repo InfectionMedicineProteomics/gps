@@ -18,7 +18,7 @@ class Denoise:
 
         with OSWFile(args.input) as osw_conn:
             precursors = osw_conn.parse_to_precursors(
-                query=SelectPeakGroups.FETCH_FEATURES
+                query=SelectPeakGroups.FETCH_FEATURES_REDUCED
             )
 
             print("Denoising...")

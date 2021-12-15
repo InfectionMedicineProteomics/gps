@@ -24,15 +24,14 @@ class PeakGroup:
     idx: str
     mz: float
     rt: float
-    ms2_intensity: float
-    ms1_intensity: float
+    intensity: float
     decoy: int
     target: int
     delta_rt: float
     start_rt: float
     end_rt: float
 
-    def __init__(self, ghost_score_id='', idx='', mz=0.0, rt=0.0, intensity=None, q_value=None, ms2_intensity=0.0, ms1_intensity=0.0, decoy=0,
+    def __init__(self, ghost_score_id='', idx='', mz=0.0, rt=0.0, q_value=None, intensity=0.0, decoy=0,
                  delta_rt = 0.0, start_rt = 0.0, end_rt = 0.0):
 
         self.ghost_score_id = ghost_score_id
@@ -43,8 +42,8 @@ class PeakGroup:
         self.q_value = q_value
 
         self.mz = mz
-        self.ms2_intensity = ms2_intensity
-        self.ms1_intensity = ms1_intensity
+        self.intensity = intensity
+
         self.decoy = decoy
         self.target = abs(decoy - 1)
 
@@ -88,30 +87,28 @@ class PeakGroup:
 
 
 class Precursor:
-    sequence: str
-    modified_sequence: str
+
+    id: str
     charge: int
     decoy: int
     target: int
+    q_value: float
+    peakgroups: List[PeakGroup]
+    scores: Dict[str, float]
+    modified_sequence: str
     protein_accession: str
 
-    def __init__(self, sequence='', modified_sequence='', charge=0, decoy=0, q_value=None, protein_accession: str = ""):
+    def __init__(self, precursor_id = '', charge=0, decoy=0, q_value=None, modified_sequence="", protein_accession=""):
 
-        self.id = f"{modified_sequence}_{charge}"
-
-        self.sequence = sequence
-        self.modified_sequence = modified_sequence
+        self.id = precursor_id
         self.charge = charge
         self.decoy = decoy
         self.target = abs(decoy - 1)
-
-        self.protein_accession = protein_accession
-
         self.q_value = q_value
-
         self.peakgroups = []
-
         self.scores = dict()
+        self.modified_sequence = modified_sequence
+        self.protein_accession = protein_accession
 
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
@@ -259,6 +256,10 @@ class Precursors:
     def __setitem__(self, key: str, value: Precursor):
 
         self.precursors[key] = value
+
+    def __getitem__(self, item: str) -> Precursor:
+
+        return self.precursors[item]
 
     def get_peakgroups_by_list(self, precursor_list: List[str], rank: int = 0, score_key: str = '',
                                reverse: bool = True, return_all: bool = False) -> List[PeakGroup]:
@@ -616,13 +617,13 @@ class Precursors:
 
         positive_labels = self.filter_target_peakgroups(
             rank=1,
-            sort_key="probability",
+            sort_key="PROBABILITY",
             filter_key=filter_field,
             value=filter_value
         )
 
         negative_labels = self.get_decoy_peakgroups(
-            sort_key='probability',
+            sort_key='PROBABILITY',
             use_second_ranked=False
         )
 

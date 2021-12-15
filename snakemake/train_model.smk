@@ -1,58 +1,64 @@
-#!/usr/bin/env python
+SAMPLES, = glob_wildcards(f"{config['base_file_paths']['osw']}/{{sample}}.osw")
 
-SAMPLES, = glob_wildcards(f"{config['training_dir']}/{{samples}}.osw")
 
 rule all:
     input:
-        f"{config['model_dir']}/{config['model_name']}_trained",
-        f"{config['model_dir']}/{config['model_name']}.scaler.pkl"
-        
-rule denoise_target_labels:
+        scoring_model=f"{config['base_file_paths']['results']}/models/{config['gscore']['model_name']}",
+        scaler=f"{config['base_file_paths']['results']}/models/{config['gscore']['scaler_name']}"
+
+rule gscore_denoise:
     input:
-        osw_file = f"{config['training_dir']}/{{sample}}.osw"
+        osw_file=f"{config['base_file_paths']['osw']}/{{sample}}.osw"
     output:
-        placeholder_output = f"{config['training_dir']}/denoised/{{sample}}"
+        placeholder=f"{config['base_file_paths']['results']}/denoised/{{sample}}",
     params:
-        num_classifiers = 100,
-        num_folds = 20
+        num_classifiers=10,
+        num_folds=10,
+        vote_percentage=0.5
     threads:
-        10
-    run:
-        shell(
-            "gscore scorerun "
-            "--denoise-only "
+        4
+    shell:
+        (
+            "gscore denoise "
             "-i {input.osw_file} "
             "--num-classifiers {params.num_classifiers} "
             "--num-folds {params.num_folds} "
-            "--threads {threads} "
-            "-v NOTSET"
-        )
-        
-        shell(
-            "touch {output.placeholder_output}"
+            "--vote-percentage {params.vote_percentage} "
+            "--threads {threads} &&"
+
+            "touch {output.placeholder}"
         )
 
-
-rule train_model:
+rule gscore_export_training_data:
     input:
-        placeholder_input = expand(f"{config['training_dir']}/denoised/{{sample}}", sample=SAMPLES),
-        osw_files = expand(f"{config['training_dir']}/{{sample}}.osw", sample=SAMPLES)
+        placeholder=f"{config['base_file_paths']['results']}/denoised/{{sample}}",
+        osw_file=f"{config['base_file_paths']['osw']}/{{sample}}.osw"
     output:
-        placeholder_output = f"{config['model_dir']}/{config['model_name']}_trained",
-        scaler = f"{config['model_dir']}/{config['model_name']}.scaler.pkl"
+        npz=f"{config['base_file_paths']['results']}/training_data/{{sample}}.npz"
     params:
-        model_dir = config['model_dir'],
-        model_name = config['model_name'],
-        log_level = config['log_level']
-    run:
-        shell(
-            "gscore buildscorer "
-            "-i {input.osw_files} "
-            "--outmodeldir {params.model_dir} "
-            "--model-name {params.model_name} "
-            "-v {params.log_level}"
+        export_method="training-data"
+    threads:
+        1
+    shell:
+        (
+            "gscore export "
+            "--export-method {params.export_method} "
+            "--input {input.osw_file} "
+            "--output {output.npz}"
         )
 
-        shell(
-            "touch {output.placeholder_output}"
+rule gscore_train_model:
+    input:
+        npz=expand(f"{config['base_file_paths']['results']}/training_data/{{sample}}.npz",sample=SAMPLES)
+    output:
+        scoring_model=f"{config['base_file_paths']['results']}/models/{config['gscore']['model_name']}",
+        scaler=f"{config['base_file_paths']['results']}/models/{config['gscore']['scaler_name']}"
+    threads:
+        12
+    shell:
+        (
+            "gscore train "
+            "--input {input.npz} "
+            "--model-output {output.scoring_model} "
+            "--scaler-output {output.scaler}"
         )

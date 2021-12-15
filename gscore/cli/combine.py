@@ -35,7 +35,7 @@ class Combine:
             with OSWFile(input_file) as osw_conn:
 
                 precursors = osw_conn.parse_to_precursors(
-                    query=queries.SelectPeakGroups.FETCH_ALL_SCORED_DATA
+                    query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
                 )
 
                 for precursor in precursors:
@@ -43,6 +43,7 @@ class Combine:
                     precursor_id = f"{precursor.modified_sequence}_{precursor.charge}"
 
                     if precursor_id not in export:
+
                         export[precursor_id] = PrecursorExportRecord(
                             modified_sequence=precursor.modified_sequence,
                             charge=precursor.charge,
@@ -52,7 +53,7 @@ class Combine:
                             peptide_q_value=global_peptide_model.get_q_value(precursor.modified_sequence)
                         )
 
-                    peakgroup = precursor.get_peakgroup(rank=1, key="q_value")
+                    peakgroup = precursor.get_peakgroup(rank=1, key="Q_VALUE")
 
                     export[precursor_id].add_sample(
                         sample_key=sample_name,

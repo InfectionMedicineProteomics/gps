@@ -73,6 +73,10 @@ class OSWFile:
 
             self.run_raw_sql(sql_index)
 
+        if "GHOST_SCORE_TABLE" in self:
+
+            self.run_raw_sql(CreateIndex.CREATE_GHOST_SCORE_IDX)
+
         self.conn.row_factory = sqlite3.Row
 
         self
@@ -103,29 +107,29 @@ class OSWFile:
 
         for record in self.iterate_records(query):
 
-            if record['protein_accession'] not in proteins:
+            if record['PROTEIN_ACCESSION'] not in proteins:
 
                 protein = Protein(
-                    protein_accession=record['protein_accession'],
-                    decoy=record['decoy'],
-                    q_value=record['q_value'],
-                    d_score=record['d_score']
+                    protein_accession=record['PROTEIN_ACCESSION'],
+                    decoy=record['DECOY'],
+                    q_value=record['Q_VALUE'],
+                    d_score=record['D_SCORE']
                 )
 
-                proteins[record['protein_accession']] = protein
+                proteins[record['PROTEIN_ACCESSION']] = protein
 
             else:
 
-                if record['d_score'] > proteins[record['protein_accession']].d_score:
+                if record['D_SCORE'] > proteins[record['PROTEIN_ACCESSION']].d_score:
 
                     protein = Protein(
-                        protein_accession=record['protein_accession'],
-                        decoy=record['decoy'],
-                        q_value=record['q_value'],
-                        d_score=record['d_score']
+                        protein_accession=record['PROTEIN_ACCESSION'],
+                        decoy=record['DECOY'],
+                        q_value=record['Q_VALUE'],
+                        d_score=record['D_SCORE']
                     )
 
-                    proteins[record['protein_accession']] = protein
+                    proteins[record['PROTEIN_ACCESSION']] = protein
 
         return proteins
 
@@ -135,31 +139,31 @@ class OSWFile:
 
         for record in self.iterate_records(query):
 
-            if record['modified_sequence'] not in peptides:
+            if record['MODIFIED_SEQUENCE'] not in peptides:
 
                 peptide = Peptide(
-                    sequence=record['peptide_sequence'],
-                    modified_sequence=record['modified_sequence'],
-                    decoy=record['decoy'],
-                    q_value=record['q_value'],
-                    d_score=record['d_score']
+                    sequence=record['UNMODIFIED_SEQUENCE'],
+                    modified_sequence=record['MODIFIED_SEQUENCE'],
+                    decoy=record['DECOY'],
+                    q_value=record['Q_VALUE'],
+                    d_score=record['D_SCORE']
                 )
 
-                peptides[record['modified_sequence']] = peptide
+                peptides[record['MODIFIED_SEQUENCE']] = peptide
 
             else:
 
-                if record['d_score'] > peptides[record['modified_sequence']].d_score:
+                if record['D_SCORE'] > peptides[record['MODIFIED_SEQUENCE']].d_score:
 
                     peptide = Peptide(
-                        sequence=record['peptide_sequence'],
-                        modified_sequence=record['modified_sequence'],
-                        decoy=record['decoy'],
-                        q_value=record['q_value'],
-                        d_score=record['d_score']
+                        sequence=record['UNMODIFIED_SEQUENCE'],
+                        modified_sequence=record['MODIFIED_SEQUENCE'],
+                        decoy=record['DECOY'],
+                        q_value=record['Q_VALUE'],
+                        d_score=record['D_SCORE']
                     )
 
-                    peptides[record['modified_sequence']] = peptide
+                    peptides[record['MODIFIED_SEQUENCE']] = peptide
 
         return peptides
 
@@ -167,58 +171,98 @@ class OSWFile:
 
         precursors = Precursors()
 
-        score_columns = dict()
+        printit = True
+
+        check_pyprophet_scores = dict()
 
         for record in self.iterate_records(query):
 
-            if record['precursor_id'] not in precursors:
+            if record['PRECURSOR_ID'] not in precursors:
 
                 precursor = Precursor(
-                    sequence=record['peptide_sequence'],
-                    modified_sequence=record['modified_sequence'],
-                    charge=record['charge'],
-                    decoy=record['decoy'],
-                    protein_accession=record['protein_accession']
+                    precursor_id=record['PRECURSOR_ID'],
+                    charge=record['CHARGE'],
+                    decoy=record['DECOY']
                 )
 
-                precursors[record['precursor_id']] = precursor
+                precursors[record['PRECURSOR_ID']] = precursor
 
             peakgroup = PeakGroup(
-                idx=record['feature_id'],
-                mz=record['mz'],
-                start_rt=record['rt_start'],
-                rt=record['rt_apex'],
-                end_rt=record['rt_end'],
-                decoy=record['decoy']
+                idx=record['FEATURE_ID'],
+                mz=record['MZ'],
+                start_rt=record['RT_START'],
+                rt=record['RT_APEX'],
+                end_rt=record['RT_END'],
+                decoy=record['DECOY']
             )
 
             for key, value in record.items():
 
-                if key.startswith("VAR") and value is not None:
+                if key.startswith("VAR_"):
+
+                    if key not in check_pyprophet_scores:
+
+                        check_pyprophet_scores[key] = []
+
+                    check_pyprophet_scores[key].append(value)
 
                     peakgroup.scores[key] = value
 
-                elif key in ['probability', 'vote_percentage', 'd_score', 'q_value']:
+                elif key in ["PROBABILITY", "VOTE_PERCENTAGE", "Q_VALUE", "D_SCORE"]:
 
                     peakgroup.scores[key] = value
 
-                elif key == "ghost_score_id":
+                elif key == "GHOST_SCORE_ID":
 
                     peakgroup.ghost_score_id = value
 
-                elif key == "ms1_intensity":
+                elif key == "AREA_INTENSITY":
 
-                    peakgroup.ms1_intensity = value
+                    peakgroup.intensity = value
 
-                elif key == "ms2_intensity":
+                elif key == "PROTEIN_ACCESSION":
 
-                    peakgroup.ms2_intensity = value
+                    precursors[record['PRECURSOR_ID']].protein_accession = value
 
-            precursors.add_peakgroup(record['precursor_id'], peakgroup)
+                elif key == "MODIFIED_SEQUENCE":
+
+                    precursors[record['PRECURSOR_ID']].modified_sequence = value
+
+            precursors.add_peakgroup(record['PRECURSOR_ID'], peakgroup)
+
+        print("Cleaning unused score columns.")
+
+        keep_scores = dict()
+
+        for score_name, score_values in check_pyprophet_scores.items():
+
+            score_values = np.array(score_values)
+
+            if not np.any(score_values):
+
+                keep_scores[score_name] = False
+
+            else:
+
+                keep_scores[score_name] = True
+
+        score_lengths = dict()
+
+        for precursor in precursors:
+
+            for peakgroup in precursor.peakgroups:
+
+                for score_name, keep_score in keep_scores.items():
+
+                    if not keep_score:
+
+                        if score_name in peakgroup.scores:
+
+                            del peakgroup.scores[score_name]
+
+                score_lengths[len(peakgroup.scores)] = score_lengths.get(len(peakgroup.scores), 0) + 1
 
         return precursors
-
-
 
     def fetch_all_records(self, query):
 
@@ -462,15 +506,15 @@ class OSWFile:
 
             for peakgroup in precursor.peakgroups:
                 record = {
-                    'feature_id': peakgroup.idx,
-                    'probability': peakgroup.scores['probability'],
-                    'vote_percentage': peakgroup.scores['vote_percentage']
+                    'FEATURE_ID': peakgroup.idx,
+                    'PROBABILITY': peakgroup.scores['probability'],
+                    'VOTE_PERCENTAGE': peakgroup.scores['vote_percentage']
                 }
 
                 records.append(record)
 
         self.drop_table(
-            'ghost_score_table'
+            'GHOST_SCORE_TABLE'
         )
 
         self.create_table(
@@ -478,7 +522,7 @@ class OSWFile:
         )
 
         self.add_records(
-            table_name='ghost_score_table',
+            table_name='GHOST_SCORE_TABLE',
             records=records
         )
 
@@ -521,14 +565,14 @@ class OSWFile:
             for peakgroup in precursor.peakgroups:
 
                 records[peakgroup.ghost_score_id] = {
-                    'probability': peakgroup.scores['probability'],
-                    'vote_percentage': peakgroup.scores['vote_percentage'],
-                    'd_score': peakgroup.scores['d_score'],
-                    'q_value': peakgroup.scores['q_value']
+                    'PROBABILITY': peakgroup.scores['PROBABILITY'],
+                    'VOTE_PERCENTAGE': peakgroup.scores['VOTE_PERCENTAGE'],
+                    'D_SCORE': peakgroup.scores['d_score'],
+                    'Q_VALUE': peakgroup.scores['q_value']
                 }
 
         self.update_records(
-            table_name='ghost_score_table',
-            key_field="ghost_score_id",
+            table_name='GHOST_SCORE_TABLE',
+            key_field="GHOST_SCORE_ID",
             records=records
         )

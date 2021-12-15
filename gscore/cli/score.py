@@ -16,32 +16,20 @@ class Score:
 
         print(f"Processing file {args.input}")
 
-        already_scored = False
-
         with OSWFile(args.input) as osw_conn:
 
-            if "ghost_score_table" in osw_conn:
+            precursors = osw_conn.parse_to_precursors(
+                query=SelectPeakGroups.FETCH_FEATURES_REDUCED
+            )
 
-                already_scored = True
+            print("Denoising...")
 
-                precursors = osw_conn.parse_to_precursors(
-                    query=SelectPeakGroups.FETCH_ALL_DENOIZED_DATA
-                )
-
-            else:
-
-                precursors = osw_conn.parse_to_precursors(
-                    query=SelectPeakGroups.FETCH_FEATURES
-                )
-
-                print("Denoising...")
-
-                precursors.denoise(
-                    num_folds=args.num_folds,
-                    num_classifiers=args.num_classifiers,
-                    num_threads=args.threads,
-                    vote_percentage=args.vote_percentage
-                )
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_percentage=args.vote_percentage
+            )
 
             print("Scoring...")
 
@@ -59,17 +47,9 @@ class Score:
 
             print("Updating Q Values in PQP file")
 
-            if not already_scored:
-
-                osw_conn.add_score_and_q_value_records(
-                    precursors
-                )
-
-            else:
-
-                osw_conn.update_q_value_records(
-                    precursors
-                )
+            osw_conn.add_score_and_q_value_records(
+                precursors
+            )
 
             print("Done!")
 
@@ -90,16 +70,6 @@ class Score:
         )
 
         self.parser.add_argument(
-            "--apply-model",
-            dest="apply_model",
-            help=(
-                "Set this flag if you want to apply a trained scoring model to the data"
-            ),
-            default=False,
-            action="store_true"
-        )
-
-        self.parser.add_argument(
             "--scoring-model",
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
@@ -114,10 +84,34 @@ class Score:
         )
 
         self.parser.add_argument(
+            '--num-classifiers',
+            dest='num_classifiers',
+            help='The number of ensemble learners used to denoise each fold',
+            default=10,
+            type=int
+        )
+
+        self.parser.add_argument(
+            '--num-folds',
+            dest='num_folds',
+            help='The number of folds used to denoise the target labels',
+            default=10,
+            type=int
+        )
+
+        self.parser.add_argument(
+            "--vote-percentage",
+            dest="vote_percentage",
+            help="The minimum probability needed to be counted as a positive vote",
+            default=0.5,
+            type=float
+        )
+
+        self.parser.add_argument(
             '--threads',
             dest='threads',
             help='The number of threads to use',
-            default=10,
+            default=1,
             type=int
         )
 

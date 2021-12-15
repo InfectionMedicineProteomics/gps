@@ -22,7 +22,7 @@ class Export:
                 print(f"Parsing {args.input}")
 
                 precursors = osw_file.parse_to_precursors(
-                    query=queries.SelectPeakGroups.FETCH_ALL_DENOIZED_DATA
+                    query=queries.SelectPeakGroups.FETCH_DENOIZED_REDUCED
                 )
 
                 print(f"Filtering and writing output.")
@@ -71,9 +71,9 @@ class Export:
             "--filter-field",
             dest="filter_field",
             choices=[
-                "probability", "vote_percentage"
+                "PROBABILITY", "VOTE_PERCENTAGE"
             ],
-            default="vote_percentage",
+            default="VOTE_PERCENTAGE",
             help="Field to filter the peakgroups for export as training data."
         )
 

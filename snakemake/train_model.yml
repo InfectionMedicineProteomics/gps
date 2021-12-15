@@ -1,7 +1,7 @@
-training_dir: '/path/to/training/data/small_model_training'
+base_file_paths:
+  osw: '/path/to/training/data'
+  results: '/path/to/base/results'
 
-model_name: 'model_name'
-
-model_dir: '/output/path/to/models'
-
-log_level: NOTSET
+gscore:
+  model_name: 'xgb.model'
+  scaler_name: 'xgb.scaler'
