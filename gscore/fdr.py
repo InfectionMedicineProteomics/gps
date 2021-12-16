@@ -10,7 +10,10 @@ from typing import TypeVar, Generic, Dict, Tuple, Union
 
 from joblib import dump, load  # type: ignore
 
-from gscore.peakgroups import Peptide, Precursor, Protein
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gscore.peakgroups import Peptide, Protein
 
 T = TypeVar("T")
 
