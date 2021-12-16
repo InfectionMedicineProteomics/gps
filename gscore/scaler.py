@@ -1,9 +1,9 @@
 import numpy as np
-from sklearn.preprocessing import RobustScaler, MinMaxScaler
+from sklearn.preprocessing import RobustScaler, MinMaxScaler  # type: ignore
 
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline  # type: ignore
 
-from joblib import dump, load
+from joblib import dump, load  # type: ignore
 
 
 class Scaler:

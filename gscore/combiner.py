@@ -1,5 +1,6 @@
 from csv import DictWriter
 from collections.abc import MutableMapping
+from typing import Dict, List
 
 import numpy as np
 
@@ -7,14 +8,23 @@ from gscore.peakgroups import PeakGroup
 
 
 class PrecursorExportRecord:
+
+    modified_sequence: str
+    charge: int
+    decoy: bool
+    protein_accession: str
+    protein_q_value: float
+    peptide_q_value: float
+    samples: Dict[str, PeakGroup]
+
     def __init__(
         self,
         modified_sequence: str,
         charge: int,
         decoy: bool,
         protein_accession: str,
-        protein_q_value: float = None,
-        peptide_q_value: float = None,
+        protein_q_value: float = 0.0,
+        peptide_q_value: float = 0.0,
     ):
 
         self.modified_sequence = modified_sequence
@@ -58,7 +68,12 @@ class PrecursorExportRecord:
 
 
 class PrecursorExport(MutableMapping):
-    def __init__(self, data=None, max_q_value: float = 0.05):
+
+    _data: Dict[str, PrecursorExportRecord]
+    samples: List[str]
+    max_q_value: float
+
+    def __init__(self, data=None, max_q_value=0.05):
 
         if data is None:
             data = dict()

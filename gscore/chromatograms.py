@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Dict
 
-from pynumpress import decode_slof, decode_linear, decode_pic
+from pynumpress import decode_slof, decode_linear, decode_pic  # type: ignore
 
 import torch
 from torch.utils.data import Dataset
@@ -150,7 +151,7 @@ class Chromatograms:
 
         chromatograms = Chromatograms()
 
-        chromatogram_ids = dict()
+        chromatogram_ids: Dict[str, Dict[str, Chromatogram]] = dict()
 
         for record in chromatogram_records:
 

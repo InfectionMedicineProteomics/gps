@@ -15,7 +15,7 @@ from gscore.peakgroups import (
 from gscore.parsers import queries
 
 
-from typing import Dict
+from typing import Dict, List
 
 import sqlite3
 
@@ -176,9 +176,7 @@ class OSWFile:
 
         precursors = Precursors()
 
-        printit = True
-
-        check_pyprophet_scores = dict()
+        check_pyprophet_scores: Dict[str, List[float]] = dict()
 
         for record in self.iterate_records(query):
 
@@ -241,9 +239,9 @@ class OSWFile:
 
         for score_name, score_values in check_pyprophet_scores.items():
 
-            score_values = np.array(score_values)
+            score_values_array = np.array(score_values)
 
-            if not np.any(score_values):
+            if not np.any(score_values_array):
 
                 keep_scores[score_name] = False
 
@@ -251,7 +249,7 @@ class OSWFile:
 
                 keep_scores[score_name] = True
 
-        score_lengths = dict()
+        score_lengths: Dict[int, int] = dict()
 
         for precursor in precursors:
 

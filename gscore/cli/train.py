@@ -3,8 +3,8 @@ from collections import Counter
 
 import numpy as np
 
-from sklearn.model_selection import train_test_split
-from sklearn.utils import class_weight
+from sklearn.model_selection import train_test_split  # type: ignore
+from sklearn.utils import class_weight  # type: ignore
 
 from gscore import preprocess
 from gscore.scaler import Scaler
@@ -31,7 +31,7 @@ class Train:
 
         for input_file in args.input_files:
 
-            scores, labels = ml.get_training_data_from_npz(input_file)
+            scores, labels = preprocess.get_training_data_from_npz(input_file)
 
             combined_data.append(scores)
             combined_labels.append(labels)
@@ -51,7 +51,7 @@ class Train:
             y=training_labels.ravel(),
         )
 
-        counter = Counter(training_labels.ravel())
+        counter: Counter = Counter(training_labels.ravel())
         scale_pos_weight = counter[0] / counter[1]
 
         scorer = XGBoostScorer(scale_pos_weight=scale_pos_weight)

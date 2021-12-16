@@ -1,5 +1,7 @@
-from sklearn.linear_model import SGDClassifier
-from sklearn.ensemble import BaggingClassifier
+from typing import Union, Iterable, Any, Optional
+
+from sklearn.linear_model import SGDClassifier  # type: ignore
+from sklearn.ensemble import BaggingClassifier  # type: ignore
 
 from gscore.preprocess import *
 
@@ -12,7 +14,7 @@ class BaggedDenoiser(BaggingClassifier):
         max_samples=3,
         n_jobs=5,
         random_state=0,
-        class_weights: np.ndarray = None,
+        class_weights: np.ndarray = np.array([1.0, 1.0]),
     ):
 
         if not base_estimator:

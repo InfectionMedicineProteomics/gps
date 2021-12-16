@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import numpy as np
-import networkx as nx
 
-from sklearn.utils import shuffle, class_weight
-from sklearn.metrics import precision_score, recall_score
+from sklearn.utils import shuffle, class_weight  # type: ignore
+from sklearn.metrics import precision_score, recall_score  # type: ignore
 
 from gscore import preprocess
 from gscore.scaler import Scaler
@@ -138,10 +137,12 @@ class Protein:
 
     protein_accession: str
     decoy: int
+    target: int
+    q_value: float
+    d_score: float
+    scores: Dict[str, float]
 
-    def __init__(
-        self, protein_accession="", decoy=0, q_value=None, d_score: float = None
-    ):
+    def __init__(self, protein_accession="", decoy=0, q_value=0.0, d_score=0.0):
 
         self.protein_accession = protein_accession
 
@@ -201,8 +202,8 @@ class Peptide:
         sequence="",
         modified_sequence: str = "",
         decoy: int = 0,
-        q_value: float = None,
-        d_score: float = None,
+        q_value: float = 0.0,
+        d_score: float = 0.0,
     ):
 
         self.sequence = sequence
@@ -283,7 +284,7 @@ class Precursors:
 
     def get_peakgroups_by_list(
         self,
-        precursor_list: List[str],
+        precursor_list: np.ndarray,
         rank: int = 0,
         score_key: str = "",
         reverse: bool = True,
@@ -419,7 +420,9 @@ class Precursors:
         base_estimator=None,
     ) -> Precursors:
 
-        precursor_folds = ml.get_precursor_id_folds(list(self.keys()), num_folds)
+        precursor_folds = preprocess.get_precursor_id_folds(
+            list(self.keys()), num_folds
+        )
 
         total_recall = []
         total_precision = []
@@ -430,7 +433,7 @@ class Precursors:
 
                 print(f"Processing fold {fold_num + 1}...")
 
-            training_precursors = ml.get_training_data(
+            training_precursors = preprocess.get_training_data(
                 folds=precursor_folds, fold_num=fold_num
             )
 
@@ -442,9 +445,11 @@ class Precursors:
                 reverse=True,
             )
 
-            peakgroup_scores, peakgroup_labels, peakgroup_indices = ml.reformat_data(
-                peakgroups=training_data_targets
-            )
+            (
+                peakgroup_scores,
+                peakgroup_labels,
+                peakgroup_indices,
+            ) = preprocess.reformat_data(peakgroups=training_data_targets)
 
             train_data, train_labels = shuffle(
                 peakgroup_scores, peakgroup_labels, random_state=42
@@ -489,7 +494,7 @@ class Precursors:
                 precursor_list=precursor_fold_ids, return_all=True
             )
 
-            testing_scores, testing_labels, testing_keys = ml.reformat_data(
+            testing_scores, testing_labels, testing_keys = preprocess.reformat_data(
                 peakgroups=peakgroups_to_score
             )
 
@@ -520,7 +525,9 @@ class Precursors:
                 reverse=True,
             )
 
-            val_scores, val_labels, _ = ml.reformat_data(peakgroups=validation_data)
+            val_scores, val_labels, _ = preprocess.reformat_data(
+                peakgroups=validation_data
+            )
 
             val_scores = scaler.transform(val_scores)
 
@@ -559,7 +566,7 @@ class Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
-        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+        all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
             all_peakgroups, include_score_columns=True
         )
 
@@ -591,7 +598,7 @@ class Precursors:
 
         modelling_peakgroups = target_peakgroups + decoy_peakgroups
 
-        scores, labels = ml.reformat_distribution_data(
+        scores, labels = preprocess.reformat_distribution_data(
             modelling_peakgroups, score_column=sort_key
         )
 
@@ -601,7 +608,7 @@ class Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
-        all_data_scores, all_data_labels = ml.reformat_distribution_data(
+        all_data_scores, all_data_labels = preprocess.reformat_distribution_data(
             all_peakgroups, score_column=sort_key
         )
 
@@ -627,7 +634,7 @@ class Precursors:
 
         combined = positive_labels + negative_labels
 
-        all_data_scores, all_data_labels, all_data_indices = ml.reformat_data(
+        all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
             combined, include_score_columns=True
         )
 

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import numpy as np
 
-from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.interpolate import InterpolatedUnivariateSpline  # type: ignore
 
-from sklearn.neighbors import KernelDensity
+from sklearn.neighbors import KernelDensity  # type: ignore
 
-from typing import TypeVar, Generic, Dict, Tuple
+from typing import TypeVar, Generic, Dict, Tuple, Union
 
-from joblib import dump, load
+from joblib import dump, load  # type: ignore
 
+from gscore.peakgroups import Peptide, Precursor, Protein
 
 T = TypeVar("T")
 
@@ -107,34 +108,34 @@ class ScoreDistribution:
             target_areas.append(target_area)
             decoy_areas.append(decoy_area)
 
-        target_areas = np.array(target_areas)
-        decoy_areas = np.array(decoy_areas)
+        target_areas_array = np.array(target_areas)
+        decoy_areas_array = np.array(decoy_areas)
 
-        total_areas = target_areas + decoy_areas
+        total_areas = target_areas_array + decoy_areas_array
 
-        q_values = decoy_areas / total_areas
+        q_values = decoy_areas_array / total_areas
 
         return q_values
 
 
-class GlobalDistribution(Generic[T]):
+class GlobalDistribution:
 
-    features: Dict[str, T]
+    features: Dict[str, Union[Peptide, Protein]]
     score_distribution: ScoreDistribution
 
     def __init__(self) -> None:
 
-        self.features: Dict[str, T] = dict()
+        self.features: Dict[str, Union[Peptide, Protein]] = dict()
 
     def __contains__(self, item) -> bool:
 
         return item in self.features
 
-    def __setitem__(self, key: str, value: T) -> None:
+    def __setitem__(self, key: str, value: Union[Peptide, Protein]) -> None:
 
         self.features[key] = value
 
-    def compare_score(self, key: str, feature: T) -> None:
+    def compare_score(self, key: str, feature: Union[Peptide, Protein]) -> None:
 
         if feature.d_score > self.features[key].d_score:
 
@@ -156,7 +157,7 @@ class GlobalDistribution(Generic[T]):
 
         self.scores = np.array(scores, dtype=np.float64)
         self.labels = np.array(labels, dtype=int)
-        self.feature_keys = np.array(feature_keys, dtype=np.str)
+        self.feature_keys = np.array(feature_keys, dtype=str)
 
     def fit(self) -> None:
 
