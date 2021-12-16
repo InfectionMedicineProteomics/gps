@@ -1,12 +1,10 @@
 import numpy as np
-from sklearn.preprocessing import (
-    RobustScaler,
-    MinMaxScaler
-)
+from sklearn.preprocessing import RobustScaler, MinMaxScaler
 
 from sklearn.pipeline import Pipeline
 
 from joblib import dump, load
+
 
 class Scaler:
 
@@ -15,10 +13,7 @@ class Scaler:
     def __init__(self):
 
         self.scaler = Pipeline(
-            [
-                ("robust_scaler", RobustScaler()),
-                ("min_max_scaler", MinMaxScaler())
-            ]
+            [("robust_scaler", RobustScaler()), ("min_max_scaler", MinMaxScaler())]
         )
 
     def save(self, path: str) -> None:
@@ -40,7 +35,3 @@ class Scaler:
     def transform(self, data: np.ndarray) -> np.ndarray:
 
         return self.scaler.transform(data)
-
-
-
-

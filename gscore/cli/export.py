@@ -30,51 +30,51 @@ class Export:
                 precursors.dump_training_data(
                     args.output,
                     filter_field=args.filter_field,
-                    filter_value=args.filter_value
+                    filter_value=args.filter_value,
                 )
 
-    def build_subparser(self,
-                        subparser
-                        ):
+    def build_subparser(self, subparser):
 
         self.parser = subparser.add_parser(
-            self.name,
-            help="Filter peakgroups and export training data."
+            self.name, help="Filter peakgroups and export training data."
         )
 
         self.parser.add_argument(
-            '-i',
-            '--input',
-            dest='input',
-            help='OSW file to filter and export training data',
-            type=str
+            "-i",
+            "--input",
+            dest="input",
+            help="OSW file to filter and export training data",
+            type=str,
         )
 
         self.parser.add_argument(
             "--input-files",
             dest="input_files",
             nargs="+",
-            help="List of files to export to quant matrix"
+            help="List of files to export to quant matrix",
         )
 
         self.parser.add_argument(
-            '--export-method',
-            dest='export_method',
+            "--export-method",
+            dest="export_method",
             choices=[
-                'tric-formatted', 'comprehensive', 'peptide', 'protein', 'pyprophet', 'training-data'
+                "tric-formatted",
+                "comprehensive",
+                "peptide",
+                "protein",
+                "pyprophet",
+                "training-data",
             ],
-            default='comprehensive',
-            help='Which format to export results'
+            default="comprehensive",
+            help="Which format to export results",
         )
 
         self.parser.add_argument(
             "--filter-field",
             dest="filter_field",
-            choices=[
-                "PROBABILITY", "VOTE_PERCENTAGE"
-            ],
+            choices=["PROBABILITY", "VOTE_PERCENTAGE"],
             default="VOTE_PERCENTAGE",
-            help="Field to filter the peakgroups for export as training data."
+            help="Field to filter the peakgroups for export as training data.",
         )
 
         self.parser.add_argument(
@@ -82,15 +82,10 @@ class Export:
             dest="filter_value",
             type=float,
             default=1.0,
-            help="Set value by which the target peakgroups are filtered on the filter-field"
+            help="Set value by which the target peakgroups are filtered on the filter-field",
         )
 
-        self.parser.add_argument(
-            '-o',
-            '--output',
-            dest='output',
-            help="Output file "
-        )
+        self.parser.add_argument("-o", "--output", dest="output", help="Output file ")
 
         self.parser.set_defaults(run=self)
 

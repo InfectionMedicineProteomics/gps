@@ -3,7 +3,6 @@ from joblib import dump, load
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score
 
 
@@ -19,18 +18,13 @@ import numpy as np
 
 import torch
 
-MODELS = {
-    "adaboost": AdaBoostClassifier
-}
+MODELS = {"adaboost": AdaBoostClassifier}
+
 
 class Scorer:
-
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
-        self.model.fit(
-            data,
-            labels
-        )
+        self.model.fit(data, labels)
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
@@ -70,16 +64,16 @@ class SGDScorer(Scorer):
         self.model = SGDClassifier(
             alpha=1e-05,
             average=True,
-            loss='log',
+            loss="log",
             max_iter=500,
-            penalty='l2',
+            penalty="l2",
             shuffle=True,
             tol=0.0001,
-            learning_rate='adaptive',
+            learning_rate="adaptive",
             eta0=0.001,
             fit_intercept=True,
             random_state=42,
-            class_weight=dict(enumerate(class_weights))
+            class_weight=dict(enumerate(class_weights)),
         )
 
 
@@ -95,7 +89,7 @@ class XGBoostScorer(Scorer):
             objective="binary:logistic",
             n_jobs=10,
             random_state=42,
-            scale_pos_weight=scale_pos_weight
+            scale_pos_weight=scale_pos_weight,
         )
 
 
@@ -109,26 +103,27 @@ class EasyEnsembleScorer(Scorer):
         self.submodel = SGDClassifier(
             alpha=1e-05,
             average=True,
-            loss='log',
+            loss="log",
             max_iter=500,
-            penalty='l2',
+            penalty="l2",
             shuffle=True,
             tol=0.0001,
-            learning_rate='adaptive',
+            learning_rate="adaptive",
             eta0=0.001,
             fit_intercept=True,
             random_state=42,
-            class_weight=dict(enumerate(class_weights))
+            class_weight=dict(enumerate(class_weights)),
         )
 
         self.model = EasyEnsembleClassifier(
             base_estimator=self.submodel,
             n_estimators=100,
-            sampling_strategy='auto',
+            sampling_strategy="auto",
             random_state=42,
             n_jobs=10,
-            verbose=True
+            verbose=True,
         )
+
 
 class XGBEnsembleScorer(Scorer):
 
@@ -143,18 +138,17 @@ class XGBEnsembleScorer(Scorer):
             objective="binary:logistic",
             n_jobs=5,
             random_state=42,
-            scale_pos_weight=scale_pos_weight
+            scale_pos_weight=scale_pos_weight,
         )
 
         self.model = EasyEnsembleClassifier(
             base_estimator=self.submodel,
             n_estimators=10,
-            sampling_strategy='auto',
+            sampling_strategy="auto",
             random_state=42,
             n_jobs=2,
-            verbose=True
+            verbose=True,
         )
-
 
 
 class BalancedBaggingScorer(Scorer):
@@ -167,26 +161,26 @@ class BalancedBaggingScorer(Scorer):
         self.submodel = SGDClassifier(
             alpha=1e-05,
             average=True,
-            loss='log',
+            loss="log",
             max_iter=500,
-            penalty='l2',
+            penalty="l2",
             shuffle=True,
             tol=0.0001,
-            learning_rate='adaptive',
+            learning_rate="adaptive",
             eta0=0.001,
             fit_intercept=True,
             random_state=42,
-            class_weight=dict(enumerate(class_weights))
+            class_weight=dict(enumerate(class_weights)),
         )
 
         self.model = BalancedBaggingClassifier(
             base_estimator=self.submodel,
             n_estimators=100,
             bootstrap=True,
-            sampling_strategy='auto',
+            sampling_strategy="auto",
             random_state=42,
             n_jobs=10,
-            verbose=True
+            verbose=True,
         )
 
 
@@ -209,16 +203,16 @@ class AdaBoostSGDScorer(Scorer):
         self.submodel = SGDClassifier(
             alpha=1e-05,
             average=True,
-            loss='log',
+            loss="log",
             max_iter=500,
-            penalty='l2',
+            penalty="l2",
             shuffle=True,
             tol=0.0001,
-            learning_rate='adaptive',
+            learning_rate="adaptive",
             eta0=0.001,
             fit_intercept=True,
             random_state=42,
-            class_weight=dict(enumerate(class_weights))
+            class_weight=dict(enumerate(class_weights)),
         )
 
         self.model = AdaBoostClassifier(
@@ -226,13 +220,11 @@ class AdaBoostSGDScorer(Scorer):
             n_estimators=100,
             learning_rate=1.0,
             algorithm="SAMME.R",
-            random_state=42
+            random_state=42,
         )
 
 
-
 class ChromatogramModel:
-
     def __init__(self, model, criterion, optimizer, device):
         self.model = model
         self.criterion = criterion
@@ -247,10 +239,7 @@ class ChromatogramModel:
 
         yhat = self.model(chroms, peakgroups)
 
-        loss = self.criterion(
-            yhat.reshape(-1),
-            labels.double()
-        )
+        loss = self.criterion(yhat.reshape(-1), labels.double())
 
         loss.backward()
 
@@ -261,8 +250,7 @@ class ChromatogramModel:
     def train_val_split(self, dataset, val_split=0.10):
 
         train_idx, val_idx = train_test_split(
-            list(range(len(dataset))),
-            test_size=val_split
+            list(range(len(dataset))), test_size=val_split
         )
 
         training_set = Subset(dataset, train_idx)
@@ -280,17 +268,12 @@ class ChromatogramModel:
 
     def load(self, saved_model_path):
 
-        self.model.load_state_dict(
-            torch.load(saved_model_path)
-        )
+        self.model.load_state_dict(torch.load(saved_model_path))
 
     def eval_test_accuracy(self, testing_dataset):
 
         testing_loader = DataLoader(
-            testing_dataset,
-            batch_size=32,
-            num_workers=5,
-            drop_last=True
+            testing_dataset, batch_size=32, num_workers=5, drop_last=True
         )
 
         accuracies = []
@@ -304,7 +287,10 @@ class ChromatogramModel:
             with torch.no_grad():
                 predictions = self.model.predict(chroms.double(), peakgroups)
 
-                accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / labels.shape[0]).item()
+                accuracy = (
+                    (predictions.detach() == labels.reshape((-1, 1)).detach()).sum()
+                    / labels.shape[0]
+                ).item()
 
                 accuracies.append(accuracy)
 
@@ -314,20 +300,16 @@ class ChromatogramModel:
 
     def train(self, training_data, val_split=0.10, batch_size=32, n_epochs=50):
 
-        training_split, validation_split= self.train_val_split(training_data, val_split)
+        training_split, validation_split = self.train_val_split(
+            training_data, val_split
+        )
 
         training_loader = DataLoader(
-            training_split,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=5
+            training_split, batch_size=batch_size, shuffle=True, num_workers=5
         )
 
         validation_loader = DataLoader(
-            validation_split,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=5
+            validation_split, batch_size=batch_size, shuffle=True, num_workers=5
         )
 
         try:
@@ -359,7 +341,7 @@ class ChromatogramModel:
 
                     percentage = (i / len(training_loader)) * 100.0
 
-                    print("Epoch percentage: ", percentage, end='\r')
+                    print("Epoch percentage: ", percentage, end="\r")
 
                 training_loss = np.mean(losses)
 
@@ -379,12 +361,14 @@ class ChromatogramModel:
 
                         val_losses.append(val_loss)
 
-                        predictions = self.model.predict(
-                            chroms.double(),
-                            peakgroups
-                        )
+                        predictions = self.model.predict(chroms.double(), peakgroups)
 
-                        accuracy = ((predictions.detach() == labels.reshape((-1, 1)).detach()).sum() / predictions.shape[0]).item()
+                        accuracy = (
+                            (
+                                predictions.detach() == labels.reshape((-1, 1)).detach()
+                            ).sum()
+                            / predictions.shape[0]
+                        ).item()
 
                         accuracies.append(accuracy)
 
@@ -399,19 +383,20 @@ class ChromatogramModel:
                 self.train_losses.append(epoch_loss)
                 self.val_losses.append(epoch_val_loss)
 
-                print(f'epoch {epoch}, loss {epoch_loss}, val loss {epoch_val_loss}, val accuracy {epoch_val_accuracy}')
+                print(
+                    f"epoch {epoch}, loss {epoch_loss}, val loss {epoch_val_loss}, val accuracy {epoch_val_accuracy}"
+                )
 
         except Exception as e:
 
-            torch.save(self.model.state_dict(), './chrom.pth')
+            torch.save(self.model.state_dict(), "./chrom.pth")
 
             raise e
 
-        torch.save(self.model.state_dict(), './chrom.pth')
+        torch.save(self.model.state_dict(), "./chrom.pth")
 
 
 class ChromatogramProbabilityModel(nn.Module):
-
     def __init__(self, n_features, sequence_length):
 
         super().__init__()
@@ -421,7 +406,7 @@ class ChromatogramProbabilityModel(nn.Module):
             out_channels=7,
             kernel_size=(3,),
             stride=(1,),
-            padding='same'
+            padding="same",
         )
 
         self.n_features = n_features
@@ -436,14 +421,13 @@ class ChromatogramProbabilityModel(nn.Module):
             num_layers=self.layer_dim,
             batch_first=True,
             dropout=0.2,
-            bidirectional=True
+            bidirectional=True,
         )
 
         self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3, 42)
         self.linear_2 = nn.Linear(42, 42)
         self.linear_3 = nn.Linear(42, 42)
         self.linear_4 = nn.Linear(42, 1)
-
 
     def forward(self, chromatogram, peakgroup):
 

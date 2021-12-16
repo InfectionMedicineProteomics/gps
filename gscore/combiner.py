@@ -5,16 +5,16 @@ import numpy as np
 
 from gscore.peakgroups import PeakGroup
 
-class PrecursorExportRecord:
 
+class PrecursorExportRecord:
     def __init__(
-            self,
-            modified_sequence: str,
-            charge: int,
-            decoy: bool,
-            protein_accession: str,
-            protein_q_value: float = None,
-            peptide_q_value: float = None
+        self,
+        modified_sequence: str,
+        charge: int,
+        decoy: bool,
+        protein_accession: str,
+        protein_q_value: float = None,
+        peptide_q_value: float = None,
     ):
 
         self.modified_sequence = modified_sequence
@@ -37,7 +37,7 @@ class PrecursorExportRecord:
 
         self.samples[sample_key] = peakgroup
 
-    def get_sample_intensity(self, sample_key=''):
+    def get_sample_intensity(self, sample_key=""):
 
         if sample_key in self.samples:
 
@@ -58,7 +58,6 @@ class PrecursorExportRecord:
 
 
 class PrecursorExport(MutableMapping):
-
     def __init__(self, data=None, max_q_value: float = 0.05):
 
         if data is None:
@@ -97,20 +96,20 @@ class PrecursorExport(MutableMapping):
         for peptide_key, record in self._data.items():
 
             export_record = {
-                'PeptideSequence': record.modified_sequence,
-                'Charge': record.charge,
-                'Decoy': record.decoy,
-                'Protein': record.protein_accession,
-                'RetentionTime': record.retention_time(),
-                'PeptideQValue': record.peptide_q_value,
-                'ProteinQValue': record.protein_q_value
+                "PeptideSequence": record.modified_sequence,
+                "Charge": record.charge,
+                "Decoy": record.decoy,
+                "Protein": record.protein_accession,
+                "RetentionTime": record.retention_time(),
+                "PeptideQValue": record.peptide_q_value,
+                "ProteinQValue": record.protein_q_value,
             }
 
             for sample in self.samples:
 
                 if sample in record:
 
-                    if record[sample].scores['Q_VALUE'] <= self.max_q_value:
+                    if record[sample].scores["Q_VALUE"] <= self.max_q_value:
 
                         export_record[sample] = record.get_sample_intensity(
                             sample_key=sample
@@ -130,9 +129,9 @@ class PrecursorExport(MutableMapping):
 
         return self._data.items()
 
-    def write(self, path=''):
+    def write(self, path=""):
 
-        with open(path, 'w') as outfile:
+        with open(path, "w") as outfile:
 
             first_line = True
 
@@ -142,11 +141,7 @@ class PrecursorExport(MutableMapping):
 
                     fieldnames = list(record.keys())
 
-                    writer = DictWriter(
-                        outfile,
-                        fieldnames=fieldnames,
-                        delimiter="\t"
-                    )
+                    writer = DictWriter(outfile, fieldnames=fieldnames, delimiter="\t")
 
                     writer.writeheader()
 

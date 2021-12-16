@@ -1,7 +1,6 @@
 class CreateTable:
 
-    CREATE_GHOSTSCORE_TABLE = (
-        """
+    CREATE_GHOSTSCORE_TABLE = """
         CREATE TABLE IF NOT EXISTS GHOST_SCORE_TABLE (
             GHOST_SCORE_ID INTEGER PRIMARY KEY,
             FEATURE_ID INTEGER NOT NULL,
@@ -13,72 +12,54 @@ class CreateTable:
                 REFERENCES FEATURE (ID)
         )
         """
-    )
+
 
 class CreateIndex:
 
-    CREATE_PROTEIN_IDX = (
-        """
+    CREATE_PROTEIN_IDX = """
         CREATE INDEX IF NOT EXISTS idx_protein
         ON PROTEIN(id);
         """
-    )
 
-    CREATE_PRECURSOR_IDX = (
-        """
+    CREATE_PRECURSOR_IDX = """
         CREATE INDEX IF NOT EXISTS idx_precursor_id
         ON precursor(id);
         """
-    )
 
-    CREATE_PREC_PEP_MAPPING_IDX = (
-        """
+    CREATE_PREC_PEP_MAPPING_IDX = """
         CREATE INDEX IF NOT EXISTS idx_prec_pep_mapping
         ON PRECURSOR_PEPTIDE_MAPPING(precursor_id);
         """
-    )
 
-    CREATE_PROT_PEP_MAPPING_IDX = (
-        """
+    CREATE_PROT_PEP_MAPPING_IDX = """
         CREATE INDEX IF NOT EXISTS idx_prot_pep_mapping
         ON PEPTIDE_PROTEIN_MAPPING(peptide_id);
         """
-    )
 
-    CREATE_PEPTIDE_IDX = (
-        """
+    CREATE_PEPTIDE_IDX = """
         CREATE INDEX IF NOT EXISTS idx_peptide
         ON PEPTIDE(id);
         """
-    )
 
-    CREATE_FEATURE_IDX = (
-        """
+    CREATE_FEATURE_IDX = """
         CREATE INDEX IF NOT EXISTS idx_feature_precursor
         ON FEATURE(precursor_id);
         """
-    )
 
-    CREATE_FEATURE_MS2_IDX = (
-        """
+    CREATE_FEATURE_MS2_IDX = """
         CREATE INDEX IF NOT EXISTS idx_feature_feature_ms2
         ON FEATURE_MS2(feature_id)
         """
-    )
 
-    CREATE_FEATURE_MS1_IDX = (
-        """
+    CREATE_FEATURE_MS1_IDX = """
         CREATE INDEX IF NOT EXISTS idx_feature_feature_ms1
         ON FEATURE_MS1(feature_id)
         """
-    )
 
-    CREATE_GHOST_SCORE_IDX = (
-        """
+    CREATE_GHOST_SCORE_IDX = """
         CREATE INDEX IF NOT EXISTS idx_ghost_score_feature
         ON GHOST_SCORE_TABLE(FEATURE_ID)
         """
-    )
 
     ALL_INDICES = [
         CREATE_PRECURSOR_IDX,
@@ -88,15 +69,13 @@ class CreateIndex:
         CREATE_FEATURE_MS1_IDX,
         CREATE_FEATURE_MS2_IDX,
         CREATE_PREC_PEP_MAPPING_IDX,
-        CREATE_PROT_PEP_MAPPING_IDX
+        CREATE_PROT_PEP_MAPPING_IDX,
     ]
-
 
 
 class ChromatogramQueries:
 
-    FETCH_PEPTIDE_CHROMATOGRAM = (
-        """
+    FETCH_PEPTIDE_CHROMATOGRAM = """
         select
             PRECURSOR.PEPTIDE_SEQUENCE,
             PRECURSOR.CHARGE,
@@ -111,12 +90,11 @@ class ChromatogramQueries:
         join DATA on CHROMATOGRAM.ID = DATA.CHROMATOGRAM_ID
         join PRODUCT on CHROMATOGRAM.ID = PRODUCT.CHROMATOGRAM_ID;
         """
-    )
+
 
 class SelectPeakGroups:
 
-    FETCH_DENOIZED_REDUCED = (
-        """
+    FETCH_DENOIZED_REDUCED = """
         SELECT
             *
         FROM FEATURE_MS2
@@ -168,10 +146,8 @@ class SelectPeakGroups:
         ORDER BY PRECURSOR.ID ASC,
                  FEATURE.RT_APEX ASC
         """
-    )
 
-    FETCH_PRECURSORS_FOR_EXPORT_REDUCED = (
-        """
+    FETCH_PRECURSORS_FOR_EXPORT_REDUCED = """
         SELECT
             *
         FROM FEATURE_MS2
@@ -240,10 +216,8 @@ class SelectPeakGroups:
         ORDER BY PRECURSOR.ID ASC,
                  FEATURE.RT_APEX ASC
         """
-    )
 
-    FETCH_FEATURES_REDUCED = (
-        """
+    FETCH_FEATURES_REDUCED = """
         SELECT
             *
         FROM FEATURE_MS2
@@ -287,4 +261,3 @@ class SelectPeakGroups:
         ORDER BY PRECURSOR.ID ASC,
                  FEATURE.RT_APEX ASC
         """
-    )

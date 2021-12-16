@@ -3,6 +3,7 @@ import argparse
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
 
+
 class Denoise:
 
     name: str
@@ -27,7 +28,7 @@ class Denoise:
                 num_folds=args.num_folds,
                 num_classifiers=args.num_classifiers,
                 num_threads=args.threads,
-                vote_percentage=args.vote_percentage
+                vote_percentage=args.vote_percentage,
             )
 
             print("Writing scores to OSW file...")
@@ -36,46 +37,36 @@ class Denoise:
 
             print("Done!")
 
-
-    def build_subparser(self,
-                        subparser
-    ):
+    def build_subparser(self, subparser):
 
         self.parser = subparser.add_parser(
-            self.name,
-            help="Commands to denoise OSW files"
+            self.name, help="Commands to denoise OSW files"
         )
 
-        self.parser.add_argument(
-            "-i",
-            "--input",
-            help="OSW file to process",
-            type=str
-        )
-
+        self.parser.add_argument("-i", "--input", help="OSW file to process", type=str)
 
         self.parser.add_argument(
-            '--num-classifiers',
-            dest='num_classifiers',
-            help='The number of ensemble learners used to denoise each fold',
+            "--num-classifiers",
+            dest="num_classifiers",
+            help="The number of ensemble learners used to denoise each fold",
             default=10,
-            type=int
+            type=int,
         )
 
         self.parser.add_argument(
-            '--num-folds',
-            dest='num_folds',
-            help='The number of folds used to denoise the target labels',
+            "--num-folds",
+            dest="num_folds",
+            help="The number of folds used to denoise the target labels",
             default=10,
-            type=int
+            type=int,
         )
 
         self.parser.add_argument(
-            '--threads',
-            dest='threads',
-            help='The number of threads to use',
+            "--threads",
+            dest="threads",
+            help="The number of threads to use",
             default=10,
-            type=int
+            type=int,
         )
 
         self.parser.add_argument(
@@ -83,7 +74,7 @@ class Denoise:
             dest="vote_percentage",
             help="The minimum probability needed to be counted as a positive vote",
             default=0.8,
-            type=float
+            type=float,
         )
 
         self.parser.set_defaults(run=self)

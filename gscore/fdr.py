@@ -11,10 +11,11 @@ from typing import TypeVar, Generic, Dict, Tuple
 from joblib import dump, load
 
 
-
 T = TypeVar("T")
 
-G = TypeVar("G", )
+G = TypeVar(
+    "G",
+)
 
 
 class ScoreDistribution:
@@ -36,47 +37,32 @@ class ScoreDistribution:
 
             data[data == np.inf] = 25.0
 
-        self.x_axis = np.linspace(
-            start=data.min(),
-            stop=data.max(),
-            num=1000
-        )[:, np.newaxis]
-
-        target_data = data[
-            np.argwhere(labels == 1.0)
+        self.x_axis = np.linspace(start=data.min(), stop=data.max(), num=1000)[
+            :, np.newaxis
         ]
+
+        target_data = data[np.argwhere(labels == 1.0)]
 
         self.target_data = target_data
 
-        decoy_data = data[
-            np.argwhere(labels == 0.0)
-        ]
+        decoy_data = data[np.argwhere(labels == 0.0)]
 
         self.decoy_data = decoy_data
 
-        self.target_model.fit(
-            target_data
-        )
+        self.target_model.fit(target_data)
 
-        self.decoy_model.fit(
-            decoy_data
-        )
+        self.decoy_model.fit(decoy_data)
 
-        self.target_scores = self.score(model='target')
-        self.decoy_scores = self.score(model='decoy')
+        self.target_scores = self.score(model="target")
+        self.decoy_scores = self.score(model="decoy")
 
         self.target_function = InterpolatedUnivariateSpline(
-            x=self.x_axis,
-            y=self.target_scores,
-            ext=2
+            x=self.x_axis, y=self.target_scores, ext=2
         )
 
         self.decoy_function = InterpolatedUnivariateSpline(
-            x=self.x_axis,
-            y=self.decoy_scores,
-            ext=2
+            x=self.x_axis, y=self.decoy_scores, ext=2
         )
-
 
     def score(self, model: str):
 
@@ -89,7 +75,6 @@ class ScoreDistribution:
             log_density = self.decoy_model.score_samples(self.x_axis)
 
         return np.exp(log_density)
-
 
     def calculate_q_vales(self, scores: np.ndarray) -> np.ndarray:
 
@@ -116,8 +101,7 @@ class ScoreDistribution:
             else:
 
                 target_area = self.target_function.integral(
-                    a=score,
-                    b=self.x_axis[-1].item()
+                    a=score, b=self.x_axis[-1].item()
                 )
 
             target_areas.append(target_area)
@@ -182,10 +166,7 @@ class GlobalDistribution(Generic[T]):
 
         self.score_distribution = ScoreDistribution()
 
-        self.score_distribution.fit(
-            self.scores,
-            self.labels
-        )
+        self.score_distribution.fit(self.scores, self.labels)
 
         self.q_values = self.score_distribution.calculate_q_vales(self.scores)
 
@@ -205,5 +186,3 @@ class GlobalDistribution(Generic[T]):
     def load(file_path: str) -> GlobalDistribution:
 
         return load(file_path)
-
-

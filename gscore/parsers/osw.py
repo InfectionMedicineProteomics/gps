@@ -1,17 +1,21 @@
 import numpy as np
 
-from gscore.parsers.queries import (
-    CreateIndex
-)
+from gscore.parsers.queries import CreateIndex
 
 from gscore.peakgroups import (
-    Protein, Proteins, Peptides, Peptide, Precursors, Precursor, PeakGroup
+    Protein,
+    Proteins,
+    Peptides,
+    Peptide,
+    Precursors,
+    Precursor,
+    PeakGroup,
 )
 
 from gscore.parsers import queries
 
 
-from typing import  Dict
+from typing import Dict
 
 import sqlite3
 
@@ -19,13 +23,16 @@ import sqlite3
 class Queries:
     ADD_RECORD = """INSERT INTO {table_name} ({list_fields}) VALUES ({list_values});"""
 
-    UPDATE_RECORD = """UPDATE {table_name} SET {update_values} WHERE {key_field} = {record_id};"""
+    UPDATE_RECORD = (
+        """UPDATE {table_name} SET {update_values} WHERE {key_field} = {record_id};"""
+    )
 
-    CREATE_INDEX = """CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_list});"""
+    CREATE_INDEX = (
+        """CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_list});"""
+    )
 
 
-OSW_FEATURE_QUERY = \
-"""
+OSW_FEATURE_QUERY = """
 SELECT *,
        RUN_ID || '_' || PRECURSOR_ID AS GROUP_ID
 FROM FEATURE_MS2
@@ -52,8 +59,7 @@ ORDER BY RUN_ID,
          FEATURE.EXP_RT ASC;
 """
 
-FETCH_MS1_SCORES = \
-"""
+FETCH_MS1_SCORES = """
 SELECT
     *
 FROM FEATURE_MS1
@@ -62,7 +68,6 @@ WHERE FEATURE_ID = {value};
 
 
 class OSWFile:
-
     def __init__(self, db_path):
 
         self.db_path = db_path
@@ -107,29 +112,29 @@ class OSWFile:
 
         for record in self.iterate_records(query):
 
-            if record['PROTEIN_ACCESSION'] not in proteins:
+            if record["PROTEIN_ACCESSION"] not in proteins:
 
                 protein = Protein(
-                    protein_accession=record['PROTEIN_ACCESSION'],
-                    decoy=record['DECOY'],
-                    q_value=record['Q_VALUE'],
-                    d_score=record['D_SCORE']
+                    protein_accession=record["PROTEIN_ACCESSION"],
+                    decoy=record["DECOY"],
+                    q_value=record["Q_VALUE"],
+                    d_score=record["D_SCORE"],
                 )
 
-                proteins[record['PROTEIN_ACCESSION']] = protein
+                proteins[record["PROTEIN_ACCESSION"]] = protein
 
             else:
 
-                if record['D_SCORE'] > proteins[record['PROTEIN_ACCESSION']].d_score:
+                if record["D_SCORE"] > proteins[record["PROTEIN_ACCESSION"]].d_score:
 
                     protein = Protein(
-                        protein_accession=record['PROTEIN_ACCESSION'],
-                        decoy=record['DECOY'],
-                        q_value=record['Q_VALUE'],
-                        d_score=record['D_SCORE']
+                        protein_accession=record["PROTEIN_ACCESSION"],
+                        decoy=record["DECOY"],
+                        q_value=record["Q_VALUE"],
+                        d_score=record["D_SCORE"],
                     )
 
-                    proteins[record['PROTEIN_ACCESSION']] = protein
+                    proteins[record["PROTEIN_ACCESSION"]] = protein
 
         return proteins
 
@@ -139,31 +144,31 @@ class OSWFile:
 
         for record in self.iterate_records(query):
 
-            if record['MODIFIED_SEQUENCE'] not in peptides:
+            if record["MODIFIED_SEQUENCE"] not in peptides:
 
                 peptide = Peptide(
-                    sequence=record['UNMODIFIED_SEQUENCE'],
-                    modified_sequence=record['MODIFIED_SEQUENCE'],
-                    decoy=record['DECOY'],
-                    q_value=record['Q_VALUE'],
-                    d_score=record['D_SCORE']
+                    sequence=record["UNMODIFIED_SEQUENCE"],
+                    modified_sequence=record["MODIFIED_SEQUENCE"],
+                    decoy=record["DECOY"],
+                    q_value=record["Q_VALUE"],
+                    d_score=record["D_SCORE"],
                 )
 
-                peptides[record['MODIFIED_SEQUENCE']] = peptide
+                peptides[record["MODIFIED_SEQUENCE"]] = peptide
 
             else:
 
-                if record['D_SCORE'] > peptides[record['MODIFIED_SEQUENCE']].d_score:
+                if record["D_SCORE"] > peptides[record["MODIFIED_SEQUENCE"]].d_score:
 
                     peptide = Peptide(
-                        sequence=record['UNMODIFIED_SEQUENCE'],
-                        modified_sequence=record['MODIFIED_SEQUENCE'],
-                        decoy=record['DECOY'],
-                        q_value=record['Q_VALUE'],
-                        d_score=record['D_SCORE']
+                        sequence=record["UNMODIFIED_SEQUENCE"],
+                        modified_sequence=record["MODIFIED_SEQUENCE"],
+                        decoy=record["DECOY"],
+                        q_value=record["Q_VALUE"],
+                        d_score=record["D_SCORE"],
                     )
 
-                    peptides[record['MODIFIED_SEQUENCE']] = peptide
+                    peptides[record["MODIFIED_SEQUENCE"]] = peptide
 
         return peptides
 
@@ -177,23 +182,23 @@ class OSWFile:
 
         for record in self.iterate_records(query):
 
-            if record['PRECURSOR_ID'] not in precursors:
+            if record["PRECURSOR_ID"] not in precursors:
 
                 precursor = Precursor(
-                    precursor_id=record['PRECURSOR_ID'],
-                    charge=record['CHARGE'],
-                    decoy=record['DECOY']
+                    precursor_id=record["PRECURSOR_ID"],
+                    charge=record["CHARGE"],
+                    decoy=record["DECOY"],
                 )
 
-                precursors[record['PRECURSOR_ID']] = precursor
+                precursors[record["PRECURSOR_ID"]] = precursor
 
             peakgroup = PeakGroup(
-                idx=record['FEATURE_ID'],
-                mz=record['MZ'],
-                start_rt=record['RT_START'],
-                rt=record['RT_APEX'],
-                end_rt=record['RT_END'],
-                decoy=record['DECOY']
+                idx=record["FEATURE_ID"],
+                mz=record["MZ"],
+                start_rt=record["RT_START"],
+                rt=record["RT_APEX"],
+                end_rt=record["RT_END"],
+                decoy=record["DECOY"],
             )
 
             for key, value in record.items():
@@ -222,13 +227,13 @@ class OSWFile:
 
                 elif key == "PROTEIN_ACCESSION":
 
-                    precursors[record['PRECURSOR_ID']].protein_accession = value
+                    precursors[record["PRECURSOR_ID"]].protein_accession = value
 
                 elif key == "MODIFIED_SEQUENCE":
 
-                    precursors[record['PRECURSOR_ID']].modified_sequence = value
+                    precursors[record["PRECURSOR_ID"]].modified_sequence = value
 
-            precursors.add_peakgroup(record['PRECURSOR_ID'], peakgroup)
+            precursors.add_peakgroup(record["PRECURSOR_ID"], peakgroup)
 
         print("Cleaning unused score columns.")
 
@@ -260,7 +265,9 @@ class OSWFile:
 
                             del peakgroup.scores[score_name]
 
-                score_lengths[len(peakgroup.scores)] = score_lengths.get(len(peakgroup.scores), 0) + 1
+                score_lengths[len(peakgroup.scores)] = (
+                    score_lengths.get(len(peakgroup.scores), 0) + 1
+                )
 
         return precursors
 
@@ -296,7 +303,7 @@ class OSWFile:
 
         return formatted_records
 
-    def add_records(self, table_name='', records=[]):
+    def add_records(self, table_name="", records=[]):
 
         input_records = list()
 
@@ -313,12 +320,12 @@ class OSWFile:
             input_records.append(tuple(field_values))
 
             if record_num % 1000 == 0 and record_num > 0:
-                holders = ','.join('?' * len(field_names))
+                holders = ",".join("?" * len(field_names))
 
                 add_record_query = Queries.ADD_RECORD.format(
                     table_name=table_name,
-                    list_fields=','.join(field_names),
-                    list_values=holders
+                    list_fields=",".join(field_names),
+                    list_values=holders,
                 )
 
                 cursor = self.conn.cursor()
@@ -330,12 +337,12 @@ class OSWFile:
                 input_records = list()
 
         if input_records:
-            holders = ','.join('?' * len(field_names))
+            holders = ",".join("?" * len(field_names))
 
             add_record_query = Queries.ADD_RECORD.format(
                 table_name=table_name,
-                list_fields=','.join(field_names),
-                list_values=holders
+                list_fields=",".join(field_names),
+                list_values=holders,
             )
 
             cursor = self.conn.cursor()
@@ -346,7 +353,7 @@ class OSWFile:
 
             input_records = list()
 
-    def update_records(self, table_name='', key_field='', records={}):
+    def update_records(self, table_name="", key_field="", records={}):
 
         """
         records = dict()
@@ -357,12 +364,10 @@ class OSWFile:
         index_query = Queries.CREATE_INDEX.format(
             index_name=f"idx_{key_field}_{table_name}",
             table_name=table_name,
-            column_list=key_field
+            column_list=key_field,
         )
 
-        self.run_raw_sql(
-            index_query
-        )
+        self.run_raw_sql(index_query)
 
         input_records = list()
 
@@ -379,9 +384,7 @@ class OSWFile:
 
             field_values.append(record_id)
 
-            input_records.append(
-                field_values
-            )
+            input_records.append(field_values)
 
             if record_num % 1000 == 0 and record_num > 0:
 
@@ -391,32 +394,29 @@ class OSWFile:
 
                 else:
 
-                    formatted_field_names = [f"{field_name}=?" for field_name in field_names]
+                    formatted_field_names = [
+                        f"{field_name}=?" for field_name in field_names
+                    ]
 
-                    formatted_update_string_holder = ', '.join(
-                        formatted_field_names
-                    )
+                    formatted_update_string_holder = ", ".join(formatted_field_names)
 
                 update_record_query = Queries.UPDATE_RECORD.format(
                     table_name=table_name,
                     update_values=formatted_update_string_holder,
                     key_field=key_field,
-                    record_id='?'
+                    record_id="?",
                 )
 
                 cursor = self.conn.cursor()
 
                 try:
 
-                    cursor.executemany(
-                        update_record_query,
-                        input_records
-                    )
+                    cursor.executemany(update_record_query, input_records)
 
                 except sqlite3.OperationalError as e:
 
                     print(update_record_query)
-                    #print(input_records)
+                    # print(input_records)
                     raise e
 
                 self.conn.commit()
@@ -431,27 +431,24 @@ class OSWFile:
 
             else:
 
-                formatted_field_names = [f"{field_name}=?" for field_name in field_names]
+                formatted_field_names = [
+                    f"{field_name}=?" for field_name in field_names
+                ]
 
-                formatted_update_string_holder = ', '.join(
-                    formatted_field_names
-                )
+                formatted_update_string_holder = ", ".join(formatted_field_names)
 
             update_record_query = Queries.UPDATE_RECORD.format(
                 table_name=table_name,
                 update_values=formatted_update_string_holder,
                 key_field=key_field,
-                record_id='?'
+                record_id="?",
             )
 
             cursor = self.conn.cursor()
 
             try:
 
-                cursor.executemany(
-                    update_record_query,
-                    input_records
-                )
+                cursor.executemany(update_record_query, input_records)
 
             except sqlite3.OperationalError as e:
 
@@ -506,25 +503,18 @@ class OSWFile:
 
             for peakgroup in precursor.peakgroups:
                 record = {
-                    'FEATURE_ID': peakgroup.idx,
-                    'PROBABILITY': peakgroup.scores['probability'],
-                    'VOTE_PERCENTAGE': peakgroup.scores['vote_percentage']
+                    "FEATURE_ID": peakgroup.idx,
+                    "PROBABILITY": peakgroup.scores["probability"],
+                    "VOTE_PERCENTAGE": peakgroup.scores["vote_percentage"],
                 }
 
                 records.append(record)
 
-        self.drop_table(
-            'GHOST_SCORE_TABLE'
-        )
+        self.drop_table("GHOST_SCORE_TABLE")
 
-        self.create_table(
-            query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE
-        )
+        self.create_table(query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE)
 
-        self.add_records(
-            table_name='GHOST_SCORE_TABLE',
-            records=records
-        )
+        self.add_records(table_name="GHOST_SCORE_TABLE", records=records)
 
     def add_score_and_q_value_records(self, precursors):
 
@@ -534,27 +524,20 @@ class OSWFile:
 
             for peakgroup in precursor.peakgroups:
                 record = {
-                    'feature_id': peakgroup.idx,
-                    'probability': peakgroup.scores['probability'],
-                    'vote_percentage': peakgroup.scores['vote_percentage'],
-                    'd_score': peakgroup.scores['d_score'],
-                    'q_value': peakgroup.scores['q_value']
+                    "feature_id": peakgroup.idx,
+                    "probability": peakgroup.scores["probability"],
+                    "vote_percentage": peakgroup.scores["vote_percentage"],
+                    "d_score": peakgroup.scores["d_score"],
+                    "q_value": peakgroup.scores["q_value"],
                 }
 
                 records.append(record)
 
-        self.drop_table(
-            'ghost_score_table'
-        )
+        self.drop_table("ghost_score_table")
 
-        self.create_table(
-            query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE
-        )
+        self.create_table(query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE)
 
-        self.add_records(
-            table_name='ghost_score_table',
-            records=records
-        )
+        self.add_records(table_name="ghost_score_table", records=records)
 
     def update_q_value_records(self, precursors):
 
@@ -565,14 +548,12 @@ class OSWFile:
             for peakgroup in precursor.peakgroups:
 
                 records[peakgroup.ghost_score_id] = {
-                    'PROBABILITY': peakgroup.scores['PROBABILITY'],
-                    'VOTE_PERCENTAGE': peakgroup.scores['VOTE_PERCENTAGE'],
-                    'D_SCORE': peakgroup.scores['d_score'],
-                    'Q_VALUE': peakgroup.scores['q_value']
+                    "PROBABILITY": peakgroup.scores["PROBABILITY"],
+                    "VOTE_PERCENTAGE": peakgroup.scores["VOTE_PERCENTAGE"],
+                    "D_SCORE": peakgroup.scores["d_score"],
+                    "Q_VALUE": peakgroup.scores["q_value"],
                 }
 
         self.update_records(
-            table_name='GHOST_SCORE_TABLE',
-            key_field="GHOST_SCORE_ID",
-            records=records
+            table_name="GHOST_SCORE_TABLE", key_field="GHOST_SCORE_ID", records=records
         )

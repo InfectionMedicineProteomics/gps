@@ -46,10 +46,7 @@ class Build:
 
                     else:
 
-                        global_distribution.compare_score(
-                            group.identifier,
-                            group
-                        )
+                        global_distribution.compare_score(group.identifier, group)
 
         print("Fitting distribution...")
         global_distribution.fit()
@@ -58,37 +55,29 @@ class Build:
 
         global_distribution.save(args.output)
 
-
-    def build_subparser(self,
-                        subparser
-    ):
+    def build_subparser(self, subparser):
 
         self.parser = subparser.add_parser(
-            self.name,
-            help="Build q-value scoring models for different contexts."
+            self.name, help="Build q-value scoring models for different contexts."
         )
 
         self.parser.add_argument(
-            '-i',
-            '--input',
-            dest='input_files',
-            help='NPZ files for training scorer',
-            nargs='+'
+            "-i",
+            "--input",
+            dest="input_files",
+            help="NPZ files for training scorer",
+            nargs="+",
         )
 
         self.parser.add_argument(
             "--level",
             dest="level",
-            choices=[
-                "peptide", "protein"
-            ],
-            help="Level to build the scoring distribution."
+            choices=["peptide", "protein"],
+            help="Level to build the scoring distribution.",
         )
 
         self.parser.add_argument(
-            "--output",
-            dest="output",
-            help="Output path for scoring model."
+            "--output", dest="output", help="Output path for scoring model."
         )
 
         self.parser.set_defaults(run=self)
