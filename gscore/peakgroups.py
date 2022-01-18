@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 import numpy as np
 
@@ -8,6 +8,7 @@ from sklearn.utils import shuffle, class_weight  # type: ignore
 from sklearn.metrics import precision_score, recall_score  # type: ignore
 
 from gscore import preprocess
+from gscore.chromatograms import Chromatograms, Chromatogram
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
@@ -18,7 +19,7 @@ class PeakGroup:
     ghost_score_id: str
     idx: str
     mz: float
-    rt: float
+    retention_time: float
     intensity: float
     decoy: int
     target: int
@@ -102,7 +103,10 @@ class Precursor:
     peakgroups: List[PeakGroup]
     scores: Dict[str, float]
     modified_sequence: str
+    unmodified_sequence: str
     protein_accession: str
+    mz: float
+    chromatograms: Union[dict[str, Chromatogram], None]
 
     def __init__(
         self,
@@ -111,7 +115,9 @@ class Precursor:
         decoy=0,
         q_value=None,
         modified_sequence="",
+        unmodified_sequence="",
         protein_accession="",
+        mz=0.0
     ):
 
         self.id = precursor_id
@@ -122,7 +128,31 @@ class Precursor:
         self.peakgroups = []
         self.scores = dict()
         self.modified_sequence = modified_sequence
+        self.unmodified_sequence = unmodified_sequence
         self.protein_accession = protein_accession
+        self.mz = mz
+        self.chromatograms = None
+
+    def set_chromatograms(self, chromatograms: dict[str, Chromatogram]):
+
+        self.chromatograms = chromatograms
+
+    def get_chromatograms(self, min_rt: float, max_rt: float) -> np.ndarray:
+
+        chrom_list = []
+
+        if self.chromatograms:
+
+            for idx, chromatogram in enumerate(self.chromatograms.values()):
+
+                if idx == 0:
+
+                    chrom_list.append(chromatogram.scaled_rts(min_val=min_rt, max_val=max_rt))
+
+                chrom_list.append(chromatogram.normalized_intensities(add_min_max=(0.0, 10.0)))
+
+        return np.array(chrom_list)
+
 
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
@@ -281,6 +311,19 @@ class Precursors:
     def __getitem__(self, item: str) -> Precursor:
 
         return self.precursors[item]
+
+    def get_rt_bounds(self) -> Tuple[float, float]:
+
+        rts = list()
+
+        for precursor in self.precursors.values():
+
+            for peakgroup in precursor.peakgroups:
+
+                rts.append(peakgroup.end_rt)
+                rts.append(peakgroup.start_rt)
+
+        return (np.min(rts), np.max(rts))
 
     def get_peakgroups_by_list(
         self,
@@ -621,7 +664,7 @@ class Precursors:
         return self
 
     def dump_training_data(
-        self, file_path: str, filter_field: str, filter_value: float
+        self, file_path: str, filter_field: str, filter_value: float, chromatograms: Chromatograms
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
