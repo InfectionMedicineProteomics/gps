@@ -664,23 +664,72 @@ class Precursors:
         return self
 
     def dump_training_data(
-        self, file_path: str, filter_field: str, filter_value: float, chromatograms: Chromatograms
+        self, file_path: str, filter_field: str, filter_value: float, use_chromatograms: bool, max_chrom_length: int
     ) -> None:
 
-        positive_labels = self.filter_target_peakgroups(
-            rank=1, sort_key="PROBABILITY", filter_key=filter_field, value=filter_value
-        )
+        if use_chromatograms:
 
-        negative_labels = self.get_decoy_peakgroups(
-            sort_key="PROBABILITY", use_second_ranked=False
-        )
+            min_rt, max_rt = self.get_rt_bounds()
 
-        combined = positive_labels + negative_labels
+            peakgroups = list()
+            chromatograms = list()
 
-        all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
-            combined, include_score_columns=True
-        )
+            for precursor in self.precursors.values():
 
-        with open(file_path, "wb") as npfh:
+                precursor.peakgroups.sort(key=lambda x: x.scores["PROBABILITY"], reverse=True)
 
-            np.savez(npfh, x=all_data_scores, y=all_data_labels)
+                peakgroup = precursor.peakgroups[0]
+
+                chromatogram = precursor.get_chromatograms(min_rt=min_rt, max_rt=max_rt)
+
+                if chromatogram.any():
+
+                    if chromatogram.shape[1] < max_chrom_length:
+
+                        chromatogram = np.concatenate(
+                            (chromatogram, np.zeros((chromatogram.shape[0], max_chrom_length - chromatogram.shape[1]))),
+                            axis=1
+                        )
+
+                    if peakgroup.target == 1 and peakgroup.scores[filter_field] >= filter_value:
+
+                        peakgroups.append(peakgroup)
+                        chromatograms.append(chromatogram)
+
+                    elif peakgroup.target == 0:
+
+                        peakgroups.append(peakgroup)
+                        chromatograms.append(chromatogram)
+
+            all_data_scores, all_data_labels, all_data_indices, all_data_pg_boundaries = preprocess.reformat_chromatogram_data(
+                peakgroups
+            )
+
+            with open(file_path, "wb") as npfh:
+
+                np.savez(npfh,
+                         scores=all_data_scores,
+                         labels=all_data_labels,
+                         boundaries=all_data_pg_boundaries,
+                         chromatograms=np.array(chromatograms)
+                         )
+
+        else:
+
+            positive_labels = self.filter_target_peakgroups(
+                rank=1, sort_key="PROBABILITY", filter_key=filter_field, value=filter_value
+            )
+
+            negative_labels = self.get_decoy_peakgroups(
+                sort_key="PROBABILITY", use_second_ranked=False
+            )
+
+            combined = positive_labels + negative_labels
+
+            all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
+                combined, include_score_columns=True
+            )
+
+            with open(file_path, "wb") as npfh:
+
+                np.savez(npfh, x=all_data_scores, y=all_data_labels)

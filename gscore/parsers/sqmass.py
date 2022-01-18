@@ -25,7 +25,7 @@ FETCH_PEPTIDE_CHROMATOGRAM = """
     """
 
 
-class SqMass(SQLiteFile):
+class SqMassFile(SQLiteFile):
 
 
     def __init__(self, file_path : str):

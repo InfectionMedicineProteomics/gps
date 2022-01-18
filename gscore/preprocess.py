@@ -76,3 +76,34 @@ def reformat_data(peakgroups, include_score_columns=False):
     score_indices = np.array(score_indices, dtype=np.str)
 
     return scores, score_labels, score_indices
+
+def reformat_chromatogram_data(peakgroups):
+
+    scores = list()
+    score_labels = list()
+    score_indices = list()
+    peakgroup_boundaries = list()
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        score_array = np.array(peakgroup.scores['PROBABILITY'])
+        scores.append(score_array)
+
+        peakgroup_boundary = np.array(
+            [
+                peakgroup.start_rt,
+                peakgroup.retention_time,
+                peakgroup.end_rt
+            ]
+        )
+        peakgroup_boundaries.append(peakgroup_boundary)
+
+        score_labels.append([peakgroup.target])
+        score_indices.append(peakgroup.idx)
+
+    scores = np.array(scores, dtype=np.float64)
+    score_labels = np.array(score_labels, dtype=np.float)
+    score_indices = np.array(score_indices, dtype=np.str)
+    peakgroup_boundaries = np.array(peakgroup_boundaries, dtype=np.float)
+
+    return scores, score_labels, score_indices, peakgroup_boundaries
