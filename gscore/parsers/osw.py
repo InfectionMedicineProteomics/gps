@@ -68,6 +68,7 @@ WHERE FEATURE_ID = {value};
 
 
 class OSWFile:
+
     def __init__(self, db_path):
 
         self.db_path = db_path
@@ -186,6 +187,7 @@ class OSWFile:
                     precursor_id=record["PRECURSOR_ID"],
                     charge=record["CHARGE"],
                     decoy=record["DECOY"],
+                    mz=record["MZ"]
                 )
 
                 precursors[record["PRECURSOR_ID"]] = precursor
@@ -230,6 +232,10 @@ class OSWFile:
                 elif key == "MODIFIED_SEQUENCE":
 
                     precursors[record["PRECURSOR_ID"]].modified_sequence = value
+
+                elif key == "UNMODIFIED_SEQUENCE":
+
+                    precursors[record["PRECURSOR_ID"]].unmodified_sequence = value
 
             precursors.add_peakgroup(record["PRECURSOR_ID"], peakgroup)
 

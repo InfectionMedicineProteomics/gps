@@ -73,26 +73,70 @@ class CreateIndex:
     ]
 
 
-class ChromatogramQueries:
-
-    FETCH_PEPTIDE_CHROMATOGRAM = """
-        select
-            PRECURSOR.PEPTIDE_SEQUENCE,
-            PRECURSOR.CHARGE,
-            PRECURSOR.ISOLATION_TARGET PRECURSOR_ISOLATION_TARGET,
-            CHROMATOGRAM.NATIVE_ID,
-            DATA.COMPRESSION,
-            DATA.DATA_TYPE,
-            DATA.DATA,
-            PRODUCT.ISOLATION_TARGET PRODUCT_ISOLATION_TARGET
-        from precursor
-        join CHROMATOGRAM on PRECURSOR.CHROMATOGRAM_ID = CHROMATOGRAM.ID
-        join DATA on CHROMATOGRAM.ID = DATA.CHROMATOGRAM_ID
-        join PRODUCT on CHROMATOGRAM.ID = PRODUCT.CHROMATOGRAM_ID;
-        """
-
 
 class SelectPeakGroups:
+
+
+    FETCH_CHROMATOGRAM_TRAINING_RECORDS = """
+            SELECT
+                *
+            FROM FEATURE_MS2
+            INNER JOIN(
+                SELECT
+                    ID FEATURE_ID,
+                    PRECURSOR_ID PRECURSOR_ID,
+                    EXP_RT RT_APEX,
+                    LEFT_WIDTH RT_START,
+                    RIGHT_WIDTH RT_END
+                from FEATURE
+            ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+            INNER JOIN (
+                SELECT
+                    ID,
+                    CHARGE,
+                    PRECURSOR_MZ MZ,
+                    DECOY
+                FROM PRECURSOR
+            ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+            INNER JOIN (
+                SELECT
+                    FEATURE_ID MS1_FEATURE_ID,
+                    AREA_INTENSITY AREA_INTENSITY_MS1,
+                    APEX_INTENSITY APEX_INTENSITY_MS1,
+                    VAR_MASSDEV_SCORE VAR_MASSDEV_SCORE_MS1,
+                    VAR_MI_SCORE VAR_MI_SCORE_MS1,
+                    VAR_MI_CONTRAST_SCORE VAR_MI_CONTRAST_SCORE_MS1,
+                    VAR_MI_COMBINED_SCORE VAR_MI_COMBINED_SCORE_MS1,
+                    VAR_ISOTOPE_CORRELATION_SCORE VAR_ISOTOPE_CORRELATION_SCORE_MS1,
+                    VAR_ISOTOPE_OVERLAP_SCORE VAR_ISOTOPE_OVERLAP_SCORE_MS1,
+                    VAR_IM_MS1_DELTA_SCORE,
+                    VAR_XCORR_COELUTION VAR_XCORR_COELUTION_MS1,
+                    VAR_XCORR_COELUTION_CONTRAST VAR_XCORR_COELUTION_CONTRAST_MS1,
+                    VAR_XCORR_COELUTION_COMBINED VAR_XCORR_COELUTION_COMBINED_MS1,
+                    VAR_XCORR_SHAPE VAR_XCORR_SHAPE_MS1,
+                    VAR_XCORR_SHAPE_CONTRAST VAR_XCORR_SHAPE_CONTRAST_MS1,
+                    VAR_XCORR_SHAPE_COMBINED VAR_XCORR_SHAPE_COMBINED_MS1
+                FROM FEATURE_MS1
+            ) FEATURE_MS1 ON FEATURE.FEATURE_ID = FEATURE_MS1.MS1_FEATURE_ID
+            INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID = PRECURSOR.ID
+            INNER JOIN (
+                SELECT
+                    ID,
+                    MODIFIED_SEQUENCE,
+                    UNMODIFIED_SEQUENCE
+                FROM PEPTIDE
+            ) PEPTIDE ON PEPTIDE.ID = PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID
+            INNER JOIN (
+                SELECT
+                    GHOST_SCORE_ID,
+                    PROBABILITY,
+                    VOTE_PERCENTAGE,
+                    FEATURE_ID
+                FROM GHOST_SCORE_TABLE
+            ) GHOST_SCORE_TABLE ON FEATURE.FEATURE_ID = GHOST_SCORE_TABLE.FEATURE_ID
+            ORDER BY PRECURSOR.ID ASC,
+                     FEATURE.RT_APEX ASC
+            """
 
     FETCH_DENOIZED_REDUCED = """
         SELECT

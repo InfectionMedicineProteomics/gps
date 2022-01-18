@@ -8,8 +8,6 @@ from torch.utils.data import Dataset
 
 import zlib
 
-from gscore.parsers.sqmass import fetch_chromatograms
-
 import numpy as np
 
 
@@ -31,14 +29,24 @@ class ChromatogramDataType(Enum):
 
 
 class Chromatogram:
-    def __init__(self):
-        self.type = ""
-        self.id = ""
-        self.precursor_mz = 0.0
-        self.mz = 0.0
-        self.rts = None
-        self.intensities = None
-        self.charge = 0
+
+    def __init__(self,
+                 type: str = "",
+                 chrom_id: str = "",
+                 precursor_mz: float = 0.0,
+                 mz: float = 0.0,
+                 rts: np.ndarray = np.array([]),
+                 intensities: np.ndarray = np.array([]),
+                 charge: int = 0,
+                 peptide_sequence: str = ""):
+        self.type = type
+        self.id = chrom_id
+        self.precursor_mz = precursor_mz
+        self.mz = mz
+        self.rts = rts
+        self.intensities = intensities
+        self.charge = charge
+        self.peptide_sequence = peptide_sequence
 
     def _mean_intensity(self):
 
@@ -80,7 +88,9 @@ class Chromatogram:
 
 
 class Chromatograms:
+
     def __init__(self):
+
         self.chromatogram_records = dict()
 
     def __contains__(self, item):
@@ -95,13 +105,36 @@ class Chromatograms:
 
         return self.chromatogram_records[key]
 
+    def __setitem__(self, key, value):
+
+        self.chromatogram_records[key] = value
+
+    def get(self, precursor):
+
+        chromatograms = self.chromatogram_records[f"{precursor.mz}_{precursor.charge}"]
+
+        return_dict = dict()
+
+        for key, chromatogram in chromatograms.items():
+
+            if chromatogram.peptide_sequence == precursor.unmodified_sequence:
+
+                return_dict[key] = chromatogram
+
+        if len(return_dict) > 6:
+
+            return_dict = None
+
+        return return_dict
+
+
     def __get_chromatogram_lengths(self):
 
         chrom_lengths = set()
 
-        for peptide_id, peptide_chromatograms in self.chromatogram_records.items():
+        for chromatograms in self.chromatogram_records.values():
 
-            for record_id, record in peptide_chromatograms.items():
+            for record_id, record in chromatograms.items():
 
                 if record.type != "precursor":
                     chrom_length = len(record.rts)
@@ -111,6 +144,10 @@ class Chromatograms:
 
         return chrom_lengths
 
+    def rt_span(self):
+
+        return np.array(self.__get_chromatogram_lengths())
+
     def min_chromatogram_length(self):
 
         return min(self.__get_chromatogram_lengths())
@@ -119,85 +156,61 @@ class Chromatograms:
 
         return max(self.__get_chromatogram_lengths())
 
-    @staticmethod
-    def decode_data(chromatogram_data, compression_type):
 
-        decoded_data = list()
-
-        if compression_type == CompressionType.NP_LINEAR_ZLIB.value:
-
-            decompressed = bytearray(zlib.decompress(chromatogram_data))
-
-            if len(decompressed) > 0:
-                decoded_data = decode_linear(decompressed)
-            else:
-                decoded_data = [0]
-
-        elif compression_type == CompressionType.NP_SLOF_ZLIB.value:
-
-            decompressed = bytearray(zlib.decompress(chromatogram_data))
-
-            if len(decompressed) > 0:
-                decoded_data = decode_slof(decompressed)
-            else:
-                decoded_data = [0]
-
-        return decoded_data
-
-    @classmethod
-    def from_sqmass_file(cls, file_path: str):
-
-        chromatogram_records = fetch_chromatograms(file_path)
-
-        chromatograms = Chromatograms()
-
-        chromatogram_ids: Dict[str, Dict[str, Chromatogram]] = dict()
-
-        for record in chromatogram_records:
-
-            peptide_id = f"{record['PEPTIDE_SEQUENCE']}_{record['CHARGE']}"
-
-            if peptide_id not in chromatogram_ids:
-
-                chromatogram_ids[peptide_id] = dict()
-
-            if record["NATIVE_ID"] not in chromatogram_ids[peptide_id]:
-
-                chromatogram_record = Chromatogram()
-
-                chromatogram_record.id = record["NATIVE_ID"]
-
-                if "Precursor" in record["NATIVE_ID"]:
-                    chromatogram_record.type = "precursor"
-                else:
-                    chromatogram_record.type = "fragment"
-
-                chromatogram_record.mz = record["PRODUCT_ISOLATION_TARGET"]
-                chromatogram_record.precursor_mz = record["PRECURSOR_ISOLATION_TARGET"]
-                chromatogram_record.charge = int(record["CHARGE"])
-
-                chromatogram_ids[peptide_id][
-                    chromatogram_record.id
-                ] = chromatogram_record
-
-            data_type = record["DATA_TYPE"]
-
-            decoded_data = Chromatograms.decode_data(
-                chromatogram_data=record["DATA"], compression_type=record["COMPRESSION"]
-            )
-
-            if data_type == ChromatogramDataType.RT.value:
-                chromatogram_ids[peptide_id][record["NATIVE_ID"]].rts = np.asarray(
-                    decoded_data
-                )
-            elif data_type == ChromatogramDataType.INT.value:
-                chromatogram_ids[peptide_id][
-                    record["NATIVE_ID"]
-                ].intensities = np.asarray(decoded_data)
-
-        chromatograms.chromatogram_records = chromatogram_ids
-
-        return chromatograms
+    # @classmethod
+    # def from_sqmass_file(cls, file_path: str):
+    #
+    #     chromatogram_records = fetch_chromatograms(file_path)
+    #
+    #     chromatograms = Chromatograms()
+    #
+    #     chromatogram_ids: Dict[str, Dict[str, Chromatogram]] = dict()
+    #
+    #     for record in chromatogram_records:
+    #
+    #         peptide_id = f"{record['PEPTIDE_SEQUENCE']}_{record['CHARGE']}"
+    #
+    #         if peptide_id not in chromatogram_ids:
+    #
+    #             chromatogram_ids[peptide_id] = dict()
+    #
+    #         if record["NATIVE_ID"] not in chromatogram_ids[peptide_id]:
+    #
+    #             chromatogram_record = Chromatogram()
+    #
+    #             chromatogram_record.id = record["NATIVE_ID"]
+    #
+    #             if "Precursor" in record["NATIVE_ID"]:
+    #                 chromatogram_record.type = "precursor"
+    #             else:
+    #                 chromatogram_record.type = "fragment"
+    #
+    #             chromatogram_record.mz = record["PRODUCT_ISOLATION_TARGET"]
+    #             chromatogram_record.precursor_mz = record["PRECURSOR_ISOLATION_TARGET"]
+    #             chromatogram_record.charge = int(record["CHARGE"])
+    #
+    #             chromatogram_ids[peptide_id][
+    #                 chromatogram_record.id
+    #             ] = chromatogram_record
+    #
+    #         data_type = record["DATA_TYPE"]
+    #
+    #         decoded_data = Chromatograms.decode_data(
+    #             chromatogram_data=record["DATA"], compression_type=record["COMPRESSION"]
+    #         )
+    #
+    #         if data_type == ChromatogramDataType.RT.value:
+    #             chromatogram_ids[peptide_id][record["NATIVE_ID"]].rts = np.asarray(
+    #                 decoded_data
+    #             )
+    #         elif data_type == ChromatogramDataType.INT.value:
+    #             chromatogram_ids[peptide_id][
+    #                 record["NATIVE_ID"]
+    #             ].intensities = np.asarray(decoded_data)
+    #
+    #     chromatograms.chromatogram_records = chromatogram_ids
+    #
+    #     return chromatograms
 
 
 class ChromatogramDataset(Dataset):
@@ -333,3 +346,28 @@ class ChromatogramDataset(Dataset):
             chromatograms_transformed.double().T,
             torch.tensor(label).double(),
         )
+
+
+def decode_data(chromatogram_data, compression_type):
+
+    decoded_data = list()
+
+    if compression_type == CompressionType.NP_LINEAR_ZLIB.value:
+
+        decompressed = bytearray(zlib.decompress(chromatogram_data))
+
+        if len(decompressed) > 0:
+            decoded_data = decode_linear(decompressed)
+        else:
+            decoded_data = [0]
+
+    elif compression_type == CompressionType.NP_SLOF_ZLIB.value:
+
+        decompressed = bytearray(zlib.decompress(chromatogram_data))
+
+        if len(decompressed) > 0:
+            decoded_data = decode_slof(decompressed)
+        else:
+            decoded_data = [0]
+
+    return decoded_data
