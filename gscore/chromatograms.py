@@ -10,6 +10,8 @@ import zlib
 
 import numpy as np
 
+from scipy.interpolate import interp1d
+
 
 class CompressionType(Enum):
     NO = 0
@@ -82,9 +84,44 @@ class Chromatogram:
 
         return normalized_values
 
+    def scaled_intensities(self, min: float, max: float):
+
+        min_intensity = self.intensities.min()
+        max_intensity = self.intensities.max()
+
+        scaled_intensities = min + (
+            ((self.intensities - min_intensity) * (max - min)) / (max_intensity - min_intensity)
+        )
+
+        return np.nan_to_num(scaled_intensities, nan=0.0)
+
+
     def scaled_rts(self, min_val, max_val, a=0.0, b=100.0):
 
         return a + (((self.rts - min_val) * (b - a)) / (max_val - min_val))
+
+    def interpolated_intensities(self, num_steps):
+
+        spline = interp1d(
+            x=self.rts,
+            y=self.intensities
+        )
+
+        new_rt_steps = np.linspace(
+            self.rts.min(),
+            self.rts.max(),
+            num_steps
+        )
+
+        return spline(new_rt_steps)
+
+    def interpolated_rt(self, num_steps):
+
+        return np.linspace(
+            self.rts.min(),
+            self.rts.max(),
+            num_steps
+        )
 
 
 class Chromatograms:

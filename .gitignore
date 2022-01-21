@@ -17,3 +17,6 @@ build/*
 .ipynb_checkpoints
 
 .mypy*
+
+
+notebooks/lightning_logs/
