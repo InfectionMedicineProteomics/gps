@@ -29,8 +29,6 @@ class SQLiteFile:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        print(exc_type, exc_val, exc_tb)
-
         self.conn.close()
 
     def iterate_records(self, query: str):

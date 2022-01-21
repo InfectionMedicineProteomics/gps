@@ -77,33 +77,33 @@ def reformat_data(peakgroups, include_score_columns=False):
 
     return scores, score_labels, score_indices
 
-def reformat_chromatogram_data(peakgroups):
+def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"], use_interpolated_chroms=False, use_relative_intensities=False):
 
     scores = list()
     score_labels = list()
     score_indices = list()
-    peakgroup_boundaries = list()
+    chromatograms = list()
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = np.array(peakgroup.scores['PROBABILITY'])
-        scores.append(score_array)
+        score_array = np.array([peakgroup.scores[score] for score in include_scores])
 
-        peakgroup_boundary = np.array(
-            [
-                peakgroup.start_rt,
-                peakgroup.retention_time,
-                peakgroup.end_rt
-            ]
-        )
-        peakgroup_boundaries.append(peakgroup_boundary)
+        scores.append(score_array)
 
         score_labels.append([peakgroup.target])
         score_indices.append(peakgroup.idx)
 
+        peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
+            interpolated=use_interpolated_chroms,
+            use_relative_intensities=use_relative_intensities
+        )
+
+        chromatograms.append(peakgroup_chromatograms)
+
+
     scores = np.array(scores, dtype=np.float64)
     score_labels = np.array(score_labels, dtype=np.float)
     score_indices = np.array(score_indices, dtype=np.str)
-    peakgroup_boundaries = np.array(peakgroup_boundaries, dtype=np.float)
+    chromatograms = np.array(chromatograms, dtype=np.float)
 
-    return scores, score_labels, score_indices, peakgroup_boundaries
+    return scores, score_labels, score_indices, chromatograms

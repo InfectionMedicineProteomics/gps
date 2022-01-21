@@ -85,8 +85,6 @@ class OSWFile:
 
         self.conn.row_factory = sqlite3.Row
 
-        self
-
     def __enter__(self):
         return self
 
