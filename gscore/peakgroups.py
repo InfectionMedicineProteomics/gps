@@ -763,7 +763,7 @@ class Precursors:
 
         if use_chromatograms:
 
-            all_data_scores, all_data_labels, all_data_indices, all_data_pg_boundaries = preprocess.reformat_chromatogram_data(
+            all_data_scores, all_data_labels, all_data_indices, all_chromatograms = preprocess.reformat_chromatogram_data(
                 combined,
                 include_scores=["PROBABILITY"],
                 use_relative_intensities=use_relateive_intensities,
@@ -774,8 +774,7 @@ class Precursors:
                 np.savez(npfh,
                          scores=all_data_scores,
                          labels=all_data_labels,
-                         boundaries=all_data_pg_boundaries,
-                         chromatograms=np.array(chromatograms)
+                         chromatograms=all_chromatograms
                          )
 
         else:

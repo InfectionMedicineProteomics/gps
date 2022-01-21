@@ -84,22 +84,33 @@ def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"
     score_indices = list()
     chromatograms = list()
 
+    skipped_peakgroups = 0
+
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = np.array([peakgroup.scores[score] for score in include_scores])
+        if peakgroup.chromatograms:
 
-        scores.append(score_array)
+            score_array = np.array([peakgroup.scores[score] for score in include_scores])
 
-        score_labels.append([peakgroup.target])
-        score_indices.append(peakgroup.idx)
+            scores.append(score_array)
 
-        peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
-            interpolated=use_interpolated_chroms,
-            use_relative_intensities=use_relative_intensities
-        )
+            score_labels.append([peakgroup.target])
+            score_indices.append(peakgroup.idx)
 
-        chromatograms.append(peakgroup_chromatograms)
+            peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
+                interpolated=use_interpolated_chroms,
+                use_relative_intensities=use_relative_intensities
+            )
 
+            chromatograms.append(peakgroup_chromatograms)
+
+        else:
+
+            skipped_peakgroups += 1
+
+    if skipped_peakgroups > 0:
+
+        print(f"[WARNING] Skipped {skipped_peakgroups} with no found chromatograms.")
 
     scores = np.array(scores, dtype=np.float64)
     score_labels = np.array(score_labels, dtype=np.float)

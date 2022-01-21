@@ -18,17 +18,19 @@ class Export:
 
     def __call__(self, args: argparse.Namespace):
 
+        print(args.__dict__)
+
         with OSWFile(args.input) as osw_file:
 
             print(f"Parsing {args.input}")
 
+            precursors = osw_file.parse_to_precursors(
+                query=queries.SelectPeakGroups.FETCH_CHROMATOGRAM_TRAINING_RECORDS
+            )
+
             use_chromatograms: bool = False
 
             if args.chromatogram_file:
-
-                precursors = osw_file.parse_to_precursors(
-                    query=queries.SelectPeakGroups.FETCH_CHROMATOGRAM_TRAINING_RECORDS
-                )
 
                 print("Parsing Chromatograms...")
 
@@ -38,19 +40,10 @@ class Export:
 
                 print("Matching chromatograms with precursors...")
 
-                for precursor in precursors:
-
-                    precursor.set_chromatograms(
-                        chromatograms=chromatograms.get(precursor)
-                    )
+                precursors.set_chromatograms(chromatograms)
 
                 use_chromatograms = True
 
-            else:
-
-                precursors = osw_file.parse_to_precursors(
-                    query=queries.SelectPeakGroups.FETCH_DENOIZED_REDUCED
-                )
 
             print(f"Filtering and writing output.")
 
@@ -59,7 +52,8 @@ class Export:
                 filter_field=args.filter_field,
                 filter_value=args.filter_value,
                 use_chromatograms=use_chromatograms,
-                max_chrom_length=chromatograms.max_chromatogram_length()
+                use_interpolated_chroms=args.use_interpolated_chroms,
+                use_relateive_intensities=args.use_relative_intensities
             )
 
     def build_subparser(self, subparser):
@@ -100,6 +94,20 @@ class Export:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             default=""
+        )
+
+        self.parser.add_argument(
+            "--use-interpolated-chroms",
+            dest="use_interpolated_chroms",
+            help="Export interpolated chromatograms of a uniform length.",
+            action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--use-relative-intensities",
+            dest="use_relative_intensities",
+            help="Scale each chromatogram to use relative intensities.",
+            action="store_true"
         )
 
         self.parser.set_defaults(run=self)
