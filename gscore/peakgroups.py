@@ -81,7 +81,8 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self, scaled=False, interpolated=False, num_rt_steps=25, use_relative_intensities=False):
+    def get_chromatogram_intensity_arrays(self, scaled=False, interpolated=False, num_rt_steps=25,
+                                          use_relative_intensities=False):
 
         intensities = list()
 
@@ -108,7 +109,7 @@ class PeakGroup:
 
             intensities = intensities / intensities.max()
 
-        return intensities
+        return intensities[intensities.mean(axis=1).argsort()]
 
 
     def add_score_column(self, key, value):
