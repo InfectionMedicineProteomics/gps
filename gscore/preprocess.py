@@ -102,7 +102,7 @@ def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"
                 use_relative_intensities=use_relative_intensities
             )
 
-            chromatograms.append(peakgroup_chromatograms)
+            chromatograms.append(peakgroup_chromatograms.reshape(1, 6, 25))
 
         else:
 

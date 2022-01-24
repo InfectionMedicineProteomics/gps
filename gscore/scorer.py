@@ -18,6 +18,8 @@ import numpy as np
 
 import torch
 
+import pytorch_lightning as pl
+
 MODELS = {"adaboost": AdaBoostClassifier}
 
 
@@ -466,3 +468,114 @@ class ChromatogramProbabilityModel(nn.Module):
         probabilities = torch.sigmoid(out)
 
         return (probabilities > 0.5).double()
+
+class DeepChromConvLSTMModel(pl.LightningModule):
+
+    def __init__(self, n_features, sequence_length):
+
+        super().__init__()
+
+        self.conv1d = nn.Conv1d(
+            in_channels=n_features,
+            out_channels=7,
+            kernel_size=(3,),
+            stride=(1,),
+            padding="same",
+        )
+
+        self.n_features = n_features
+        self.sequence_length = sequence_length
+
+        self.layer_dim = 2
+        self.hidden_dim = 20
+
+        self.rnn = nn.LSTM(
+            input_size=n_features,
+            hidden_size=self.hidden_dim,
+            num_layers=self.layer_dim,
+            batch_first=True,
+            dropout=0.2,
+            bidirectional=True
+        )
+
+        self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3 + 1, 42)
+        self.linear_2 = nn.Linear(42, 42)
+        self.linear_3 = nn.Linear(42, 1)
+
+    def configure_optimizers(self):
+
+        optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=1e-3
+        )
+
+        return optimizer
+
+    def training_step(self, batch, batch_idx):
+
+        chromatograms, peakgroup_boundaries, scores, labels = batch
+
+        y_hat = self(chromatograms, peakgroup_boundaries, scores)
+
+        loss = F.binary_cross_entropy(
+            y_hat,
+            labels
+        )
+
+        self.log(
+            "train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True
+        )
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+
+        chromatograms, peakgroup_boundaries, scores, labels = batch
+
+        y_hat = self(chromatograms, peakgroup_boundaries, scores)
+
+        loss = F.binary_cross_entropy(
+            y_hat,
+            labels
+        )
+
+        return loss
+
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+
+        chromatograms, peakgroup_boundaries, scores = batch
+
+        return self(chromatograms, peakgroup_boundaries, scores)
+
+    def forward(self, chromatogram, peakgroup, score):
+
+        batch_size, seq_len, _ = chromatogram.size()
+
+        out = self.conv1d(chromatogram)
+
+        out = out.permute(0, 2, 1)
+
+        out, _ = self.rnn(out)
+
+        out = out.contiguous().view(batch_size, -1)
+
+        out = torch.cat((out, peakgroup, score), 1)
+
+        out = self.linear(out)
+
+        out = F.relu(out)
+
+        out = self.linear_2(out)
+
+        out = F.relu(out)
+
+        out = self.linear_3(out)
+
+        out = torch.sigmoid(out)
+
+        return out
