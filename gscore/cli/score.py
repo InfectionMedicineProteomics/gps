@@ -2,7 +2,9 @@ import argparse
 
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
+from gscore.parsers.sqmass import SqMassFile
 
+from pyopenms import OSWFile
 
 class Score:
 
@@ -22,6 +24,22 @@ class Score:
             precursors = osw_conn.parse_to_precursors(
                 query=SelectPeakGroups.FETCH_FEATURES_REDUCED
             )
+
+            use_chromatograms: bool = False
+
+            if args.chromatogram_file:
+
+                print("Parsing Chromatograms...")
+
+                with SqMassFile(args.chromatogram_file) as chrom_file:
+
+                    chromatograms = chrom_file.parse()
+
+                print("Matching chromatograms with precursors...")
+
+                precursors.set_chromatograms(chromatograms)
+
+                use_chromatograms = True
 
             print("Denoising...")
 

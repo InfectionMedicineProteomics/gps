@@ -20,7 +20,7 @@ def get_training_data_from_npz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
 
     npzfile = np.load(file_path)
 
-    return npzfile["x"], npzfile["y"]
+    return npzfile
 
 
 def get_training_data(folds: List[np.ndarray], fold_num: int):
@@ -77,7 +77,7 @@ def reformat_data(peakgroups, include_score_columns=False):
 
     return scores, score_labels, score_indices
 
-def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"], use_interpolated_chroms=False, use_relative_intensities=False):
+def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"], use_interpolated_chroms=False, use_relative_intensities=False, training=True):
 
     scores = list()
     score_labels = list()
@@ -106,11 +106,31 @@ def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"
 
         else:
 
+            if not training:
+
+                score_array = np.array([peakgroup.scores[score] for score in include_scores])
+
+                scores.append(score_array)
+
+                score_labels.append([peakgroup.target])
+                score_indices.append(peakgroup.idx)
+
+                peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
+
+                chromatograms.append(peakgroup_chromatograms)
+
             skipped_peakgroups += 1
 
     if skipped_peakgroups > 0:
 
-        print(f"[WARNING] Skipped {skipped_peakgroups} with no found chromatograms.")
+        if training:
+
+            print(f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found.")
+
+        else:
+
+            print(
+                f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring")
 
     scores = np.array(scores, dtype=np.float64)
     score_labels = np.array(score_labels, dtype=np.float)
