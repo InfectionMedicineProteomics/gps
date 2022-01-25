@@ -9,6 +9,7 @@ from sklearn.metrics import precision_score, recall_score  # type: ignore
 
 from gscore import preprocess
 from gscore.chromatograms import Chromatograms, Chromatogram
+from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
 from gscore.scorer import Scorer
@@ -107,7 +108,9 @@ class PeakGroup:
 
         if use_relative_intensities:
 
-            intensities = intensities / intensities.max()
+            if intensities.max() != 0.0:
+
+                intensities = intensities / intensities.max()
 
         return intensities[intensities.mean(axis=1).argsort()]
 
@@ -681,25 +684,50 @@ class Precursors:
 
         return self
 
-    def score_run(self, model_path: str, scaler_path: str):
+    def score_run(self, model_path: str, scaler_path: str,
+                  use_chromatograms: bool, threads: int,
+                  gpus: int, use_relative_intensities: bool, use_interpolated_chroms: bool):
 
-        scoring_model = Scorer()
 
-        scoring_model.load(model_path)
+        if scaler_path:
 
-        pipeline = Scaler()
+            scoring_model = Scorer()
 
-        pipeline.load(scaler_path)
+            scoring_model.load(model_path)
+
+            pipeline = Scaler()
+
+            pipeline.load(scaler_path)
 
         all_peakgroups = self.get_all_peakgroups()
 
-        all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
-            all_peakgroups, include_score_columns=True
-        )
+        if use_chromatograms:
 
-        all_data_scores = pipeline.transform(all_data_scores)
+            scoring_model = DeepChromScorer(
+                max_epochs=1,
+                gpus=gpus,
+                threads=threads
+            )
 
-        model_scores = scoring_model.score(all_data_scores)
+            scoring_model.load(model_path)
+
+            _, _, _, all_data = preprocess.reformat_chromatogram_data(
+                all_peakgroups,
+                include_scores=[],
+                use_relative_intensities=use_relative_intensities,
+                use_interpolated_chroms=use_interpolated_chroms,
+                training=False
+            )
+
+        else:
+
+            all_data, _, _ = preprocess.reformat_data(
+                all_peakgroups, include_score_columns=True
+            )
+
+            all_data = pipeline.transform(all_data)
+
+        model_scores = scoring_model.score(all_data)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 

@@ -4,8 +4,6 @@ from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
 from gscore.parsers.sqmass import SqMassFile
 
-from pyopenms import OSWFile
-
 class Score:
 
     name: str
@@ -26,6 +24,7 @@ class Score:
             )
 
             use_chromatograms: bool = False
+            include_denoise: bool = False
 
             if args.chromatogram_file:
 
@@ -41,18 +40,32 @@ class Score:
 
                 use_chromatograms = True
 
-            print("Denoising...")
+                print("Scoring...")
 
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_percentage=args.vote_percentage,
+            else:
+
+                print("Denoising...")
+
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_percentage=args.vote_percentage,
+                )
+
+                include_denoise = True
+
+                print("Scoring...")
+
+            precursors.score_run(
+                model_path=args.scoring_model,
+                scaler_path=args.scaler,
+                use_chromatograms=use_chromatograms,
+                threads=args.threads,
+                gpus=args.gpus,
+                use_relative_intensities=args.use_relative_intensities,
+                use_interpolated_chroms=args.use_interpolated_chroms
             )
-
-            print("Scoring...")
-
-            precursors.score_run(model_path=args.scoring_model, scaler_path=args.scaler)
 
             print("Calculating Q Values")
 
@@ -60,7 +73,10 @@ class Score:
 
             print("Updating Q Values in PQP file")
 
-            osw_conn.add_score_and_q_value_records(precursors)
+            osw_conn.add_score_and_q_value_records(
+                precursors,
+                include_denoise=include_denoise
+            )
 
             print("Done!")
 
@@ -71,6 +87,15 @@ class Score:
         )
 
         self.parser.add_argument("-i", "--input", help="OSW file to process", type=str)
+
+        self.parser.add_argument(
+            "-c",
+            "--chromatogram-file",
+            dest="chromatogram_file",
+            help="File containing chromatograms associated with the peakgroups.",
+            type=str,
+            default=""
+        )
 
         self.parser.add_argument(
             "--scoring-model",
@@ -84,6 +109,7 @@ class Score:
             dest="scaler",
             help="Path to scaler to transform data.",
             type=str,
+            default=""
         )
 
         self.parser.add_argument(
@@ -116,6 +142,28 @@ class Score:
             help="The number of threads to use",
             default=1,
             type=int,
+        )
+
+        self.parser.add_argument(
+            "--gpus",
+            dest="gpus",
+            type=int,
+            help="Number of GPUs to use to train model.",
+            default=1
+        )
+
+        self.parser.add_argument(
+            "--use-interpolated-chroms",
+            dest="use_interpolated_chroms",
+            help="Export interpolated chromatograms of a uniform length.",
+            action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--use-relative-intensities",
+            dest="use_relative_intensities",
+            help="Scale each chromatogram to use relative intensities.",
+            action="store_true"
         )
 
         self.parser.set_defaults(run=self)

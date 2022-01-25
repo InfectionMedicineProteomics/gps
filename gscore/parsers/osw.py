@@ -518,20 +518,30 @@ class OSWFile:
 
         self.add_records(table_name="GHOST_SCORE_TABLE", records=records)
 
-    def add_score_and_q_value_records(self, precursors):
+    def add_score_and_q_value_records(self, precursors, include_denoise=False):
 
         records = list()
 
         for precursor in precursors.precursors.values():
 
             for peakgroup in precursor.peakgroups:
-                record = {
-                    "feature_id": peakgroup.idx,
-                    "probability": peakgroup.scores["probability"],
-                    "vote_percentage": peakgroup.scores["vote_percentage"],
-                    "d_score": peakgroup.scores["d_score"],
-                    "q_value": peakgroup.scores["q_value"],
-                }
+
+                if include_denoise:
+                    record = {
+                        "feature_id": peakgroup.idx,
+                        "probability": peakgroup.scores["probability"],
+                        "vote_percentage": peakgroup.scores["vote_percentage"],
+                        "d_score": peakgroup.scores["d_score"],
+                        "q_value": peakgroup.scores["q_value"],
+                    }
+
+                else:
+
+                    record = {
+                        "feature_id": peakgroup.idx,
+                        "d_score": peakgroup.scores["d_score"],
+                        "q_value": peakgroup.scores["q_value"],
+                    }
 
                 records.append(record)
 
