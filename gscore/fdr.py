@@ -6,7 +6,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline  # type: ignore
 
 from sklearn.neighbors import KernelDensity  # type: ignore
 
-from typing import TypeVar, Generic, Dict, Tuple, Union
+from typing import TypeVar, Dict, Union
 
 from joblib import dump, load  # type: ignore
 

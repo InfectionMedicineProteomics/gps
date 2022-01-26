@@ -72,7 +72,7 @@ class DeepChromScorer(Scorer):
 
         self.trainer.fit(
             self.model,
-            train_dataloader=chromatogram_dataloader,
+            train_dataloaders=chromatogram_dataloader,
             val_dataloaders=validation_dataloader
         )
 
@@ -96,11 +96,19 @@ class DeepChromScorer(Scorer):
             dataloaders=prediction_dataloader
         )
 
-        predictions = torch.cat(predictions, 0).numpy()
+        predictions = torch.cat(predictions, 0)
+
+        probabilities = torch.sigmoid(predictions).numpy()
+
+        # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
+        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
+
+        predictions = np.log(probabilities / (1.0 - probabilities))
 
         return predictions
 
     def probability(self, data: np.ndarray) -> np.ndarray:
+
         return torch.sigmoid(
             torch.from_numpy(self.score(data)).type(torch.FloatTensor)
         ).numpy()
@@ -226,6 +234,7 @@ class DeepChromModel(pl.LightningModule):
         })
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
+
         chromatograms, = batch
 
         return self(chromatograms)
