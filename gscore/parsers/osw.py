@@ -69,19 +69,21 @@ WHERE FEATURE_ID = {value};
 
 class OSWFile:
 
-    def __init__(self, db_path):
+    def __init__(self, db_path, set_indices=False):
 
         self.db_path = db_path
 
         self.conn = sqlite3.connect(self.db_path)
 
-        for sql_index in CreateIndex.ALL_INDICES:
+        if set_indices:
 
-            self.run_raw_sql(sql_index)
+            for sql_index in CreateIndex.ALL_INDICES:
 
-        if "GHOST_SCORE_TABLE" in self:
+                self.run_raw_sql(sql_index)
 
-            self.run_raw_sql(CreateIndex.CREATE_GHOST_SCORE_IDX)
+            if "GHOST_SCORE_TABLE" in self:
+
+                self.run_raw_sql(CreateIndex.CREATE_GHOST_SCORE_IDX)
 
         self.conn.row_factory = sqlite3.Row
 
