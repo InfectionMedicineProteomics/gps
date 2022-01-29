@@ -816,7 +816,11 @@ class Precursors:
 
             with open(file_path, "wb") as npfh:
 
-                np.savez(npfh, x=all_data_scores, y=all_data_labels)
+                np.savez(
+                    npfh,
+                    scores=all_data_scores,
+                    labels=all_data_labels
+                )
 
 
 if __name__ == '__main__':
