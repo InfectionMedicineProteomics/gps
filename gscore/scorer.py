@@ -40,6 +40,9 @@ class Scorer:
 
         probabilities = self.model.predict_proba(data)[:, 1]
 
+        # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
+        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
+
         return np.log(probabilities / (1 - probabilities))
 
     def save(self, model_path: str):
