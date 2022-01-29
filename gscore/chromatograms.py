@@ -40,7 +40,9 @@ class Chromatogram:
                  rts: np.ndarray = np.array([]),
                  intensities: np.ndarray = np.array([]),
                  charge: int = 0,
-                 peptide_sequence: str = ""):
+                 peptide_sequence: str = "",
+                 start_rt: float = 0.0,
+                 end_rt: float = 0.0):
         self.type = type
         self.id = chrom_id
         self.precursor_mz = precursor_mz
@@ -49,6 +51,8 @@ class Chromatogram:
         self.intensities = intensities
         self.charge = charge
         self.peptide_sequence = peptide_sequence
+        self.start_rt = start_rt
+        self.end_rt = end_rt
 
     def _mean_intensity(self):
 
@@ -107,19 +111,34 @@ class Chromatogram:
             y=self.intensities
         )
 
+        start_rt = self.start_rt
+        end_rt = self.end_rt
+
+        if start_rt < self.rts.min():
+
+            start_rt = self.rts.min()
+
+        if end_rt > self.rts.max():
+
+            end_rt = self.rts.max()
+
         new_rt_steps = np.linspace(
-            self.rts.min(),
-            self.rts.max(),
+            start_rt,
+            end_rt,
             num_steps
         )
 
-        return spline(new_rt_steps)
+        try:
+            return spline(new_rt_steps)
+        except ValueError as e:
+            print(spline(new_rt_steps))
+            raise e
 
     def interpolated_rt(self, num_steps):
 
         return np.linspace(
-            self.rts.min(),
-            self.rts.max(),
+            self.start_rt,
+            self.end_rt,
             num_steps
         )
 

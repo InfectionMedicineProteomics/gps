@@ -404,7 +404,9 @@ class Precursors:
                             chrom_id=key,
                             precursor_mz=peakgroup.mz,
                             intensities=chrom.intensities[indices],
-                            rts=chrom.rts[indices]
+                            rts=chrom.rts[indices],
+                            start_rt=peakgroup.start_rt,
+                            end_rt=peakgroup.end_rt
                         )
 
                         peakgroup_chromatograms[key] = peakgroup_chromatogram

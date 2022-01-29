@@ -18,8 +18,6 @@ class Export:
 
     def __call__(self, args: argparse.Namespace):
 
-        print(args.__dict__)
-
         with OSWFile(args.input) as osw_file:
 
             print(f"Parsing {args.input}")
