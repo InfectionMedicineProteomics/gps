@@ -125,9 +125,11 @@ class PeakGroup:
 
         if include_score_columns:
 
-            for score_value in self.scores.values():
+            for score_column, score_value in self.scores.items():
 
-                score_values.append(score_value)
+                if score_column != "VOTE_PERCENTAGE":
+
+                    score_values.append(score_value)
 
         else:
 
