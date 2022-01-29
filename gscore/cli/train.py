@@ -55,7 +55,10 @@ class Train:
 
         combined_data = np.concatenate(combined_data)
         combined_labels = np.concatenate(combined_labels)
-        combined_chromatograms = np.concatenate(combined_chromatograms)
+
+        if combined_chromatograms:
+
+            combined_chromatograms = np.concatenate(combined_chromatograms)
 
         if args.train_deep_chromatogram_model:
 
