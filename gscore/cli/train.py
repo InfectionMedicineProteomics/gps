@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split  # type: ignore
 from sklearn.utils import class_weight  # type: ignore
 
 from gscore import preprocess
+from gscore.models.deep_chrom_feature_classifier import DeepChromFeatureScorer
 from gscore.models.deep_chromatogram_classifier import DeepChromModel, DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.scorer import XGBoostScorer
@@ -64,11 +65,14 @@ class Train:
 
             self.train_deep_model(
                 combined_chromatograms,
+                combined_data,
                 combined_labels,
                 args.model_output,
+                args.scaler_output,
                 args.threads,
                 args.gpus,
-                args.epochs
+                args.epochs,
+                args.include_score_columns
             )
 
         else:
@@ -80,36 +84,82 @@ class Train:
                 args.scaler_output
             )
 
-    def train_deep_model(self, combined_chromatograms, combined_labels, model_output, threads, gpus, epochs):
+    def train_deep_model(self, combined_chromatograms, combined_scores, combined_labels, model_output, scaler_output, threads, gpus, epochs, include_score_columns):
 
-        training_data, testing_data, training_labels, testing_labels = train_test_split(
-            combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
-        )
+        if include_score_columns:
 
-        model = DeepChromScorer(
-            threads=threads,
-            max_epochs=epochs,
-            gpus=gpus
-        )
+            scaler = Scaler()
 
-        print("Training model...")
+            training_chromatograms, testing_chromatograms, training_scores, testing_scores, training_labels, testing_labels = train_test_split(
+                combined_chromatograms, combined_scores, combined_labels, test_size=0.2, shuffle=True
+            )
 
-        model.fit(
-            data=training_data,
-            labels=training_labels
-        )
+            model = DeepChromFeatureScorer(
+                threads=threads,
+                max_epochs=epochs,
+                gpus=gpus,
+                num_features=combined_scores.shape[1]
+            )
 
-        print("Saving model...")
+            print("Training model...")
 
-        model.save(
-            model_output
-        )
+            training_scores = scaler.fit_transform(training_scores)
 
-        print("Testing model...")
+            model.fit(
+                chromatograms=training_chromatograms,
+                scores=training_scores,
+                labels=training_labels
+            )
 
-        roc_auc = model.evaluate(testing_data, testing_labels)
+            print("Saving model...")
 
-        print(f"ROC-AUC: {roc_auc}")
+            model.save(
+                model_output
+            )
+
+            scaler.save(scaler_output)
+
+            print("Testing model...")
+
+            roc_auc = model.evaluate(
+                testing_chromatograms,
+                testing_scores,
+                testing_labels
+            )
+
+            print(f"ROC-AUC: {roc_auc}")
+
+        else:
+
+            training_data, testing_data, training_labels, testing_labels = train_test_split(
+                combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
+            )
+
+            model = DeepChromScorer(
+                threads=threads,
+                max_epochs=epochs,
+                gpus=gpus
+            )
+
+            print("Training model...")
+
+            model.fit(
+                data=training_data,
+                labels=training_labels
+            )
+
+            print("Saving model...")
+
+            model.save(
+                model_output
+            )
+
+
+            print("Testing model...")
+
+            roc_auc = model.evaluate(testing_data, testing_labels)
+
+            print(f"ROC-AUC: {roc_auc}")
 
 
     def train_model(self, combined_data, combined_labels, model_output, scaler_output):
@@ -177,6 +227,13 @@ class Train:
             dest="train_deep_chromatogram_model",
             action="store_true",
             help="Flag to indicate that a deep learning model should be trained on raw chromatograms."
+        )
+
+        self.parser.add_argument(
+            "--include-score-columns",
+            dest="include_score_columns",
+            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
+            action="store_true"
         )
 
         self.parser.add_argument(

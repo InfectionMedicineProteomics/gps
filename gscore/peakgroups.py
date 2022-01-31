@@ -9,6 +9,7 @@ from sklearn.metrics import precision_score, recall_score  # type: ignore
 
 from gscore import preprocess
 from gscore.chromatograms import Chromatograms, Chromatogram
+from gscore.models.deep_chrom_feature_classifier import DeepChromFeatureScorer
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
@@ -690,14 +691,12 @@ class Precursors:
 
     def score_run(self, model_path: str, scaler_path: str,
                   use_chromatograms: bool, threads: int,
-                  gpus: int, use_relative_intensities: bool, use_interpolated_chroms: bool):
+                  gpus: int, use_relative_intensities: bool,
+                  use_interpolated_chroms: bool,
+                  include_score_columns: bool):
 
 
         if scaler_path:
-
-            scoring_model = Scorer()
-
-            scoring_model.load(model_path)
 
             pipeline = Scaler()
 
@@ -707,23 +706,45 @@ class Precursors:
 
         if use_chromatograms:
 
-            scoring_model = DeepChromScorer(
-                max_epochs=1,
-                gpus=gpus,
-                threads=threads
-            )
-
-            scoring_model.load(model_path)
-
-            _, _, _, all_data = preprocess.reformat_chromatogram_data(
+            all_scores, all_labels, all_indices, all_data = preprocess.reformat_chromatogram_data(
                 all_peakgroups,
                 include_scores=[],
                 use_relative_intensities=use_relative_intensities,
                 use_interpolated_chroms=use_interpolated_chroms,
-                training=False
+                training=False,
+                include_score_columns=include_score_columns
             )
 
+            if include_score_columns:
+
+                scoring_model = DeepChromFeatureScorer(
+                    max_epochs=1,
+                    gpus=gpus,
+                    threads=threads,
+                    num_features=all_scores.shape[1]
+                )
+
+                all_scores = pipeline.transform(all_scores)
+
+                model_scores = scoring_model.score(all_data, all_scores)
+
+            else:
+
+                scoring_model = DeepChromScorer(
+                    max_epochs=1,
+                    gpus=gpus,
+                    threads=threads
+                )
+
+                scoring_model.load(model_path)
+
+                model_scores = scoring_model.score(all_data)
+
         else:
+
+            scoring_model = Scorer()
+
+            scoring_model.load(model_path)
 
             all_data, _, _ = preprocess.reformat_data(
                 all_peakgroups, include_score_columns=True
@@ -731,7 +752,7 @@ class Precursors:
 
             all_data = pipeline.transform(all_data)
 
-        model_scores = scoring_model.score(all_data)
+            model_scores = scoring_model.score(all_data)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
@@ -782,7 +803,7 @@ class Precursors:
     def dump_training_data(
         self, file_path: str, filter_field: str, filter_value: float, use_chromatograms: bool,
             use_interpolated_chroms:bool = False, use_relateive_intensities:bool = False,
-            use_sub_scores: bool = True
+            include_score_columns: bool = True
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -801,8 +822,11 @@ class Precursors:
                 combined,
                 include_scores=["PROBABILITY"],
                 use_relative_intensities=use_relateive_intensities,
-                use_interpolated_chroms=use_interpolated_chroms
+                use_interpolated_chroms=use_interpolated_chroms,
+                include_score_columns=include_score_columns
             )
+
+            print(all_data_scores.shape)
 
             with open(file_path, "wb") as npfh:
                 np.savez(npfh,

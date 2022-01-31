@@ -83,7 +83,7 @@ def reformat_chromatogram_data(
         use_interpolated_chroms=False,
         use_relative_intensities=False,
         training=True,
-        use_sub_scores=True
+        include_score_columns=True
 ):
 
     scores = list()
@@ -97,7 +97,7 @@ def reformat_chromatogram_data(
 
         if peakgroup.chromatograms:
 
-            score_array = np.array([peakgroup.scores[score] for score in include_scores])
+            score_array = peakgroup.get_sub_score_column_array(include_score_columns)
 
             scores.append(score_array)
 
@@ -115,7 +115,7 @@ def reformat_chromatogram_data(
 
             if not training:
 
-                score_array = np.array([peakgroup.scores[score] for score in include_scores])
+                score_array = peakgroup.get_sub_score_column_array(include_score_columns)
 
                 scores.append(score_array)
 

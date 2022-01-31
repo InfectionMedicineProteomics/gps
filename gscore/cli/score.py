@@ -40,7 +40,20 @@ class Score:
 
                 use_chromatograms = True
 
-                print("Scoring...")
+                if args.include_score_columns:
+
+                    print("Denoising...")
+
+                    precursors.denoise(
+                        num_folds=args.num_folds,
+                        num_classifiers=args.num_classifiers,
+                        num_threads=args.threads,
+                        vote_percentage=args.vote_percentage,
+                    )
+
+                    include_denoise = True
+
+                    print("Scoring...")
 
             else:
 
@@ -64,7 +77,9 @@ class Score:
                 threads=args.threads,
                 gpus=args.gpus,
                 use_relative_intensities=args.use_relative_intensities,
-                use_interpolated_chroms=args.use_interpolated_chroms
+                use_interpolated_chroms=args.use_interpolated_chroms,
+                include_score_columns=args.include_score_columns
+
             )
 
             print("Calculating Q Values")
@@ -163,6 +178,13 @@ class Score:
             "--use-relative-intensities",
             dest="use_relative_intensities",
             help="Scale each chromatogram to use relative intensities.",
+            action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--include-score-columns",
+            dest="include_score_columns",
+            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
             action="store_true"
         )
 

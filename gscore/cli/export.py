@@ -51,7 +51,8 @@ class Export:
                 filter_value=args.filter_value,
                 use_chromatograms=use_chromatograms,
                 use_interpolated_chroms=args.use_interpolated_chroms,
-                use_relateive_intensities=args.use_relative_intensities
+                use_relateive_intensities=args.use_relative_intensities,
+                include_score_columns=args.include_score_columns
             )
 
     def build_subparser(self, subparser):
@@ -105,6 +106,13 @@ class Export:
             "--use-relative-intensities",
             dest="use_relative_intensities",
             help="Scale each chromatogram to use relative intensities.",
+            action="store_true"
+        )
+
+        self.parser.add_argument(
+            "--include-score-columns",
+            dest="include_score_columns",
+            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
             action="store_true"
         )
 
