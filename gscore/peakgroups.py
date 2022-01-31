@@ -127,9 +127,9 @@ class PeakGroup:
 
             for score_column, score_value in self.scores.items():
 
-                if score_column not in ["VOTE_PERCENTAGE", "vote_percentage"]:
+                #if score_column not in ["VOTE_PERCENTAGE", "vote_percentage"]:
 
-                    score_values.append(score_value)
+                score_values.append(score_value)
 
         else:
 
