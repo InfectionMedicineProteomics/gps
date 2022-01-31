@@ -15,6 +15,7 @@ from gscore.models.base_model import Scorer
 class DeepChromFeatureScorer(Scorer):
 
     def __init__(self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.05, num_features=0):
+
         self.model = DeepChromFeatureModel(
             learning_rate=initial_lr,
             num_features=num_features
@@ -40,6 +41,7 @@ class DeepChromFeatureScorer(Scorer):
         )
         self.threads = threads
         self.gpus = gpus
+        self.num_features = num_features
 
     def fit(self, chromatograms: np.ndarray, scores: np.ndarray, labels) -> None:
 
@@ -135,13 +137,16 @@ class DeepChromFeatureScorer(Scorer):
         return roc_auc_score(labels, probabilities)
 
     def save(self, model_path: str = ""):
+
         self.trainer.save_checkpoint(
             model_path
         )
 
     def load(self, model_path: str):
+
         self.model = DeepChromFeatureModel.load_from_checkpoint(
-            checkpoint_path=model_path
+            checkpoint_path=model_path,
+            num_features=self.num_features
         )
 
 

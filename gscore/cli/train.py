@@ -122,6 +122,8 @@ class Train:
                 model_output
             )
 
+
+            print("Saving scaler...")
             scaler.save(scaler_output)
 
             print("Testing model...")
