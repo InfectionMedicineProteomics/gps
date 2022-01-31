@@ -781,7 +781,8 @@ class Precursors:
 
     def dump_training_data(
         self, file_path: str, filter_field: str, filter_value: float, use_chromatograms: bool,
-            use_interpolated_chroms:bool = False, use_relateive_intensities:bool = False
+            use_interpolated_chroms:bool = False, use_relateive_intensities:bool = False,
+            use_sub_scores: bool = True
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -815,6 +816,8 @@ class Precursors:
             all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
                 combined, include_score_columns=True
             )
+
+            print(all_data_scores.shape)
 
             with open(file_path, "wb") as npfh:
 

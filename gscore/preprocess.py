@@ -77,7 +77,14 @@ def reformat_data(peakgroups, include_score_columns=False):
 
     return scores, score_labels, score_indices
 
-def reformat_chromatogram_data(peakgroups, include_scores: List = ["PROBABILITY"], use_interpolated_chroms=False, use_relative_intensities=False, training=True):
+def reformat_chromatogram_data(
+        peakgroups,
+        include_scores: List = ["PROBABILITY"],
+        use_interpolated_chroms=False,
+        use_relative_intensities=False,
+        training=True,
+        use_sub_scores=True
+):
 
     scores = list()
     score_labels = list()
