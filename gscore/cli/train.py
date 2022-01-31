@@ -57,6 +57,11 @@ class Train:
         combined_data = np.concatenate(combined_data)
         combined_labels = np.concatenate(combined_labels)
 
+        target_label_count = combined_labels[combined_labels == 1.0].size
+        decoy_label_count = combined_labels[combined_labels == 0.0].size
+
+        print(f"Target Peakgroups: {target_label_count}, Decoy Peakgroups: {decoy_label_count}")
+
         if combined_chromatograms:
 
             combined_chromatograms = np.concatenate(combined_chromatograms)
