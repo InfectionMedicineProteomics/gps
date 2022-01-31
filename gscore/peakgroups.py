@@ -724,6 +724,8 @@ class Precursors:
                     num_features=all_scores.shape[1]
                 )
 
+                scoring_model.load(model_path)
+
                 all_scores = pipeline.transform(all_scores)
 
                 model_scores = scoring_model.score(all_data, all_scores)
