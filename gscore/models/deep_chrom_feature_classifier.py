@@ -107,17 +107,17 @@ class DeepChromFeatureScorer(Scorer):
             dataloaders=prediction_dataloader
         )
 
-        predictions = torch.cat(predictions, 0)
+        predictions = torch.cat(predictions, 0).numpy()
 
-        probabilities = torch.sigmoid(predictions).numpy()
-
-        # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
-        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
-
-        print(probabilities.min())
-        print(probabilities.max())
-
-        predictions = np.log(probabilities / (1.0 - probabilities))
+        # probabilities = torch.sigmoid(predictions).numpy()
+        #
+        # # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
+        # probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
+        #
+        # print(probabilities.min())
+        # print(probabilities.max())
+        #
+        # predictions = np.log(probabilities / (1.0 - probabilities))
 
         return predictions
 
