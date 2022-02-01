@@ -136,7 +136,7 @@ class PeakGroup:
 
             for score_column, score_value in self.scores.items():
 
-                if score_column not in ["probability", "vote_percentage"]:
+                if score_column not in ["probability", "vote_percentage", "PROBABILITY", "VOTE_PERCENTAGE"]:
 
                     score_values.append(score_value)
 
@@ -712,7 +712,7 @@ class Precursors:
                 use_relative_intensities=use_relative_intensities,
                 use_interpolated_chroms=use_interpolated_chroms,
                 training=False,
-                include_score_columns=include_score_columns
+                include_score_columns=False
             )
 
             if include_score_columns:
@@ -825,7 +825,7 @@ class Precursors:
                 include_scores=["PROBABILITY"],
                 use_relative_intensities=use_relateive_intensities,
                 use_interpolated_chroms=use_interpolated_chroms,
-                include_score_columns=include_score_columns
+                include_score_columns=False
             )
 
             print(all_data_scores.shape)
@@ -840,7 +840,7 @@ class Precursors:
         else:
 
             all_data_scores, all_data_labels, all_data_indices = preprocess.reformat_data(
-                combined, include_score_columns=True
+                combined, include_score_columns=False
             )
 
             print(all_data_scores.shape)
