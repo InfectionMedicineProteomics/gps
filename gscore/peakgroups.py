@@ -794,7 +794,7 @@ class Precursors:
             all_peakgroups, score_column=sort_key
         )
 
-        q_values = self.score_distribution.calculate_q_vales(all_data_scores)
+        q_values = self.score_distribution.calculate_q_values(all_data_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 

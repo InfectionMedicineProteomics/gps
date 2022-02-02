@@ -80,7 +80,7 @@ class ScoreDistribution:
 
         return np.exp(log_density)
 
-    def calculate_q_vales(self, scores: np.ndarray) -> np.ndarray:
+    def calculate_q_values(self, scores: np.ndarray) -> np.ndarray:
 
         target_areas = []
         decoy_areas = []
@@ -172,7 +172,7 @@ class GlobalDistribution:
 
         self.score_distribution.fit(self.scores, self.labels)
 
-        self.q_values = self.score_distribution.calculate_q_vales(self.scores)
+        self.q_values = self.score_distribution.calculate_q_values(self.scores)
 
         for idx in range(len(self.q_values)):
 
