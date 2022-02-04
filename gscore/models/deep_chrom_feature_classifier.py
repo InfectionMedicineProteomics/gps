@@ -16,6 +16,7 @@ class DeepChromFeatureScorer(Scorer):
 
     def __init__(self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.05, num_features=0):
 
+        super().__init__()
         self.model = DeepChromFeatureModel(
             learning_rate=initial_lr,
             num_features=num_features
@@ -84,20 +85,21 @@ class DeepChromFeatureScorer(Scorer):
         )
 
     def score(self, chromatograms: np.ndarray, scores: np.ndarray) -> np.ndarray:
+
         trainer = Trainer(
             gpus=self.gpus
         )
 
-        chromatograms = torch.from_numpy(
+        chromatogram_tensor = torch.from_numpy(
             chromatograms
         ).type(torch.FloatTensor)
 
-        scores = torch.from_numpy(
+        score_tensor = torch.from_numpy(
             scores
         ).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms, scores),
+            TensorDataset(chromatogram_tensor, score_tensor),
             num_workers=self.threads,
             batch_size=10000
         )

@@ -1,7 +1,8 @@
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 import numpy as np
+from numpy import ndarray
 
 
 def get_precursor_id_folds(
@@ -16,7 +17,7 @@ def get_precursor_id_folds(
     return folds
 
 
-def get_training_data_from_npz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def get_training_data_from_npz(file_path: str) -> Any:
 
     npzfile = np.load(file_path)
 
@@ -38,14 +39,14 @@ def get_training_data(folds: List[np.ndarray], fold_num: int):
     return training_data
 
 
-def reformat_distribution_data(peakgroups, score_column):
+def reformat_distribution_data(peakgroups):
 
     scores = list()
     score_labels = list()
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        scores.append(peakgroup.scores[score_column])
+        scores.append(peakgroup.d_score)
 
         score_labels.append(peakgroup.target)
 
@@ -79,16 +80,12 @@ def reformat_data(peakgroups, include_score_columns=False):
 
 def reformat_chromatogram_data(
         peakgroups,
-        include_scores: List = ["PROBABILITY"],
-        use_interpolated_chroms=False,
         use_relative_intensities=False,
-        training=True,
-        include_score_columns=True
-):
+        training=True
+) -> Tuple[ndarray, ndarray, ndarray]:
 
-    scores = list()
-    score_labels = list()
-    score_indices = list()
+    labels = list()
+    indices = list()
     chromatograms = list()
 
     skipped_peakgroups = 0
@@ -97,15 +94,10 @@ def reformat_chromatogram_data(
 
         if peakgroup.chromatograms:
 
-            score_array = peakgroup.get_sub_score_column_array(include_score_columns)
-
-            scores.append(score_array)
-
-            score_labels.append([peakgroup.target])
-            score_indices.append(peakgroup.idx)
+            labels.append([peakgroup.target])
+            indices.append(peakgroup.idx)
 
             peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
-                interpolated=use_interpolated_chroms,
                 use_relative_intensities=use_relative_intensities
             )
 
@@ -115,12 +107,8 @@ def reformat_chromatogram_data(
 
             if not training:
 
-                score_array = peakgroup.get_sub_score_column_array(include_score_columns)
-
-                scores.append(score_array)
-
-                score_labels.append([peakgroup.target])
-                score_indices.append(peakgroup.idx)
+                labels.append([peakgroup.target])
+                indices.append(peakgroup.idx)
 
                 peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
 
@@ -139,9 +127,8 @@ def reformat_chromatogram_data(
             print(
                 f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring")
 
-    scores = np.array(scores, dtype=np.float64)
-    score_labels = np.array(score_labels, dtype=np.float)
-    score_indices = np.array(score_indices, dtype=np.str)
-    chromatograms = np.array(chromatograms, dtype=np.float)
+    label_array = np.array(labels, dtype=np.float64)
+    indice_array = np.array(indices, dtype=str)
+    chromatogram_array = np.array(chromatograms, dtype=np.float64)
 
-    return scores, score_labels, score_indices, chromatograms
+    return label_array, indice_array, chromatogram_array

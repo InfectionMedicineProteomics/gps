@@ -1,92 +1,142 @@
 from __future__ import annotations
 
-from typing import Dict
+from pynumpress import decode_slof, decode_linear, decode_pic  # type: ignore
 
-import numpy as np
+from gscore.chromatograms import Chromatogram, Chromatograms
+import pyopenms
 
-from gscore.chromatograms import Chromatogram, decode_data, ChromatogramDataType, Chromatograms
-from gscore.parsers.sqlite_file import SQLiteFile
+# FETCH_PEPTIDE_CHROMATOGRAM = """
+#     select
+#         PRECURSOR.PEPTIDE_SEQUENCE,
+#         PRECURSOR.CHARGE,
+#         PRECURSOR.ISOLATION_TARGET PRECURSOR_ISOLATION_TARGET,
+#         CHROMATOGRAM.NATIVE_ID,
+#         DATA.COMPRESSION,
+#         DATA.DATA_TYPE,
+#         DATA.DATA,
+#         PRODUCT.ISOLATION_TARGET PRODUCT_ISOLATION_TARGET
+#     from precursor
+#     join CHROMATOGRAM on PRECURSOR.CHROMATOGRAM_ID = CHROMATOGRAM.ID
+#     join DATA on CHROMATOGRAM.ID = DATA.CHROMATOGRAM_ID
+#     join PRODUCT on CHROMATOGRAM.ID = PRODUCT.CHROMATOGRAM_ID;
+#     """
+#
+# class CompressionType(Enum):
+#     NO = 0
+#     ZLIB = 1
+#     NP_LINEAR = 2
+#     NP_SLOF = 3
+#     NP_PIC = 4
+#     NP_LINEAR_ZLIB = 5
+#     NP_SLOF_ZLIB = 6
+#     NP_PIC_ZLIB = 7
+#
+#
+# class ChromatogramDataType(Enum):
+#     MZ = 0
+#     INT = 1
+#     RT = 2
+#
+# def decode_data(chromatogram_data, compression_type):
+#
+#     decoded_data = list()
+#
+#     if compression_type == CompressionType.NP_LINEAR_ZLIB.value:
+#
+#         decompressed = bytearray(zlib.decompress(chromatogram_data))
+#
+#         if len(decompressed) > 0:
+#             decoded_data = decode_linear(decompressed)
+#         else:
+#             decoded_data = [0]
+#
+#     elif compression_type == CompressionType.NP_SLOF_ZLIB.value:
+#
+#         decompressed = bytearray(zlib.decompress(chromatogram_data))
+#
+#         if len(decompressed) > 0:
+#             decoded_data = decode_slof(decompressed)
+#         else:
+#             decoded_data = [0]
+#
+#     return decoded_data
 
 
-FETCH_PEPTIDE_CHROMATOGRAM = """
-    select
-        PRECURSOR.PEPTIDE_SEQUENCE,
-        PRECURSOR.CHARGE,
-        PRECURSOR.ISOLATION_TARGET PRECURSOR_ISOLATION_TARGET,
-        CHROMATOGRAM.NATIVE_ID,
-        DATA.COMPRESSION,
-        DATA.DATA_TYPE,
-        DATA.DATA,
-        PRODUCT.ISOLATION_TARGET PRODUCT_ISOLATION_TARGET
-    from precursor
-    join CHROMATOGRAM on PRECURSOR.CHROMATOGRAM_ID = CHROMATOGRAM.ID
-    join DATA on CHROMATOGRAM.ID = DATA.CHROMATOGRAM_ID
-    join PRODUCT on CHROMATOGRAM.ID = PRODUCT.CHROMATOGRAM_ID;
-    """
 
 
-class SqMassFile(SQLiteFile):
+class SqMassFile:
 
+    def __init__(self, file_path: str):
 
-    def __init__(self, file_path : str):
+        self.file_path = file_path
 
-        super().__init__(file_path)
 
     def parse(self, level: str = "ms2"):
 
-        chromatograms = Chromatograms()
+        chromatograms = pyopenms.MSExperiment()
+        sqmass_file = pyopenms.SqMassFile()
+        sq_mass_config = pyopenms.SqMassConfig()
+        sq_mass_config.write_full_meta = True
 
-        chromatogram_records = list()
+        sqmass_file.setConfig(sq_mass_config)
 
-        for record in self.iterate_records(FETCH_PEPTIDE_CHROMATOGRAM):
+        sqmass_file.load(
+            self.file_path,
+            chromatograms
+        )
 
-            chromatogram_records.append(record)
+        chromatogram_records = Chromatograms()
 
-        for record in chromatogram_records:
+        for chromatogram in chromatograms.getChromatograms():
 
-            precursor_id = f"{record['PRECURSOR_ISOLATION_TARGET']}_{record['CHARGE']}"
+            retention_times, intensities = chromatogram.get_peaks()
 
-            if precursor_id not in chromatograms:
+            native_id = chromatogram.getNativeID()
 
-                chromatograms[precursor_id] = dict()
+            precursor = chromatogram.getPrecursor()
+
+            precursor_id = f"{precursor.getMZ()}_{precursor.getCharge()}"
+
+            if precursor_id not in chromatogram_records:
+
+                chromatogram_records[precursor_id] = dict()
 
             if level == "ms2":
 
-                if "Precursor" not in record["NATIVE_ID"]:
+                if "Precursor" not in native_id:
 
-                    if record["NATIVE_ID"] not in chromatograms[precursor_id]:
-
-
-                        chromatogram_record = Chromatogram(
-                            type="fragment",
-                            chrom_id=record["NATIVE_ID"],
-                            precursor_mz=record["PRECURSOR_ISOLATION_TARGET"],
-                            mz=record["PRODUCT_ISOLATION_TARGET"],
-                            charge=record["CHARGE"],
-                            peptide_sequence=record["PEPTIDE_SEQUENCE"]
-                        )
-
-                        chromatograms[precursor_id][
-                            chromatogram_record.id
-                        ] = chromatogram_record
-
-                    data_type = record["DATA_TYPE"]
-
-                    decoded_data = decode_data(
-                        chromatogram_data=record["DATA"],
-                        compression_type=record["COMPRESSION"]
+                    chromatogram_records[precursor_id][native_id] = Chromatogram(
+                        type="fragment",
+                        chrom_id=native_id,
+                        precursor_mz=precursor.getMZ(),
+                        charge=precursor.getCharge(),
+                        peptide_sequence=precursor.getMetaValue("peptide_sequence"),
+                        rts=retention_times,
+                        intensities=intensities
                     )
 
-                    if data_type == ChromatogramDataType.RT.value:
+        return chromatogram_records
 
-                        chromatograms[precursor_id][record["NATIVE_ID"]].rts = np.array(
-                            decoded_data
-                        )
 
-                    elif data_type == ChromatogramDataType.INT.value:
+if __name__ == "__main__":
 
-                        chromatograms[precursor_id][record["NATIVE_ID"]].intensities = np.array(
-                            decoded_data
-                        )
+    osw_file_path = "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
+    sqmass_file_path = "/home/aaron/projects/ghost/data/spike_in/chromatograms/AAS_P2009_167.sqMass"
 
-        return chromatograms
+    sqmass_file = SqMassFile(
+        sqmass_file_path
+    )
+
+    chromatograms = sqmass_file.parse()
+
+    from gscore.parsers import queries
+    from gscore.parsers import osw
+
+    with osw.OSWFile(osw_file_path) as osw_file:
+        print(f"Parsing {osw_file_path}")
+
+        precursors = osw_file.parse_to_precursors(
+            query=queries.SelectPeakGroups.FETCH_CHROMATOGRAM_TRAINING_RECORDS
+        )
+
+    precursors.set_chromatograms(chromatograms)

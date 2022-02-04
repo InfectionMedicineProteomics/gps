@@ -1,8 +1,12 @@
 import numpy as np
 from joblib import dump, load  # type: ignore
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score # type: ignore
 
 class Scorer:
+
+    def __init__(self):
+
+        pass
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 

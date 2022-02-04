@@ -1,6 +1,6 @@
-from setuptools import (
-    setup,
-    find_packages
+from setuptools import (  # type: ignore
+    setup,  # type: ignore
+    find_packages  # type: ignore
 )
 
 version = '0.0.01'

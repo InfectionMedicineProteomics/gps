@@ -18,42 +18,40 @@ class Export:
 
     def __call__(self, args: argparse.Namespace):
 
-        with OSWFile(args.input) as osw_file:
+        print(f"Parsing {args.input}")
 
-            print(f"Parsing {args.input}")
+        osw_file = OSWFile(args.input)
 
-            precursors = osw_file.parse_to_precursors(
-                query=queries.SelectPeakGroups.FETCH_CHROMATOGRAM_TRAINING_RECORDS
-            )
+        precursors = osw_file.parse_to_precursors(
+            query=queries.SelectPeakGroups.FETCH_PREC_RECORDS
+        )
 
-            use_chromatograms: bool = False
+        use_chromatograms: bool = False
 
-            if args.chromatogram_file:
+        if args.chromatogram_file:
 
-                print("Parsing Chromatograms...")
+            print("Parsing Chromatograms...")
 
-                with SqMassFile(args.chromatogram_file) as chrom_file:
+            chromatogram_file = SqMassFile(args.chromatogram_file)
 
-                    chromatograms = chrom_file.parse()
+            chromatograms = chromatogram_file.parse()
 
-                print("Matching chromatograms with precursors...")
+            print("Matching chromatograms with precursors...")
 
-                precursors.set_chromatograms(chromatograms)
+            precursors.set_chromatograms(chromatograms)
 
-                use_chromatograms = True
+            use_chromatograms = True
 
 
-            print(f"Filtering and writing output.")
+        print(f"Filtering and writing output.")
 
-            precursors.dump_training_data(
-                args.output,
-                filter_field=args.filter_field,
-                filter_value=args.filter_value,
-                use_chromatograms=use_chromatograms,
-                use_interpolated_chroms=args.use_interpolated_chroms,
-                use_relateive_intensities=args.use_relative_intensities,
-                include_score_columns=args.include_score_columns
-            )
+        precursors.dump_training_data(
+            args.output,
+            filter_field=args.filter_field,
+            filter_value=args.filter_value,
+            use_chromatograms=use_chromatograms,
+            use_relateive_intensities=args.use_relative_intensities
+        )
 
     def build_subparser(self, subparser):
 
@@ -93,13 +91,6 @@ class Export:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             default=""
-        )
-
-        self.parser.add_argument(
-            "--use-interpolated-chroms",
-            dest="use_interpolated_chroms",
-            help="Export interpolated chromatograms of a uniform length.",
-            action="store_true"
         )
 
         self.parser.add_argument(

@@ -19,11 +19,11 @@ class SQLiteFile:
 
         self.db_path = file_path
 
-        self.conn = sqlite3.connect(file_path)
+    def __enter__(self):
+
+        self.conn = sqlite3.connect(self.db_path)
 
         self.conn.row_factory = sqlite3.Row
-
-    def __enter__(self):
 
         return self
 

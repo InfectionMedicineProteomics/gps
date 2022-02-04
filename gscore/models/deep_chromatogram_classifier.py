@@ -1,12 +1,12 @@
 import numpy as np
 import pytorch_lightning as pl
-import torch
+import torch # type: ignore
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
-from torch import nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.nn import functional as F
-from torch.utils.data import TensorDataset, DataLoader
+from torch import nn # type: ignore
+from torch.optim.lr_scheduler import ReduceLROnPlateau # type: ignore
+from torch.nn import functional as F # type: ignore
+from torch.utils.data import TensorDataset, DataLoader # type: ignore
 
 from gscore.models.base_model import Scorer
 
@@ -14,6 +14,7 @@ from gscore.models.base_model import Scorer
 class DeepChromScorer(Scorer):
 
     def __init__(self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.05):
+        super().__init__()
         self.model = DeepChromModel(
             learning_rate=initial_lr
         )
@@ -40,6 +41,7 @@ class DeepChromScorer(Scorer):
         self.gpus = gpus
 
     def fit(self, data, labels) -> None:
+
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
 
@@ -96,16 +98,7 @@ class DeepChromScorer(Scorer):
             dataloaders=prediction_dataloader
         )
 
-        predictions = torch.cat(predictions, 0)
-
-        probabilities = torch.sigmoid(predictions).numpy()
-
-        # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
-        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
-
-        predictions = np.log(probabilities / (1.0 - probabilities))
-
-        return predictions
+        return torch.cat(predictions, 0).numpy()
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 

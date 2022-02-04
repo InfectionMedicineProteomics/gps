@@ -2,7 +2,6 @@ import argparse
 from collections import Counter
 
 import numpy as np
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 
 from sklearn.model_selection import train_test_split  # type: ignore
 from sklearn.utils import class_weight  # type: ignore
@@ -13,11 +12,6 @@ from gscore.models.deep_chromatogram_classifier import DeepChromModel, DeepChrom
 from gscore.scaler import Scaler
 from gscore.scorer import XGBoostScorer
 
-import torch
-
-from torch.utils.data import TensorDataset, DataLoader
-
-from pytorch_lightning import Trainer
 
 class Train:
 
@@ -32,7 +26,6 @@ class Train:
 
         print("Building scoring model...")
 
-        combined_data = []
         combined_labels = []
         combined_chromatograms = []
 
@@ -42,19 +35,13 @@ class Train:
 
             training_data_npz = preprocess.get_training_data_from_npz(input_file)
 
-            scores = training_data_npz["scores"]
             labels = training_data_npz["labels"]
+            chromatograms = training_data_npz["chromatograms"]
 
-            if "chromatograms" in training_data_npz:
-
-                chromatograms = training_data_npz["chromatograms"]
-
-                combined_chromatograms.append(chromatograms)
-
-            combined_data.append(scores)
+            combined_chromatograms.append(chromatograms)
             combined_labels.append(labels)
 
-        combined_data = np.concatenate(combined_data)
+        combined_chromatograms = np.concatenate(combined_chromatograms)
         combined_labels = np.concatenate(combined_labels)
 
         target_label_count = combined_labels[combined_labels == 1.0].size
@@ -62,111 +49,47 @@ class Train:
 
         print(f"Target Peakgroups: {target_label_count}, Decoy Peakgroups: {decoy_label_count}")
 
-        if combined_chromatograms:
-
-            combined_chromatograms = np.concatenate(combined_chromatograms)
-
         if args.train_deep_chromatogram_model:
 
             self.train_deep_model(
                 combined_chromatograms,
-                combined_data,
                 combined_labels,
                 args.model_output,
-                args.scaler_output,
                 args.threads,
                 args.gpus,
                 args.epochs,
-                args.include_score_columns
             )
 
-        else:
+    def train_deep_model(self, combined_chromatograms, combined_labels, model_output, threads, gpus, epochs):
 
-            self.train_model(
-                combined_data,
-                combined_labels,
-                args.model_output,
-                args.scaler_output
-            )
+        training_data, testing_data, training_labels, testing_labels = train_test_split(
+            combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
+        )
 
-    def train_deep_model(self, combined_chromatograms, combined_scores, combined_labels, model_output, scaler_output, threads, gpus, epochs, include_score_columns):
+        model = DeepChromScorer(
+            threads=threads,
+            max_epochs=epochs,
+            gpus=gpus
+        )
 
-        if include_score_columns:
+        print("Training model...")
 
-            scaler = Scaler()
+        model.fit(
+            data=training_data,
+            labels=training_labels
+        )
 
-            training_chromatograms, testing_chromatograms, training_scores, testing_scores, training_labels, testing_labels = train_test_split(
-                combined_chromatograms, combined_scores, combined_labels, test_size=0.2, shuffle=True
-            )
+        print("Saving model...")
 
-            model = DeepChromFeatureScorer(
-                threads=threads,
-                max_epochs=epochs,
-                gpus=gpus,
-                num_features=combined_scores.shape[1]
-            )
+        model.save(
+            model_output
+        )
 
-            print("Training model...")
+        print("Testing model...")
 
-            training_scores = scaler.fit_transform(training_scores)
+        roc_auc = model.evaluate(testing_data, testing_labels)
 
-            model.fit(
-                chromatograms=training_chromatograms,
-                scores=training_scores,
-                labels=training_labels
-            )
-
-            print("Saving model...")
-
-            model.save(
-                model_output
-            )
-
-
-            print("Saving scaler...")
-            scaler.save(scaler_output)
-
-            print("Testing model...")
-
-            roc_auc = model.evaluate(
-                testing_chromatograms,
-                testing_scores,
-                testing_labels
-            )
-
-            print(f"ROC-AUC: {roc_auc}")
-
-        else:
-
-            training_data, testing_data, training_labels, testing_labels = train_test_split(
-                combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
-            )
-
-            model = DeepChromScorer(
-                threads=threads,
-                max_epochs=epochs,
-                gpus=gpus
-            )
-
-            print("Training model...")
-
-            model.fit(
-                data=training_data,
-                labels=training_labels
-            )
-
-            print("Saving model...")
-
-            model.save(
-                model_output
-            )
-
-
-            print("Testing model...")
-
-            roc_auc = model.evaluate(testing_data, testing_labels)
-
-            print(f"ROC-AUC: {roc_auc}")
+        print(f"ROC-AUC: {roc_auc}")
 
 
     def train_model(self, combined_data, combined_labels, model_output, scaler_output):

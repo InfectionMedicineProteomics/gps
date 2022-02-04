@@ -12,8 +12,10 @@ from joblib import dump, load  # type: ignore
 
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from gscore.peakgroups import Peptide, Protein
+    from gscore.peptides import Peptide
+    from gscore.proteins import Protein
 
 T = TypeVar("T")
 

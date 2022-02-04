@@ -17,83 +17,52 @@ class Score:
 
         print(f"Processing file {args.input}")
 
-        with OSWFile(args.input) as osw_conn:
+        osw_file = OSWFile(args.input)
 
-            precursors = osw_conn.parse_to_precursors(
-                query=SelectPeakGroups.FETCH_FEATURES_REDUCED
-            )
+        precursors = osw_file.parse_to_precursors(
+            query=SelectPeakGroups.FETCH_FEATURES_REDUCED
+        )
 
-            use_chromatograms: bool = False
-            include_denoise: bool = False
+        use_chromatograms: bool = False
+        include_denoise: bool = False
 
-            if args.chromatogram_file:
+        if args.chromatogram_file:
 
-                print("Parsing Chromatograms...")
+            print("Parsing Chromatograms...")
 
-                with SqMassFile(args.chromatogram_file) as chrom_file:
+            chromatogram_file = SqMassFile(args.chromatogram_file)
 
-                    chromatograms = chrom_file.parse()
+            chromatograms = chromatogram_file.parse()
 
-                print("Matching chromatograms with precursors...")
+            print("Matching chromatograms with precursors...")
 
-                precursors.set_chromatograms(chromatograms)
+            precursors.set_chromatograms(chromatograms)
 
-                use_chromatograms = True
+            use_chromatograms = True
 
-                if args.include_score_columns:
+        print("Scoring...")
 
-                    print("Denoising...")
+        precursors.score_run(
+            model_path=args.scoring_model,
+            scaler_path=args.scaler,
+            threads=args.threads,
+            gpus=args.gpus,
+            use_relative_intensities=args.use_relative_intensities
 
-                    precursors.denoise(
-                        num_folds=args.num_folds,
-                        num_classifiers=args.num_classifiers,
-                        num_threads=args.threads,
-                        vote_percentage=args.vote_percentage,
-                    )
+        )
 
-                    include_denoise = True
+        print("Calculating Q Values")
 
-                    print("Scoring...")
+        precursors.calculate_q_values(sort_key="d_score", use_decoys=True)
 
-            else:
+        print("Updating Q Values in PQP file")
 
-                print("Denoising...")
+        osw_file.add_score_and_q_value_records(
+            precursors,
+            include_denoise=include_denoise
+        )
 
-                precursors.denoise(
-                    num_folds=args.num_folds,
-                    num_classifiers=args.num_classifiers,
-                    num_threads=args.threads,
-                    vote_percentage=args.vote_percentage,
-                )
-
-                include_denoise = True
-
-                print("Scoring...")
-
-            precursors.score_run(
-                model_path=args.scoring_model,
-                scaler_path=args.scaler,
-                use_chromatograms=use_chromatograms,
-                threads=args.threads,
-                gpus=args.gpus,
-                use_relative_intensities=args.use_relative_intensities,
-                use_interpolated_chroms=args.use_interpolated_chroms,
-                include_score_columns=args.include_score_columns
-
-            )
-
-            print("Calculating Q Values")
-
-            precursors.calculate_q_values(sort_key="d_score", use_decoys=True)
-
-            print("Updating Q Values in PQP file")
-
-            osw_conn.add_score_and_q_value_records(
-                precursors,
-                include_denoise=include_denoise
-            )
-
-            print("Done!")
+        print("Done!")
 
     def build_subparser(self, subparser):
 
