@@ -56,7 +56,7 @@ def reformat_distribution_data(peakgroups):
     return scores, score_labels
 
 
-def reformat_data(peakgroups, include_score_columns=False):
+def reformat_data(peakgroups):
 
     scores = list()
     score_labels = list()
@@ -64,7 +64,7 @@ def reformat_data(peakgroups, include_score_columns=False):
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = peakgroup.get_sub_score_column_array(include_score_columns)
+        score_array = peakgroup.get_sub_score_column_array()
 
         scores.append(score_array)
 
@@ -73,6 +73,9 @@ def reformat_data(peakgroups, include_score_columns=False):
         score_indices.append(peakgroup.idx)
 
     scores = np.array(scores, dtype=np.float64)
+    scores = scores[:, ~np.all(scores == 0, axis=0)]
+    scores = scores[:, ~np.all(np.isnan(scores), axis=0)]
+
     score_labels = np.array(score_labels, dtype=np.float)
     score_indices = np.array(score_indices, dtype=np.str)
 

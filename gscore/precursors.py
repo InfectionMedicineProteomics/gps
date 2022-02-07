@@ -405,9 +405,9 @@ class Precursors:
                 )
 
             for idx, peakgroup in enumerate(peakgroups_to_score):
-                peakgroup.scores["probability"] = probabilities[idx]
+                peakgroup.probability = probabilities[idx]
 
-                peakgroup.scores["vote_percentage"] = vote_percentages[idx]
+                peakgroup.vote_percentage = vote_percentages[idx]
 
             validation_data = self.get_peakgroups_by_list(
                 precursor_list=precursor_fold_ids,

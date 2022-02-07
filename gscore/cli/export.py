@@ -49,7 +49,6 @@ class Export:
             args.output,
             filter_field=args.filter_field,
             filter_value=args.filter_value,
-            use_chromatograms=use_chromatograms,
             use_relateive_intensities=args.use_relative_intensities
         )
 

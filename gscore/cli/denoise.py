@@ -17,25 +17,26 @@ class Denoise:
 
         print(f"Processing file {args.input}")
 
-        with OSWFile(args.input) as osw_conn:
-            precursors = osw_conn.parse_to_precursors(
-                query=SelectPeakGroups.FETCH_FEATURES_REDUCED
-            )
+        osw_file = OSWFile(args.input)
 
-            print("Denoising...")
+        precursors = osw_file.parse_to_precursors(
+            query=SelectPeakGroups.FETCH_FEATURES_REDUCED
+        )
 
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_percentage=args.vote_percentage,
-            )
+        print("Denoising...")
 
-            print("Writing scores to OSW file...")
+        precursors.denoise(
+            num_folds=args.num_folds,
+            num_classifiers=args.num_classifiers,
+            num_threads=args.threads,
+            vote_percentage=args.vote_percentage,
+        )
 
-            osw_conn.add_score_records(precursors)
+        print("Writing scores to OSW file...")
 
-            print("Done!")
+        osw_file.add_score_records(precursors)
+
+        print("Done!")
 
     def build_subparser(self, subparser):
 

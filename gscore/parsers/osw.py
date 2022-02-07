@@ -185,7 +185,8 @@ class OSWFile:
                     ghost_score_id=record.get("GHOST_SCORE_ID", ""),
                     intensity=record.get("AREA_INTENSITY", 0.0),
                     probability=record.get("PROBABILITY", 0.0),
-                    vote_percentage=record.get("VOTE_PERCENTAGE", 0.0)
+                    vote_percentage=record.get("VOTE_PERCENTAGE", 0.0),
+                    scores={score_col: score_value for score_col, score_value in record.items() if score_col.startswith("VAR_")}
                 )
 
                 precursors.add_peakgroup(record["PRECURSOR_ID"], peakgroup)
@@ -234,17 +235,19 @@ class OSWFile:
             for peakgroup in precursor.peakgroups:
                 record = {
                     "FEATURE_ID": peakgroup.idx,
-                    "PROBABILITY": peakgroup.scores["probability"],
-                    "VOTE_PERCENTAGE": peakgroup.scores["vote_percentage"],
+                    "PROBABILITY": peakgroup.probability,
+                    "VOTE_PERCENTAGE": peakgroup.vote_percentage,
                 }
 
                 records.append(record)
 
-        self.drop_table("GHOST_SCORE_TABLE")
+        with self.sqlite_file as sqlite_file:
 
-        self.create_table(query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE)
+            sqlite_file.drop_table("GHOST_SCORE_TABLE")
 
-        self.add_records(table_name="GHOST_SCORE_TABLE", records=records)
+            sqlite_file.create_table(query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE)
+
+            sqlite_file.add_records(table_name="GHOST_SCORE_TABLE", records=records)
 
     def add_score_and_q_value_records(self, precursors, include_denoise=False):
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union, Tuple, Optional
 
 import numpy as np
 
@@ -26,6 +26,7 @@ class PeakGroup:
     vote_percentage: float
     d_score: float
     q_value: float
+    scores: Dict[str, float]
 
     def __init__(
         self,
@@ -41,8 +42,16 @@ class PeakGroup:
         probability=0.0,
         vote_percentage=0.0,
         d_score=0.0,
-        q_value=0.0
+        q_value=0.0,
+        scores=None
     ):
+
+        if scores is None:
+            self.scores = dict()
+
+        else:
+
+            self.scores = scores
 
         self.ghost_score_id = ghost_score_id
         self.idx = idx
@@ -55,8 +64,6 @@ class PeakGroup:
 
         self.decoy = decoy
         self.target = abs(decoy - 1)
-
-        self.scores = dict()
 
         self.delta_rt = delta_rt
         self.start_rt = start_rt
@@ -111,27 +118,8 @@ class PeakGroup:
 
         self.scores[key] = value
 
-    def get_sub_score_column_array(self, include_score_columns=False):
+    def get_sub_score_column_array(self):
 
-        score_values = list()
-
-        if include_score_columns:
-
-            for score_column, score_value in self.scores.items():
-
-                #if score_column not in ["VOTE_PERCENTAGE", "vote_percentage"]:
-
-                score_values.append(score_value)
-
-        else:
-
-            for score_column, score_value in self.scores.items():
-
-                if score_column not in ["probability", "vote_percentage", "PROBABILITY", "VOTE_PERCENTAGE"]:
-
-                    score_values.append(score_value)
+        score_values = [score for score in self.scores.values()]
 
         return np.asarray(score_values, dtype=np.double)
-
-
-
