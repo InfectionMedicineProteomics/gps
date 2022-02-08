@@ -22,31 +22,31 @@ class Build:
 
             print(f"Processing {input_file}...")
 
-            with OSWFile(input_file) as osw_conn:
+            osw_file = OSWFile(input_file)
 
-                if args.level == "protein":
+            if args.level == "protein":
 
-                    groups = osw_conn.parse_to_proteins(
-                        query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
-                    )
+                groups = osw_file.parse_to_proteins(
+                    query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
+                )
 
-                elif args.level == "peptide":
+            elif args.level == "peptide":
 
-                    groups = osw_conn.parse_to_peptides(
-                        query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
-                    )
+                groups = osw_file.parse_to_peptides(
+                    query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
+                )
 
-                print(f"Comparing {args.level} level scores...")
+            print(f"Comparing {args.level} level scores...")
 
-                for group in groups:
+            for group in groups:
 
-                    if group.identifier not in global_distribution:
+                if group.identifier not in global_distribution:
 
-                        global_distribution[group.identifier] = group
+                    global_distribution[group.identifier] = group
 
-                    else:
+                else:
 
-                        global_distribution.compare_score(group.identifier, group)
+                    global_distribution.compare_score(group.identifier, group)
 
         print("Fitting distribution...")
         global_distribution.fit()

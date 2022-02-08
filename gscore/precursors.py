@@ -86,7 +86,13 @@ class Precursor:
 
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
-        self.peakgroups.sort(key=lambda x: x.scores[key], reverse=reverse)
+        if key == "Q_VALUE":
+
+            self.peakgroups.sort(key=lambda x: x.q_value, reverse=reverse)
+
+        else:
+
+            self.peakgroups.sort(key=lambda x: x.scores[key], reverse=reverse)
 
         rank = rank - 1
 
@@ -265,14 +271,23 @@ class Precursors:
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-            self, use_second_ranked: bool = False
+            self,
+            filter_field="PROBABILITY",
+            use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
 
         for precursor in self.precursors.values():
 
-            precursor.peakgroups.sort(key=lambda x: x.probability, reverse=True)
+            if filter_field == "PROBABILITY":
+
+                precursor.peakgroups.sort(key=lambda x: x.probability, reverse=True)
+
+            elif filter_field == "D_SCORE":
+
+                precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
 
             if use_second_ranked and len(precursor.peakgroups) > 1:
 
@@ -486,7 +501,9 @@ class Precursors:
 
         if use_decoys:
 
-            decoy_peakgroups = self.get_decoy_peakgroups()
+            decoy_peakgroups = self.get_decoy_peakgroups(
+                filter_field="D_SCORE"
+            )
 
         else:
 
@@ -513,7 +530,7 @@ class Precursors:
         q_values = self.score_distribution.calculate_q_values(all_data_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
-            peakgroup.scores["q_value"] = q_values[idx].item()
+            peakgroup.q_value = q_values[idx].item()
 
         return self
 

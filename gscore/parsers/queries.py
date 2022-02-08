@@ -244,9 +244,92 @@ class SelectPeakGroups:
                  FEATURE.RT_APEX ASC
         """
 
+    BUILD_GLOBAL_MODEL_QUERY = """
+        SELECT
+            FEATURE_MS2.FEATURE_ID,
+            FEATURE.PRECURSOR_ID,
+            MODIFIED_SEQUENCE,
+            UNMODIFIED_SEQUENCE,
+            CHARGE,
+            DECOY,
+            PROTEIN_ACCESSION,
+            Q_VALUE,
+            D_SCORE
+        FROM FEATURE_MS2
+        INNER JOIN(
+            SELECT
+                ID FEATURE_ID,
+                PRECURSOR_ID PRECURSOR_ID,
+                EXP_RT RT_APEX,
+                LEFT_WIDTH RT_START,
+                RIGHT_WIDTH RT_END
+            from FEATURE
+        ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+        INNER JOIN (
+            SELECT
+                ID,
+                CHARGE,
+                PRECURSOR_MZ MZ,
+                DECOY
+            FROM PRECURSOR
+        ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                FEATURE_ID MS1_FEATURE_ID,
+                AREA_INTENSITY AREA_INTENSITY_MS1,
+                APEX_INTENSITY APEX_INTENSITY_MS1
+            FROM FEATURE_MS1
+        ) FEATURE_MS1 ON FEATURE.FEATURE_ID = FEATURE_MS1.MS1_FEATURE_ID
+        INNER JOIN (
+            SELECT
+                GHOST_SCORE_ID,
+                PROBABILITY,
+                VOTE_PERCENTAGE,
+                FEATURE_ID,
+                Q_VALUE,
+                D_SCORE
+            FROM GHOST_SCORE_TABLE
+        ) GHOST_SCORE_TABLE ON FEATURE.FEATURE_ID = GHOST_SCORE_TABLE.FEATURE_ID
+        INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID = PRECURSOR.ID
+        INNER JOIN (
+            SELECT
+                ID,
+                MODIFIED_SEQUENCE,
+                UNMODIFIED_SEQUENCE
+            FROM PEPTIDE
+        ) PEPTIDE ON PEPTIDE.ID = PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID
+        INNER JOIN PEPTIDE_PROTEIN_MAPPING ON PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID = PEPTIDE.ID
+        INNER JOIN (
+            SELECT
+                ID,
+                PROTEIN_ACCESSION
+            FROM PROTEIN
+        ) PROTEIN ON PROTEIN.ID = PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID
+        ORDER BY PRECURSOR.ID ASC,
+                 FEATURE.RT_APEX ASC
+    
+    """
+
+
     FETCH_PRECURSORS_FOR_EXPORT_REDUCED = """
         SELECT
-            *
+            FEATURE_MS2.FEATURE_ID,
+            FEATURE.PRECURSOR_ID,
+            RT_APEX,
+            RT_START,
+            RT_END,
+            CHARGE,
+            MZ,
+            DECOY,
+            MODIFIED_SEQUENCE,
+            UNMODIFIED_SEQUENCE,
+            PROTEIN_ACCESSION,
+            GHOST_SCORE_ID,
+            PROBABILITY,
+            VOTE_PERCENTAGE,
+            FEATURE_MS2.AREA_INTENSITY,
+            Q_VALUE,
+            D_SCORE
         FROM FEATURE_MS2
         INNER JOIN(
             SELECT

@@ -32,36 +32,36 @@ class Combine:
 
             export.add_sample(sample_name)
 
-            with OSWFile(input_file) as osw_conn:
+            osw_file = OSWFile(input_file)
 
-                precursors = osw_conn.parse_to_precursors(
-                    query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
-                )
+            precursors = osw_file.parse_to_precursors(
+                query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
+            )
 
-                for precursor in precursors:
+            for precursor in precursors:
 
-                    precursor_id = f"{precursor.modified_sequence}_{precursor.charge}"
+                precursor_id = f"{precursor.modified_sequence}_{precursor.charge}"
 
-                    if precursor_id not in export:
+                if precursor_id not in export:
 
-                        export[precursor_id] = PrecursorExportRecord(
-                            modified_sequence=precursor.modified_sequence,
-                            charge=precursor.charge,
-                            decoy=precursor.decoy,
-                            protein_accession=precursor.protein_accession,
-                            protein_q_value=global_protein_model.get_q_value(
-                                precursor.protein_accession
-                            ),
-                            peptide_q_value=global_peptide_model.get_q_value(
-                                precursor.modified_sequence
-                            ),
-                        )
-
-                    peakgroup = precursor.get_peakgroup(rank=1, key="Q_VALUE")
-
-                    export[precursor_id].add_sample(
-                        sample_key=sample_name, peakgroup=peakgroup
+                    export[precursor_id] = PrecursorExportRecord(
+                        modified_sequence=precursor.modified_sequence,
+                        charge=precursor.charge,
+                        decoy=precursor.decoy,
+                        protein_accession=precursor.protein_accession,
+                        protein_q_value=global_protein_model.get_q_value(
+                            precursor.protein_accession
+                        ),
+                        peptide_q_value=global_peptide_model.get_q_value(
+                            precursor.modified_sequence
+                        ),
                     )
+
+                peakgroup = precursor.get_peakgroup(rank=1, key="Q_VALUE")
+
+                export[precursor_id].add_sample(
+                    sample_key=sample_name, peakgroup=peakgroup
+                )
 
         print(f"Writing {args.output}...")
 

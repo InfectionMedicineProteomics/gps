@@ -91,22 +91,11 @@ class OSWFile:
 
         proteins = Proteins()
 
-        for record in self.iterate_records(query):
+        with self.sqlite_file as sqlite_file:
 
-            if record["PROTEIN_ACCESSION"] not in proteins:
+            for record in sqlite_file.iterate_records(query):
 
-                protein = Protein(
-                    protein_accession=record["PROTEIN_ACCESSION"],
-                    decoy=record["DECOY"],
-                    q_value=record["Q_VALUE"],
-                    d_score=record["D_SCORE"],
-                )
-
-                proteins[record["PROTEIN_ACCESSION"]] = protein
-
-            else:
-
-                if record["D_SCORE"] > proteins[record["PROTEIN_ACCESSION"]].d_score:
+                if record["PROTEIN_ACCESSION"] not in proteins:
 
                     protein = Protein(
                         protein_accession=record["PROTEIN_ACCESSION"],
@@ -117,29 +106,30 @@ class OSWFile:
 
                     proteins[record["PROTEIN_ACCESSION"]] = protein
 
+                else:
+
+                    if record["D_SCORE"] > proteins[record["PROTEIN_ACCESSION"]].d_score:
+
+                        protein = Protein(
+                            protein_accession=record["PROTEIN_ACCESSION"],
+                            decoy=record["DECOY"],
+                            q_value=record["Q_VALUE"],
+                            d_score=record["D_SCORE"],
+                        )
+
+                        proteins[record["PROTEIN_ACCESSION"]] = protein
+
         return proteins
 
     def parse_to_peptides(self, query: str) -> Peptides:
 
         peptides = Peptides()
 
-        for record in self.iterate_records(query):
+        with self.sqlite_file as sqlite_file:
 
-            if record["MODIFIED_SEQUENCE"] not in peptides:
+            for record in sqlite_file.iterate_records(query):
 
-                peptide = Peptide(
-                    sequence=record["UNMODIFIED_SEQUENCE"],
-                    modified_sequence=record["MODIFIED_SEQUENCE"],
-                    decoy=record["DECOY"],
-                    q_value=record["Q_VALUE"],
-                    d_score=record["D_SCORE"],
-                )
-
-                peptides[record["MODIFIED_SEQUENCE"]] = peptide
-
-            else:
-
-                if record["D_SCORE"] > peptides[record["MODIFIED_SEQUENCE"]].d_score:
+                if record["MODIFIED_SEQUENCE"] not in peptides:
 
                     peptide = Peptide(
                         sequence=record["UNMODIFIED_SEQUENCE"],
@@ -150,6 +140,20 @@ class OSWFile:
                     )
 
                     peptides[record["MODIFIED_SEQUENCE"]] = peptide
+
+                else:
+
+                    if record["D_SCORE"] > peptides[record["MODIFIED_SEQUENCE"]].d_score:
+
+                        peptide = Peptide(
+                            sequence=record["UNMODIFIED_SEQUENCE"],
+                            modified_sequence=record["MODIFIED_SEQUENCE"],
+                            decoy=record["DECOY"],
+                            q_value=record["Q_VALUE"],
+                            d_score=record["D_SCORE"],
+                        )
+
+                        peptides[record["MODIFIED_SEQUENCE"]] = peptide
 
         return peptides
 
@@ -186,6 +190,8 @@ class OSWFile:
                     intensity=record.get("AREA_INTENSITY", 0.0),
                     probability=record.get("PROBABILITY", 0.0),
                     vote_percentage=record.get("VOTE_PERCENTAGE", 0.0),
+                    q_value=record.get("Q_VALUE", 0.0),
+                    d_score=record.get("D_SCORE", 0.0),
                     scores={score_col: score_value for score_col, score_value in record.items() if score_col.startswith("VAR_")}
                 )
 

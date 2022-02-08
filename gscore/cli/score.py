@@ -55,7 +55,7 @@ class Score:
 
         precursors.calculate_q_values(sort_key="d_score", use_decoys=True)
 
-        print("Updating Q Values in PQP file")
+        print("Updating Q Values in file")
 
         osw_file.add_score_and_q_value_records(
             precursors,

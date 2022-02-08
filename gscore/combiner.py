@@ -124,7 +124,7 @@ class PrecursorExport(MutableMapping):
 
                 if sample in record:
 
-                    if record[sample].scores["Q_VALUE"] <= self.max_q_value:
+                    if record[sample].q_value <= self.max_q_value:
 
                         export_record[sample] = record.get_sample_intensity(
                             sample_key=sample
