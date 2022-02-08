@@ -73,7 +73,6 @@ class CreateIndex:
     ]
 
 
-
 class SelectPeakGroups:
 
     FETCH_PREC_RECORDS = """
@@ -128,7 +127,6 @@ class SelectPeakGroups:
                 ORDER BY PRECURSOR.ID ASC,
                          FEATURE.RT_APEX ASC
                 """
-
 
     FETCH_CHROMATOGRAM_TRAINING_RECORDS = """
             SELECT
@@ -309,7 +307,6 @@ class SelectPeakGroups:
                  FEATURE.RT_APEX ASC
     
     """
-
 
     FETCH_PRECURSORS_FOR_EXPORT_REDUCED = """
         SELECT

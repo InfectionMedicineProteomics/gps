@@ -13,13 +13,18 @@ from gscore.models.base_model import Scorer
 
 
 class DeepChromFeatureScorer(Scorer):
-
-    def __init__(self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.05, num_features=0):
+    def __init__(
+        self,
+        max_epochs: int = 1000,
+        gpus: int = 1,
+        threads: int = 1,
+        initial_lr=0.05,
+        num_features=0,
+    ):
 
         super().__init__()
         self.model = DeepChromFeatureModel(
-            learning_rate=initial_lr,
-            num_features=num_features
+            learning_rate=initial_lr, num_features=num_features
         )
 
         ###TODO:
@@ -36,9 +41,9 @@ class DeepChromFeatureScorer(Scorer):
                     min_delta=0.00,
                     patience=10,
                     verbose=False,
-                    mode="min"
-                )
-            ]
+                    mode="min",
+                ),
+            ],
         )
         self.threads = threads
         self.gpus = gpus
@@ -50,64 +55,45 @@ class DeepChromFeatureScorer(Scorer):
         scores = torch.from_numpy(scores).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
 
-        chromatogram_dataset = TensorDataset(
-            chromatograms,
-            scores,
-            labels
-        )
+        chromatogram_dataset = TensorDataset(chromatograms, scores, labels)
 
         train_length = int(0.9 * len(chromatogram_dataset))
 
         validation_length = len(chromatogram_dataset) - train_length
 
         train_dataset, validation_dataset = torch.utils.data.random_split(
-            chromatogram_dataset,
-            (train_length, validation_length)
+            chromatogram_dataset, (train_length, validation_length)
         )
 
         chromatogram_dataloader = DataLoader(
-            train_dataset,
-            batch_size=100,
-            shuffle=True,
-            num_workers=self.threads
+            train_dataset, batch_size=100, shuffle=True, num_workers=self.threads
         )
 
         validation_dataloader = DataLoader(
-            validation_dataset,
-            batch_size=100,
-            num_workers=10
+            validation_dataset, batch_size=100, num_workers=10
         )
 
         self.trainer.fit(
             self.model,
             train_dataloaders=chromatogram_dataloader,
-            val_dataloaders=validation_dataloader
+            val_dataloaders=validation_dataloader,
         )
 
     def score(self, chromatograms: np.ndarray, scores: np.ndarray) -> np.ndarray:
 
-        trainer = Trainer(
-            gpus=self.gpus
-        )
+        trainer = Trainer(gpus=self.gpus)
 
-        chromatogram_tensor = torch.from_numpy(
-            chromatograms
-        ).type(torch.FloatTensor)
+        chromatogram_tensor = torch.from_numpy(chromatograms).type(torch.FloatTensor)
 
-        score_tensor = torch.from_numpy(
-            scores
-        ).type(torch.FloatTensor)
+        score_tensor = torch.from_numpy(scores).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
             TensorDataset(chromatogram_tensor, score_tensor),
             num_workers=self.threads,
-            batch_size=10000
+            batch_size=10000,
         )
 
-        predictions = trainer.predict(
-            self.model,
-            dataloaders=prediction_dataloader
-        )
+        predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
 
         predictions = torch.cat(predictions, 0).numpy()
 
@@ -129,34 +115,31 @@ class DeepChromFeatureScorer(Scorer):
             torch.from_numpy(self.score(chromatograms, scores)).type(torch.FloatTensor)
         ).numpy()
 
-    def predict_proba(self, chromatograms: np.ndarray, scores: np.ndarray) -> np.ndarray:
+    def predict_proba(
+        self, chromatograms: np.ndarray, scores: np.ndarray
+    ) -> np.ndarray:
         return self.probability(chromatograms, scores)
 
-    def evaluate(self, chromatograms: np.ndarray, scores: np.ndarray, labels: np.ndarray) -> float:
+    def evaluate(
+        self, chromatograms: np.ndarray, scores: np.ndarray, labels: np.ndarray
+    ) -> float:
 
-        probabilities = self.predict_proba(
-            chromatograms,
-            scores
-        )
+        probabilities = self.predict_proba(chromatograms, scores)
 
         return roc_auc_score(labels, probabilities)
 
     def save(self, model_path: str = ""):
 
-        self.trainer.save_checkpoint(
-            model_path
-        )
+        self.trainer.save_checkpoint(model_path)
 
     def load(self, model_path: str):
 
         self.model = DeepChromFeatureModel.load_from_checkpoint(
-            checkpoint_path=model_path,
-            num_features=self.num_features
+            checkpoint_path=model_path, num_features=self.num_features
         )
 
 
 class DeepChromFeatureModel(pl.LightningModule):
-
     def __init__(self, learning_rate=0.005, num_features=0):
         self.lr = learning_rate
 
@@ -171,34 +154,30 @@ class DeepChromFeatureModel(pl.LightningModule):
             ),
             nn.BatchNorm2d(10),
             nn.ReLU(),
-            nn.MaxPool2d(
-                kernel_size=2,
-                stride=1
-            ),
+            nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Conv2d(
-                10, 42,
+                10,
+                42,
                 kernel_size=5,
                 padding="same",
             ),
             nn.BatchNorm2d(42),
             nn.ReLU(),
-            nn.MaxPool2d(
-                kernel_size=2,
-                stride=2
-            ),
-            nn.Flatten()
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Flatten(),
         )
 
         self.linear_layers = nn.Sequential(
-            nn.Linear(1008 + num_features, 1008), nn.ReLU(),
-            nn.Linear(1008, 1008), nn.ReLU(),
-            nn.Linear(1008, 1)
+            nn.Linear(1008 + num_features, 1008),
+            nn.ReLU(),
+            nn.Linear(1008, 1008),
+            nn.ReLU(),
+            nn.Linear(1008, 1),
         )
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=(self.lr or self.learning_rate)
+            self.parameters(), lr=(self.lr or self.learning_rate)
         )
 
         scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5, min_lr=1e-6)
@@ -206,7 +185,7 @@ class DeepChromFeatureModel(pl.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler,
-            "monitor": "train_loss"
+            "monitor": "train_loss",
         }
 
     def training_step(self, batch, batch_idx):
@@ -215,18 +194,10 @@ class DeepChromFeatureModel(pl.LightningModule):
 
         y_hat = self(chromatograms, scores)
 
-        loss = F.binary_cross_entropy_with_logits(
-            y_hat,
-            labels
-        )
+        loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
         self.log(
-            "train_loss",
-            loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True
+            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
         )
 
         return loss
@@ -236,10 +207,7 @@ class DeepChromFeatureModel(pl.LightningModule):
 
         y_hat = self(chromatograms, scores)
 
-        loss = F.binary_cross_entropy_with_logits(
-            y_hat,
-            labels
-        )
+        loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
         return loss
 
@@ -248,19 +216,18 @@ class DeepChromFeatureModel(pl.LightningModule):
 
         y_hat = self(chromatograms, scores)
 
-        loss = F.binary_cross_entropy_with_logits(
-            y_hat,
-            labels
-        )
+        loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
         labels_hat = torch.argmax(y_hat, dim=1)
 
         accuracy = torch.sum(labels_hat == labels).item() / (len(labels) * 1.0)
 
-        self.log_dict({
-            'test_loss': loss,
-            'test_acc': accuracy,
-        })
+        self.log_dict(
+            {
+                "test_loss": loss,
+                "test_acc": accuracy,
+            }
+        )
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
 
@@ -272,13 +239,7 @@ class DeepChromFeatureModel(pl.LightningModule):
 
         out = self.conv_layers(chromatogram)
 
-        out = torch.cat(
-            (
-                out,
-                scores
-            ),
-            dim=1
-        )
+        out = torch.cat((out, scores), dim=1)
 
         out = self.linear_layers(out)
 

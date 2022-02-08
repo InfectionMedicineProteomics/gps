@@ -62,14 +62,10 @@ import pyopenms
 #     return decoded_data
 
 
-
-
 class SqMassFile:
-
     def __init__(self, file_path: str):
 
         self.file_path = file_path
-
 
     def parse(self, level: str = "ms2"):
 
@@ -80,10 +76,7 @@ class SqMassFile:
 
         sqmass_file.setConfig(sq_mass_config)
 
-        sqmass_file.load(
-            self.file_path,
-            chromatograms
-        )
+        sqmass_file.load(self.file_path, chromatograms)
 
         chromatogram_records = Chromatograms()
 
@@ -112,7 +105,7 @@ class SqMassFile:
                         charge=precursor.getCharge(),
                         peptide_sequence=precursor.getMetaValue("peptide_sequence"),
                         rts=retention_times,
-                        intensities=intensities
+                        intensities=intensities,
                     )
 
         return chromatogram_records
@@ -120,12 +113,14 @@ class SqMassFile:
 
 if __name__ == "__main__":
 
-    osw_file_path = "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
-    sqmass_file_path = "/home/aaron/projects/ghost/data/spike_in/chromatograms/AAS_P2009_167.sqMass"
-
-    sqmass_file = SqMassFile(
-        sqmass_file_path
+    osw_file_path = (
+        "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
     )
+    sqmass_file_path = (
+        "/home/aaron/projects/ghost/data/spike_in/chromatograms/AAS_P2009_167.sqMass"
+    )
+
+    sqmass_file = SqMassFile(sqmass_file_path)
 
     chromatograms = sqmass_file.parse()
 

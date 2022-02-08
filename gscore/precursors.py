@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import List, Dict, Union, Tuple, Optional
 
 import numpy as np
-from sklearn.metrics import precision_score, recall_score # type: ignore
-from sklearn.utils import shuffle, class_weight # type: ignore
+from sklearn.metrics import precision_score, recall_score  # type: ignore
+from sklearn.utils import shuffle, class_weight  # type: ignore
 
 
 from gscore import preprocess
@@ -47,7 +47,7 @@ class Precursor:
         modified_sequence="",
         unmodified_sequence="",
         protein_accession="",
-        mz=0.0
+        mz=0.0,
     ):
 
         self.id = precursor_id
@@ -77,12 +77,15 @@ class Precursor:
 
                 if idx == 0:
 
-                    chrom_list.append(chromatogram.scaled_rts(min_val=min_rt, max_val=max_rt))
+                    chrom_list.append(
+                        chromatogram.scaled_rts(min_val=min_rt, max_val=max_rt)
+                    )
 
-                chrom_list.append(chromatogram.normalized_intensities(add_min_max=(0.0, 10.0)))
+                chrom_list.append(
+                    chromatogram.normalized_intensities(add_min_max=(0.0, 10.0))
+                )
 
         return np.array(chrom_list)
-
 
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
@@ -151,8 +154,7 @@ class Precursors:
         for precursor in self:
 
             precursor_chromatograms = chromatograms.get(
-                f"{precursor.mz}_{precursor.charge}",
-                precursor.unmodified_sequence
+                f"{precursor.mz}_{precursor.charge}", precursor.unmodified_sequence
             )
 
             if precursor_chromatograms:
@@ -164,11 +166,7 @@ class Precursors:
                     start_rt = peakgroup.start_rt
                     end_rt = peakgroup.end_rt
 
-                    new_rt_steps = np.linspace(
-                        start_rt,
-                        end_rt,
-                        25
-                    )
+                    new_rt_steps = np.linspace(start_rt, end_rt, 25)
 
                     for key, chrom in precursor_chromatograms.items():
 
@@ -179,22 +177,20 @@ class Precursors:
                             intensities=chrom.interpolated_chromatogram(new_rt_steps),
                             rts=new_rt_steps,
                             start_rt=peakgroup.start_rt,
-                            end_rt=peakgroup.end_rt
+                            end_rt=peakgroup.end_rt,
                         )
 
                         peakgroup_chromatograms[key] = peakgroup_chromatogram
 
                         peakgroup.chromatograms = peakgroup_chromatograms
 
-
-
     def get_peakgroups_by_list(
-            self,
-            precursor_list: np.ndarray,
-            rank: int = 0,
-            score_key: str = "",
-            reverse: bool = True,
-            return_all: bool = False,
+        self,
+        precursor_list: np.ndarray,
+        rank: int = 0,
+        score_key: str = "",
+        reverse: bool = True,
+        return_all: bool = False,
     ) -> List[PeakGroup]:
 
         peakgroups = list()
@@ -219,7 +215,7 @@ class Precursors:
         return peakgroups
 
     def get_target_peakgroups_by_rank(
-            self, rank: int, score_key: str = "", reverse: bool = True
+        self, rank: int, score_key: str = "", reverse: bool = True
     ):
 
         filtered_peakgroups = []
@@ -228,9 +224,7 @@ class Precursors:
 
         for precursor in self.precursors.values():
 
-            precursor.peakgroups.sort(
-                key=lambda x: x.d_score, reverse=reverse
-            )
+            precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=reverse)
 
             peakgroup = precursor.peakgroups[rank]
 
@@ -240,7 +234,7 @@ class Precursors:
         return filtered_peakgroups
 
     def filter_target_peakgroups(
-            self, rank: int, filter_key: str, value: float
+        self, rank: int, filter_key: str, value: float
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -271,9 +265,7 @@ class Precursors:
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-            self,
-            filter_field="PROBABILITY",
-            use_second_ranked: bool = False
+        self, filter_field="PROBABILITY", use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -287,7 +279,6 @@ class Precursors:
             elif filter_field == "D_SCORE":
 
                 precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
-
 
             if use_second_ranked and len(precursor.peakgroups) > 1:
 
@@ -320,13 +311,13 @@ class Precursors:
         return all_peakgroups
 
     def denoise(
-            self,
-            num_folds: int,
-            num_classifiers: int,
-            num_threads: int,
-            vote_percentage: float,
-            verbose: bool = False,
-            base_estimator=None,
+        self,
+        num_folds: int,
+        num_classifiers: int,
+        num_threads: int,
+        vote_percentage: float,
+        verbose: bool = False,
+        base_estimator=None,
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -459,9 +450,14 @@ class Precursors:
 
         return self
 
-    def score_run(self, model_path: str, scaler_path: str, threads: int,
-                  gpus: int, use_relative_intensities: bool,
-):
+    def score_run(
+        self,
+        model_path: str,
+        scaler_path: str,
+        threads: int,
+        gpus: int,
+        use_relative_intensities: bool,
+    ):
 
         scoring_model: Optional[Scorer]
 
@@ -472,17 +468,19 @@ class Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
-        all_data_labels, all_data_indices, all_chromatograms = preprocess.reformat_chromatogram_data(
+        (
+            all_data_labels,
+            all_data_indices,
+            all_chromatograms,
+        ) = preprocess.reformat_chromatogram_data(
             all_peakgroups,
             use_relative_intensities=use_relative_intensities,
-            training=False
+            training=False,
         )
 
         scoring_model = DeepChromScorer(
-            max_epochs=1,
-            gpus=gpus,
-            threads=threads
-        ) # type: Scorer
+            max_epochs=1, gpus=gpus, threads=threads
+        )  # type: Scorer
 
         scoring_model.load(model_path)
 
@@ -501,9 +499,7 @@ class Precursors:
 
         if use_decoys:
 
-            decoy_peakgroups = self.get_decoy_peakgroups(
-                filter_field="D_SCORE"
-            )
+            decoy_peakgroups = self.get_decoy_peakgroups(filter_field="D_SCORE")
 
         else:
 
@@ -513,9 +509,7 @@ class Precursors:
 
         modelling_peakgroups = target_peakgroups + decoy_peakgroups
 
-        scores, labels = preprocess.reformat_distribution_data(
-            modelling_peakgroups
-        )
+        scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
 
         self.score_distribution = ScoreDistribution()
 
@@ -535,26 +529,28 @@ class Precursors:
         return self
 
     def dump_training_data(
-            self, file_path: str, filter_field: str, filter_value: float, use_relateive_intensities: bool = False,
+        self,
+        file_path: str,
+        filter_field: str,
+        filter_value: float,
+        use_relateive_intensities: bool = False,
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
             rank=1, filter_key=filter_field, value=filter_value
         )
 
-        negative_labels = self.get_decoy_peakgroups(
-            use_second_ranked=False
-        )
+        negative_labels = self.get_decoy_peakgroups(use_second_ranked=False)
 
         combined = positive_labels + negative_labels
 
-        all_data_labels, all_data_indices, all_chromatograms = preprocess.reformat_chromatogram_data(
-            combined,
-            use_relative_intensities=use_relateive_intensities
+        (
+            all_data_labels,
+            all_data_indices,
+            all_chromatograms,
+        ) = preprocess.reformat_chromatogram_data(
+            combined, use_relative_intensities=use_relateive_intensities
         )
 
         with open(file_path, "wb") as npfh:
-            np.savez(npfh,
-                     labels=all_data_labels,
-                     chromatograms=all_chromatograms
-                     )
+            np.savez(npfh, labels=all_data_labels, chromatograms=all_chromatograms)

@@ -4,6 +4,7 @@ from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
 from gscore.parsers.sqmass import SqMassFile
 
+
 class Score:
 
     name: str
@@ -47,8 +48,7 @@ class Score:
             scaler_path=args.scaler,
             threads=args.threads,
             gpus=args.gpus,
-            use_relative_intensities=args.use_relative_intensities
-
+            use_relative_intensities=args.use_relative_intensities,
         )
 
         print("Calculating Q Values")
@@ -58,8 +58,7 @@ class Score:
         print("Updating Q Values in file")
 
         osw_file.add_score_and_q_value_records(
-            precursors,
-            include_denoise=include_denoise
+            precursors, include_denoise=include_denoise
         )
 
         print("Done!")
@@ -78,7 +77,7 @@ class Score:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             type=str,
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
@@ -93,7 +92,7 @@ class Score:
             dest="scaler",
             help="Path to scaler to transform data.",
             type=str,
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
@@ -133,28 +132,28 @@ class Score:
             dest="gpus",
             type=int,
             help="Number of GPUs to use to train model.",
-            default=1
+            default=1,
         )
 
         self.parser.add_argument(
             "--use-interpolated-chroms",
             dest="use_interpolated_chroms",
             help="Export interpolated chromatograms of a uniform length.",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.add_argument(
             "--use-relative-intensities",
             dest="use_relative_intensities",
             help="Scale each chromatogram to use relative intensities.",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.add_argument(
             "--include-score-columns",
             dest="include_score_columns",
             help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.set_defaults(run=self)

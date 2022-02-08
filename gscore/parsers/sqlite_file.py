@@ -3,7 +3,6 @@ import sqlite3
 
 class SQLiteFile:
 
-
     ADD_RECORD = """INSERT INTO {table_name} ({list_fields}) VALUES ({list_values});"""
 
     UPDATE_RECORD = (
@@ -14,8 +13,7 @@ class SQLiteFile:
         """CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_list});"""
     )
 
-
-    def __init__(self, file_path : str = ""):
+    def __init__(self, file_path: str = ""):
 
         self.db_path = file_path
 

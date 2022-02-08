@@ -43,7 +43,7 @@ class PeakGroup:
         vote_percentage=0.0,
         d_score=0.0,
         q_value=0.0,
-        scores=None
+        scores=None,
     ):
 
         if scores is None:
@@ -94,8 +94,7 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self,
-                                          use_relative_intensities=False):
+    def get_chromatogram_intensity_arrays(self, use_relative_intensities=False):
 
         intensities = list()
 
@@ -112,7 +111,6 @@ class PeakGroup:
                 intensities = intensities / np.max(intensities)
 
         return intensities[intensities.mean(axis=1).argsort()]
-
 
     def add_score_column(self, key, value):
 

@@ -1,9 +1,8 @@
-
 from typing import Dict, ItemsView, Optional, Set
 
 import numpy as np
 
-from scipy.interpolate import interp1d # type: ignore
+from scipy.interpolate import interp1d  # type: ignore
 
 
 class Chromatogram:
@@ -20,19 +19,20 @@ class Chromatogram:
     end_rt: float
     interpolated_chromatogram: interp1d
 
-    def __init__(self,
-                 type: str = "",
-                 chrom_id: str = "",
-                 precursor_mz: float = 0.0,
-                 mz: float = 0.0,
-                 rts: np.ndarray = np.array([]),
-                 intensities: np.ndarray = np.array([]),
-                 charge: int = 0,
-                 peptide_sequence: str = "",
-                 start_rt: float = 0.0,
-                 end_rt: float = 0.0,
-                 #calculate_interpolated_function: bool=False
-     ):
+    def __init__(
+        self,
+        type: str = "",
+        chrom_id: str = "",
+        precursor_mz: float = 0.0,
+        mz: float = 0.0,
+        rts: np.ndarray = np.array([]),
+        intensities: np.ndarray = np.array([]),
+        charge: int = 0,
+        peptide_sequence: str = "",
+        start_rt: float = 0.0,
+        end_rt: float = 0.0,
+        # calculate_interpolated_function: bool=False
+    ):
         self.type = type
         self.id = chrom_id
         self.precursor_mz = precursor_mz
@@ -56,13 +56,9 @@ class Chromatogram:
 
     def interpolated_chromatogram(self, rts: np.ndarray):
 
-        #TODO: Investigate if the left and right extrapolation should change
+        # TODO: Investigate if the left and right extrapolation should change
 
-        return np.interp(
-            rts,
-            self.rts,
-            self.intensities
-        )
+        return np.interp(rts, self.rts, self.intensities)
 
     def _mean_intensity(self) -> np.ndarray:
 
@@ -104,22 +100,21 @@ class Chromatogram:
         max_intensity = self.intensities.max()
 
         scaled_intensities = min + (
-            ((self.intensities - min_intensity) * (max - min)) / (max_intensity - min_intensity)
+            ((self.intensities - min_intensity) * (max - min))
+            / (max_intensity - min_intensity)
         )
 
         return np.nan_to_num(scaled_intensities, nan=0.0)
 
-
-    def scaled_rts(self, min_val:float , max_val: float, a: float=0.0, b: float=100.0) -> np.ndarray:
+    def scaled_rts(
+        self, min_val: float, max_val: float, a: float = 0.0, b: float = 100.0
+    ) -> np.ndarray:
 
         return a + (((self.rts - min_val) * (b - a)) / (max_val - min_val))
 
     def interpolated_intensities(self, num_steps: int) -> np.ndarray:
 
-        spline = interp1d(
-            x=self.rts,
-            y=self.intensities
-        )
+        spline = interp1d(x=self.rts, y=self.intensities)
 
         start_rt = self.start_rt
         end_rt = self.end_rt
@@ -132,11 +127,7 @@ class Chromatogram:
 
             end_rt = self.rts.max()
 
-        new_rt_steps = np.linspace(
-            start_rt,
-            end_rt,
-            num_steps
-        )
+        new_rt_steps = np.linspace(start_rt, end_rt, num_steps)
 
         try:
             return spline(new_rt_steps)
@@ -146,11 +137,7 @@ class Chromatogram:
 
     def interpolated_rt(self, num_steps: int):
 
-        return np.linspace(
-            self.start_rt,
-            self.end_rt,
-            num_steps
-        )
+        return np.linspace(self.start_rt, self.end_rt, num_steps)
 
 
 class Chromatograms:
@@ -177,9 +164,8 @@ class Chromatograms:
 
         self.chromatogram_records[key] = value
 
-    def get(self,
-            precursor_id: str,
-            unmodified_sequence: str
+    def get(
+        self, precursor_id: str, unmodified_sequence: str
     ) -> Optional[Dict[str, Chromatogram]]:
 
         chromatograms = self.chromatogram_records[precursor_id]
@@ -192,13 +178,12 @@ class Chromatograms:
 
                 return_dict[key] = chromatogram
 
-        #TODO: check if this can be removed
+        # TODO: check if this can be removed
         if len(return_dict) > 6:
 
             return None
 
         return return_dict
-
 
     def __get_chromatogram_lengths(self) -> Set[int]:
 
@@ -227,6 +212,3 @@ class Chromatograms:
     def max_chromatogram_length(self) -> int:
 
         return max(self.__get_chromatogram_lengths())
-
-
-

@@ -47,7 +47,9 @@ class Train:
         target_label_count = combined_labels[combined_labels == 1.0].size
         decoy_label_count = combined_labels[combined_labels == 0.0].size
 
-        print(f"Target Peakgroups: {target_label_count}, Decoy Peakgroups: {decoy_label_count}")
+        print(
+            f"Target Peakgroups: {target_label_count}, Decoy Peakgroups: {decoy_label_count}"
+        )
 
         if args.train_deep_chromatogram_model:
 
@@ -60,37 +62,35 @@ class Train:
                 args.epochs,
             )
 
-    def train_deep_model(self, combined_chromatograms, combined_labels, model_output, threads, gpus, epochs):
+    def train_deep_model(
+        self,
+        combined_chromatograms,
+        combined_labels,
+        model_output,
+        threads,
+        gpus,
+        epochs,
+    ):
 
         training_data, testing_data, training_labels, testing_labels = train_test_split(
             combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
         )
 
-        model = DeepChromScorer(
-            threads=threads,
-            max_epochs=epochs,
-            gpus=gpus
-        )
+        model = DeepChromScorer(threads=threads, max_epochs=epochs, gpus=gpus)
 
         print("Training model...")
 
-        model.fit(
-            data=training_data,
-            labels=training_labels
-        )
+        model.fit(data=training_data, labels=training_labels)
 
         print("Saving model...")
 
-        model.save(
-            model_output
-        )
+        model.save(model_output)
 
         print("Testing model...")
 
         roc_auc = model.evaluate(testing_data, testing_labels)
 
         print(f"ROC-AUC: {roc_auc}")
-
 
     def train_model(self, combined_data, combined_labels, model_output, scaler_output):
 
@@ -156,14 +156,14 @@ class Train:
             "--train-deep-chromatogram-model",
             dest="train_deep_chromatogram_model",
             action="store_true",
-            help="Flag to indicate that a deep learning model should be trained on raw chromatograms."
+            help="Flag to indicate that a deep learning model should be trained on raw chromatograms.",
         )
 
         self.parser.add_argument(
             "--include-score-columns",
             dest="include_score_columns",
             help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.add_argument(
@@ -171,7 +171,7 @@ class Train:
             dest="threads",
             type=int,
             help="Number of threads/workers to use to train model.",
-            default=1
+            default=1,
         )
 
         self.parser.add_argument(
@@ -179,16 +179,15 @@ class Train:
             dest="gpus",
             type=int,
             help="Number of GPUs to use to train model.",
-            default=1
+            default=1,
         )
-
 
         self.parser.add_argument(
             "--epochs",
             dest="epochs",
             type=int,
             help="Number of Epochs to use to train deep chrom model.",
-            default=1
+            default=1,
         )
 
         self.parser.set_defaults(run=self)

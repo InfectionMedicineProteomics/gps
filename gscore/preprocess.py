@@ -81,10 +81,9 @@ def reformat_data(peakgroups):
 
     return scores, score_labels, score_indices
 
+
 def reformat_chromatogram_data(
-        peakgroups,
-        use_relative_intensities=False,
-        training=True
+    peakgroups, use_relative_intensities=False, training=True
 ) -> Tuple[ndarray, ndarray, ndarray]:
 
     labels = list()
@@ -123,12 +122,15 @@ def reformat_chromatogram_data(
 
         if training:
 
-            print(f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found.")
+            print(
+                f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found."
+            )
 
         else:
 
             print(
-                f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring")
+                f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring"
+            )
 
     label_array = np.array(labels, dtype=np.float64)
     indice_array = np.array(indices, dtype=str)

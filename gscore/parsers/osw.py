@@ -66,13 +66,10 @@ WHERE FEATURE_ID = {value};
 
 
 class OSWFile:
-
     def __init__(self, db_path, set_indices=False):
 
         self.db_path = db_path
-        self.sqlite_file = SQLiteFile(
-            db_path
-        )
+        self.sqlite_file = SQLiteFile(db_path)
 
         if set_indices:
 
@@ -85,7 +82,6 @@ class OSWFile:
                 if "GHOST_SCORE_TABLE" in self.sqlite_file:
 
                     sqlite_file.run_raw_sql(CreateIndex.CREATE_GHOST_SCORE_IDX)
-
 
     def parse_to_proteins(self, query: str) -> Proteins:
 
@@ -108,7 +104,10 @@ class OSWFile:
 
                 else:
 
-                    if record["D_SCORE"] > proteins[record["PROTEIN_ACCESSION"]].d_score:
+                    if (
+                        record["D_SCORE"]
+                        > proteins[record["PROTEIN_ACCESSION"]].d_score
+                    ):
 
                         protein = Protein(
                             protein_accession=record["PROTEIN_ACCESSION"],
@@ -143,7 +142,10 @@ class OSWFile:
 
                 else:
 
-                    if record["D_SCORE"] > peptides[record["MODIFIED_SEQUENCE"]].d_score:
+                    if (
+                        record["D_SCORE"]
+                        > peptides[record["MODIFIED_SEQUENCE"]].d_score
+                    ):
 
                         peptide = Peptide(
                             sequence=record["UNMODIFIED_SEQUENCE"],
@@ -174,7 +176,7 @@ class OSWFile:
                         mz=record["MZ"],
                         modified_sequence=record["MODIFIED_SEQUENCE"],
                         unmodified_sequence=record["UNMODIFIED_SEQUENCE"],
-                        protein_accession=record.get("PROTEIN_ACCESSION", "")
+                        protein_accession=record.get("PROTEIN_ACCESSION", ""),
                     )
 
                     precursors[record["PRECURSOR_ID"]] = precursor
@@ -192,7 +194,11 @@ class OSWFile:
                     vote_percentage=record.get("VOTE_PERCENTAGE", 0.0),
                     q_value=record.get("Q_VALUE", 0.0),
                     d_score=record.get("D_SCORE", 0.0),
-                    scores={score_col: score_value for score_col, score_value in record.items() if score_col.startswith("VAR_")}
+                    scores={
+                        score_col: score_value
+                        for score_col, score_value in record.items()
+                        if score_col.startswith("VAR_")
+                    },
                 )
 
                 precursors.add_peakgroup(record["PRECURSOR_ID"], peakgroup)
@@ -230,7 +236,6 @@ class OSWFile:
             formatted_records.append(record)
 
         return formatted_records
-
 
     def add_score_records(self, precursors):
 
@@ -277,7 +282,7 @@ class OSWFile:
                     record = {
                         "feature_id": peakgroup.idx,
                         "d_score": peakgroup.d_score,
-                        "q_value": peakgroup.q_value
+                        "q_value": peakgroup.q_value,
                     }
 
                 records.append(record)
@@ -310,14 +315,13 @@ class OSWFile:
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    osw_file_path = "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
-
-    osw_file = OSWFile(
-        osw_file_path,
-        set_indices=True
+    osw_file_path = (
+        "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
     )
+
+    osw_file = OSWFile(osw_file_path, set_indices=True)
 
     precursors = osw_file.parse_to_precursors(
         query=queries.SelectPeakGroups.FETCH_PREC_RECORDS

@@ -472,8 +472,8 @@ class ChromatogramProbabilityModel(nn.Module):
 
         return (probabilities > 0.5).double()
 
-class DeepChromConvLSTMModel(pl.LightningModule):
 
+class DeepChromConvLSTMModel(pl.LightningModule):
     def __init__(self, n_features, sequence_length):
 
         super().__init__()
@@ -498,7 +498,7 @@ class DeepChromConvLSTMModel(pl.LightningModule):
             num_layers=self.layer_dim,
             batch_first=True,
             dropout=0.2,
-            bidirectional=True
+            bidirectional=True,
         )
 
         self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3 + 1, 42)
@@ -507,10 +507,7 @@ class DeepChromConvLSTMModel(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=1e-3
-        )
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
         return optimizer
 
@@ -520,18 +517,10 @@ class DeepChromConvLSTMModel(pl.LightningModule):
 
         y_hat = self(chromatograms, peakgroup_boundaries, scores)
 
-        loss = F.binary_cross_entropy(
-            y_hat,
-            labels
-        )
+        loss = F.binary_cross_entropy(y_hat, labels)
 
         self.log(
-            "train_loss",
-            loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True
+            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
         )
 
         return loss
@@ -542,10 +531,7 @@ class DeepChromConvLSTMModel(pl.LightningModule):
 
         y_hat = self(chromatograms, peakgroup_boundaries, scores)
 
-        loss = F.binary_cross_entropy(
-            y_hat,
-            labels
-        )
+        loss = F.binary_cross_entropy(y_hat, labels)
 
         return loss
 
