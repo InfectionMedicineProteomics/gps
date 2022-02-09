@@ -13,7 +13,7 @@ from gscore.models.base_model import Scorer
 
 class DeepChromScorer(Scorer):
     def __init__(
-        self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.05
+        self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005
     ):
         super().__init__()
         self.model = DeepChromModel(learning_rate=initial_lr)
