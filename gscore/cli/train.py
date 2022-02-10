@@ -190,6 +190,14 @@ class Train:
             default=1,
         )
 
+        self.parser.add_argument(
+            "--early-stopping",
+            dest="early_stopping",
+            type=int,
+            help="Number of epochs with unchanged error to stop training.",
+            default=25,
+        )
+
         self.parser.set_defaults(run=self)
 
     def __repr__(self):
