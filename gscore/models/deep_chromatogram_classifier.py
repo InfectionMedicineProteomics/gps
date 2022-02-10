@@ -69,6 +69,7 @@ class DeepChromScorer(Scorer):
         )
 
     def score(self, data: np.ndarray) -> np.ndarray:
+
         trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
@@ -79,13 +80,31 @@ class DeepChromScorer(Scorer):
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
 
-        return torch.cat(predictions, 0).numpy()
+        probabilities = torch.cat(predictions, 0).numpy()
+
+        probabilities = torch.sigmoid(probabilities).numpy()
+
+        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
+
+        return np.log(probabilities / (1.0 - probabilities))
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
-        return torch.sigmoid(
-            torch.from_numpy(self.score(data)).type(torch.FloatTensor)
-        ).numpy()
+        trainer = Trainer(gpus=self.gpus)
+
+        chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+
+        prediction_dataloader = DataLoader(
+            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
+        )
+
+        predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
+
+        probabilities = torch.cat(predictions, 0)
+
+        probabilities = torch.sigmoid(probabilities).numpy()
+
+        return probabilities
 
     def predict_proba(self, data: np.ndarray) -> np.ndarray:
         return self.probability(data)
@@ -147,6 +166,7 @@ class DeepChromModel(pl.LightningModule):
         }
 
     def training_step(self, batch, batch_idx):
+
         chromatograms, labels = batch
 
         y_hat = self(chromatograms)
