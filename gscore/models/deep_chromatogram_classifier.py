@@ -10,7 +10,7 @@ from torch.utils.data import TensorDataset, DataLoader  # type: ignore
 
 from gscore.models.base_model import Scorer
 
-from sklearn.preprocessing import RobustScaler, MinMaxScaler  # type: ignore
+from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler  # type: ignore
 
 from sklearn.pipeline import Pipeline  # type: ignore
 
@@ -88,7 +88,7 @@ class DeepChromScorer(Scorer):
 
         transform = Pipeline(
             [
-                ("robust_scaler", RobustScaler()),
+                ("robust_scaler", StandardScaler()),
                 ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1))
                  )
             ]
