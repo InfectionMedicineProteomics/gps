@@ -80,7 +80,7 @@ class DeepChromScorer(Scorer):
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
 
-        probabilities = torch.cat(predictions, 0).numpy()
+        probabilities = torch.cat(predictions, 0)
 
         probabilities = torch.sigmoid(probabilities).numpy()
 
