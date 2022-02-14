@@ -10,6 +10,10 @@ from torch.utils.data import TensorDataset, DataLoader  # type: ignore
 
 from gscore.models.base_model import Scorer
 
+from sklearn.preprocessing import RobustScaler, MinMaxScaler  # type: ignore
+
+from sklearn.pipeline import Pipeline  # type: ignore
+
 
 class DeepChromScorer(Scorer):
     def __init__(
@@ -80,13 +84,23 @@ class DeepChromScorer(Scorer):
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
 
-        probabilities = torch.cat(predictions, 0)
+        predictions = torch.cat(predictions, 0)
 
-        probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
+        transform = Pipeline(
+            [
+                ("robust_scaler", RobustScaler()),
+                ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1))
+                 )
+            ]
+        )
+
+        #probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
 
         #probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
 
-        return np.log(probabilities / (1.0 - probabilities))
+        scores = transform.fit_transform(predictions.numpy())
+
+        return scores
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
