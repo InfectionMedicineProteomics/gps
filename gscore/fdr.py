@@ -13,6 +13,11 @@ from joblib import dump, load  # type: ignore
 
 from typing import TYPE_CHECKING
 
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+import statsmodels.api as sm
+
 if TYPE_CHECKING:
     from gscore.peptides import Peptide
     from gscore.proteins import Protein
@@ -31,21 +36,46 @@ class ScoreDistribution:
     decoy_model: KernelDensity
     target_function: InterpolatedUnivariateSpline
     decoy_function: InterpolatedUnivariateSpline
+    scale: bool
+    smooth: bool
 
-    def __init__(self):
+    def __init__(self, scale: bool = False, smooth: bool = False):
 
         self.target_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
         self.decoy_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
+        self.scale = scale
+        self.smooth = smooth
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
-        if np.isposinf(data).any():
-
-            data[data == np.inf] = 25.0
-
         self.x_axis = np.linspace(start=data.min(), stop=data.max(), num=1000)[
-            :, np.newaxis
-        ]
+                      :, np.newaxis
+                      ]
+
+        if self.scale:
+
+            print("Scaling score distributions.")
+
+            transform = Pipeline(
+                    [
+                        #("robust_scaler", StandardScaler())
+                        ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1)))
+                    ]
+                )
+
+            data = transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
+
+            self.x_axis = np.linspace(start=-2, stop=2, num=1000)[
+                          :, np.newaxis
+                          ]
+
+        if self.smooth:
+
+            data = sm.nonparametric.lowess(
+                data,
+                self.x_axis
+            )
+
 
         target_data = data[np.argwhere(labels == 1.0)]
 
@@ -170,7 +200,10 @@ class GlobalDistribution:
 
         self._parse_scores()
 
-        self.score_distribution = ScoreDistribution()
+        self.score_distribution = ScoreDistribution(
+            scale=True,
+            smooth=False
+        )
 
         self.score_distribution.fit(self.scores, self.labels)
 

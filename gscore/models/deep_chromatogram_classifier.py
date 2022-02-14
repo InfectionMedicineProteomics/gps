@@ -86,21 +86,21 @@ class DeepChromScorer(Scorer):
 
         predictions = torch.cat(predictions, 0)
 
-        transform = Pipeline(
-            [
-                ("robust_scaler", StandardScaler()),
-                ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1))
-                 )
-            ]
-        )
+        # transform = Pipeline(
+        #     [
+        #         ("robust_scaler", StandardScaler()),
+        #         ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1))
+        #          )
+        #     ]
+        # )
 
         #probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
 
         #probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
 
-        scores = transform.fit_transform(predictions.numpy())
+        #scores = transform.fit_transform(predictions.numpy())
 
-        return scores
+        return predictions.numpy()
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
