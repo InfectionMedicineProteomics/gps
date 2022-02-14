@@ -82,9 +82,9 @@ class DeepChromScorer(Scorer):
 
         probabilities = torch.cat(predictions, 0)
 
-        probabilities = torch.sigmoid(probabilities).numpy()
+        probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
 
-        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
+        #probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
 
         return np.log(probabilities / (1.0 - probabilities))
 
@@ -102,7 +102,7 @@ class DeepChromScorer(Scorer):
 
         probabilities = torch.cat(predictions, 0)
 
-        probabilities = torch.sigmoid(probabilities).numpy()
+        probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
 
         return probabilities
 
