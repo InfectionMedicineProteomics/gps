@@ -512,7 +512,7 @@ class Precursors:
         scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
 
         self.score_distribution = ScoreDistribution(
-            scale=False,
+            scale=True,
             smooth=False
         )
 

@@ -14,7 +14,7 @@ from joblib import dump, load  # type: ignore
 from typing import TYPE_CHECKING
 
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
 import statsmodels.api as sm
 
@@ -58,7 +58,7 @@ class ScoreDistribution:
 
             transform = Pipeline(
                     [
-                        #("robust_scaler", StandardScaler())
+                        ("robust_scaler", RobustScaler()),
                         ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1)))
                     ]
                 )
@@ -201,7 +201,7 @@ class GlobalDistribution:
         self._parse_scores()
 
         self.score_distribution = ScoreDistribution(
-            scale=False,
+            scale=True,
             smooth=False
         )
 
