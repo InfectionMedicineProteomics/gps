@@ -94,7 +94,7 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self, use_relative_intensities=False):
+    def get_chromatogram_intensity_arrays(self, use_relative_intensities=False, num_chromatograms=6):
 
         intensities = list()
 
@@ -103,6 +103,21 @@ class PeakGroup:
             intensities.append(chromatogram.intensities)
 
         intensities = np.array(intensities)
+
+        if intensities.shape[0] < num_chromatograms:
+
+            difference = num_chromatograms - len(intensities)
+
+            padded_chromatograms = np.zeros((difference, 25), dtype=float)
+
+            intensities = np.concatenate(
+                (
+                    intensities,
+                    padded_chromatograms
+                ),
+                axis=0
+            )
+
 
         if use_relative_intensities:
 

@@ -20,3 +20,4 @@ build/*
 
 
 notebooks/lightning_logs/
+lightning_logs/
