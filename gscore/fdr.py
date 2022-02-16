@@ -42,8 +42,8 @@ class ScoreDistribution:
 
     def __init__(self, scale: bool = False, smooth: bool = False):
 
-        self.target_model = KernelDensity(bandwidth=0.2, kernel="epanechnikov")
-        self.decoy_model = KernelDensity(bandwidth=0.2, kernel="epanechnikov")
+        self.target_model = KernelDensity(bandwidth=0.3, kernel="epanechnikov")
+        self.decoy_model = KernelDensity(bandwidth=0.3, kernel="epanechnikov")
         self.scale = scale
         self.smooth = smooth
 
@@ -61,11 +61,14 @@ class ScoreDistribution:
                     [
                         #("standard_scaler", PowerTransformer()),
                         #("robust_scaler", RobustScaler()),
-                        ("robust_scaler", QuantileTransformer(output_distribution="normal"))
+                        #("robust_scaler", QuantileTransformer(output_distribution="normal")),
+                        ("min_max", MinMaxScaler(feature_range=(0.01, 10)))
                     ]
                 )
 
             data = self.transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
+
+            data = np.log(data)
 
             self.x_axis = np.linspace(start=data.min() - 1, stop=data.max() + 1, num=1000)[
                           :, np.newaxis
@@ -123,6 +126,8 @@ class ScoreDistribution:
             scores = self.transform.transform(
                 scores.reshape((-1, 1))
             ).reshape((-1))
+
+            scores = np.log(scores)
 
         for score in scores:
 
