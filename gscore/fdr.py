@@ -59,14 +59,14 @@ class ScoreDistribution:
 
             self.transform = Pipeline(
                     [
-                        ("robust_scaler", RobustScaler()),
-                        ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1)))
+                        ("standard_scaler", StandardScaler()),
+                        #("min_max_scaler", MinMaxScaler(feature_range=(-10, 10)))
                     ]
                 )
 
             data = self.transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
 
-            self.x_axis = np.linspace(start=-2, stop=2, num=1000)[
+            self.x_axis = np.linspace(start=data.min() - 1, stop=data.max() + 1, num=1000)[
                           :, np.newaxis
                           ]
 
@@ -78,17 +78,14 @@ class ScoreDistribution:
             )
 
 
-        target_data = data[np.argwhere(labels == 1.0)]
+        self.target_data = data[np.argwhere(labels == 1.0)]
 
-        self.target_data = target_data
 
-        decoy_data = data[np.argwhere(labels == 0.0)]
+        self.decoy_data = data[np.argwhere(labels == 0.0)]
 
-        self.decoy_data = decoy_data
+        self.target_model.fit(self.target_data)
 
-        self.target_model.fit(target_data)
-
-        self.decoy_model.fit(decoy_data)
+        self.decoy_model.fit(self.decoy_data)
 
         self.target_scores = self.score(model="target")
         self.decoy_scores = self.score(model="decoy")
@@ -156,6 +153,8 @@ class ScoreDistribution:
         decoy_areas_array = np.array(decoy_areas)
 
         total_areas = target_areas_array + decoy_areas_array
+
+        print(total_areas.min(), total_areas.max())
 
         q_values = decoy_areas_array / total_areas
 
