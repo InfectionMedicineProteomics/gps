@@ -59,8 +59,9 @@ class ScoreDistribution:
 
             self.transform = Pipeline(
                     [
-                        ("standard_scaler", PowerTransformer()),
-                        ("robust_scaler", RobustScaler())
+                        #("standard_scaler", PowerTransformer()),
+                        #("robust_scaler", RobustScaler()),
+                        ("robust_scaler", QuantileTransformer(output_distribution="normal"))
                     ]
                 )
 
