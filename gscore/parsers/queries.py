@@ -252,7 +252,8 @@ class SelectPeakGroups:
             DECOY,
             PROTEIN_ACCESSION,
             Q_VALUE,
-            D_SCORE
+            D_SCORE,
+            PROBABILITY
         FROM FEATURE_MS2
         INNER JOIN(
             SELECT
@@ -326,7 +327,8 @@ class SelectPeakGroups:
             VOTE_PERCENTAGE,
             FEATURE_MS2.AREA_INTENSITY,
             Q_VALUE,
-            D_SCORE
+            D_SCORE,
+            PROBABILITY
         FROM FEATURE_MS2
         INNER JOIN(
             SELECT

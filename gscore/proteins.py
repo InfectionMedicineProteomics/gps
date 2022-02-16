@@ -8,9 +8,10 @@ class Protein:
     target: int
     q_value: float
     d_score: float
+    probability: float
     scores: Dict[str, float]
 
-    def __init__(self, protein_accession="", decoy=0, q_value=0.0, d_score=0.0):
+    def __init__(self, protein_accession="", decoy=0, q_value=0.0, d_score=0.0, probability=0.0):
 
         self.protein_accession = protein_accession
 
@@ -20,6 +21,8 @@ class Protein:
         self.q_value = q_value
 
         self.d_score = d_score
+
+        self.probability = probability
 
         self.scores = dict()
 

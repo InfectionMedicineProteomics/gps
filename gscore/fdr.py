@@ -59,8 +59,8 @@ class ScoreDistribution:
 
             self.transform = Pipeline(
                     [
-                        ("standard_scaler", PowerTransformer()),
-                        #("robust_scaler", RobustScaler()),
+                        #("standard_scaler", PowerTransformer()),
+                        ("robust_scaler", RobustScaler()),
                         #("robust_scaler", QuantileTransformer(output_distribution="normal")),
                     ]
                 )
@@ -190,6 +190,7 @@ class GlobalDistribution:
         scores = []
         labels = []
         feature_keys = []
+        probabilities = []
 
         for feature_key, feature in self.features.items():
 
@@ -199,13 +200,18 @@ class GlobalDistribution:
 
             feature_keys.append(feature_key)
 
+            probabilities.append(feature.probability)
+
         self.scores = np.array(scores, dtype=np.float64)
         self.labels = np.array(labels, dtype=int)
         self.feature_keys = np.array(feature_keys, dtype=str)
+        self.probabilities = np.array(probabilities, dtype=np.float64)
 
     def fit(self) -> None:
 
         self.q_value_map = dict()
+        self.score_map = dict()
+        self.probability_map = dict()
 
         self._parse_scores()
 
@@ -222,9 +228,21 @@ class GlobalDistribution:
 
             self.q_value_map[self.feature_keys[idx].item()] = self.q_values[idx].item()
 
+            self.score_map[self.feature_keys[idx].item()] = self.scores[idx].item()
+
+            self.probability_map[self.feature_keys[idx].item()] = self.probabilities[idx].item()
+
+    def get_score(self, feature_key: str):
+
+        return self.score_map[feature_key]
+
     def get_q_value(self, feature_key: str):
 
         return self.q_value_map[feature_key]
+
+    def get_probability(self, feature_key: str):
+
+        return self.probability_map[feature_key]
 
     def save(self, file_path: str) -> None:
 

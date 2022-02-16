@@ -49,15 +49,15 @@ class Combine:
                         charge=precursor.charge,
                         decoy=precursor.decoy,
                         protein_accession=precursor.protein_accession,
-                        protein_q_value=global_protein_model.get_q_value(
+                        protein_q_value=global_protein_model.get_probability(
                             precursor.protein_accession
                         ),
-                        peptide_q_value=global_peptide_model.get_q_value(
+                        peptide_q_value=global_peptide_model.get_probability(
                             precursor.modified_sequence
                         ),
                     )
 
-                peakgroup = precursor.get_peakgroup(rank=1, key="Q_VALUE")
+                peakgroup = precursor.get_peakgroup(rank=1, key="D_SCORE")
 
                 export[precursor_id].add_sample(
                     sample_key=sample_name, peakgroup=peakgroup

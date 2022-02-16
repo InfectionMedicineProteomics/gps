@@ -72,6 +72,7 @@ class DeepChromScorer(Scorer):
             val_dataloaders=validation_dataloader,
         )
 
+
     def score(self, data: np.ndarray) -> np.ndarray:
 
         trainer = Trainer(gpus=self.gpus)
@@ -85,6 +86,8 @@ class DeepChromScorer(Scorer):
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
 
         predictions = torch.cat(predictions, 0)
+
+        #probabilities = torch.sigmoid(predictions.to(dtype=torch.float64)).numpy()
 
         # transform = Pipeline(
         #     [

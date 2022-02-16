@@ -114,6 +114,7 @@ class OSWFile:
                             decoy=record["DECOY"],
                             q_value=record["Q_VALUE"],
                             d_score=record["D_SCORE"],
+                            probability=record["PROBABILITY"]
                         )
 
                         proteins[record["PROTEIN_ACCESSION"]] = protein
@@ -153,6 +154,7 @@ class OSWFile:
                             decoy=record["DECOY"],
                             q_value=record["Q_VALUE"],
                             d_score=record["D_SCORE"],
+                            probability=record["PROBABILITY"]
                         )
 
                         peptides[record["MODIFIED_SEQUENCE"]] = peptide
@@ -283,6 +285,7 @@ class OSWFile:
                         "feature_id": peakgroup.idx,
                         "d_score": peakgroup.d_score,
                         "q_value": peakgroup.q_value,
+                        "probability": peakgroup.probability
                     }
 
                 records.append(record)

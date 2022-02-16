@@ -93,6 +93,10 @@ class Precursor:
 
             self.peakgroups.sort(key=lambda x: x.q_value, reverse=reverse)
 
+        if key == "D_SCORE":
+
+            self.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
         else:
 
             self.peakgroups.sort(key=lambda x: x.scores[key], reverse=reverse)
@@ -486,8 +490,14 @@ class Precursors:
 
         model_scores = scoring_model.score(all_chromatograms)
 
+        model_probabilities = scoring_model.probability(all_chromatograms)
+
         for idx, peakgroup in enumerate(all_peakgroups):
+
             peakgroup.d_score = model_scores[idx].item()
+
+            peakgroup.probability = model_probabilities[idx].item()
+
 
         return self
 

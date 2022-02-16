@@ -9,6 +9,7 @@ class Peptide:
     target: int
     q_value: float
     d_score: float
+    probability: float
 
     def __init__(
         self,
@@ -17,6 +18,7 @@ class Peptide:
         decoy: int = 0,
         q_value: float = 0.0,
         d_score: float = 0.0,
+        probability = 0.0
     ):
 
         self.sequence = sequence
@@ -27,6 +29,7 @@ class Peptide:
 
         self.q_value = q_value
         self.d_score = d_score
+        self.probability = probability
 
     @property
     def identifier(self):
