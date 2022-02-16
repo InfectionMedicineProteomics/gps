@@ -14,7 +14,7 @@ from joblib import dump, load  # type: ignore
 from typing import TYPE_CHECKING
 
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, StandardScaler, QuantileTransformer, normalize
 
 import statsmodels.api as sm
 
@@ -42,8 +42,8 @@ class ScoreDistribution:
 
     def __init__(self, scale: bool = False, smooth: bool = False):
 
-        self.target_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
-        self.decoy_model = KernelDensity(bandwidth=0.2, kernel="gaussian")
+        self.target_model = KernelDensity(bandwidth=0.2, kernel="epanechnikov")
+        self.decoy_model = KernelDensity(bandwidth=0.2, kernel="epanechnikov")
         self.scale = scale
         self.smooth = smooth
 
@@ -59,8 +59,8 @@ class ScoreDistribution:
 
             self.transform = Pipeline(
                     [
-                        ("standard_scaler", StandardScaler()),
-                        #("min_max_scaler", MinMaxScaler(feature_range=(-10, 10)))
+                        ("standard_scaler", PowerTransformer()),
+                        ("robust_scaler", RobustScaler())
                     ]
                 )
 
