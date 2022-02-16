@@ -14,7 +14,7 @@ from joblib import dump, load  # type: ignore
 from typing import TYPE_CHECKING
 
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, StandardScaler, QuantileTransformer, normalize
+from sklearn.preprocessing import Normalizer, StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, StandardScaler, QuantileTransformer, normalize
 
 import statsmodels.api as sm
 
@@ -59,16 +59,13 @@ class ScoreDistribution:
 
             self.transform = Pipeline(
                     [
-                        #("standard_scaler", PowerTransformer()),
+                        ("standard_scaler", PowerTransformer()),
                         #("robust_scaler", RobustScaler()),
                         #("robust_scaler", QuantileTransformer(output_distribution="normal")),
-                        ("min_max", MinMaxScaler(feature_range=(0.01, 10)))
                     ]
                 )
 
             data = self.transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
-
-            data = np.log(data)
 
             self.x_axis = np.linspace(start=data.min() - 1, stop=data.max() + 1, num=1000)[
                           :, np.newaxis
@@ -126,8 +123,6 @@ class ScoreDistribution:
             scores = self.transform.transform(
                 scores.reshape((-1, 1))
             ).reshape((-1))
-
-            scores = np.log(scores)
 
         for score in scores:
 
