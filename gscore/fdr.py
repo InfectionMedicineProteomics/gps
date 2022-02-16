@@ -38,6 +38,7 @@ class ScoreDistribution:
     decoy_function: InterpolatedUnivariateSpline
     scale: bool
     smooth: bool
+    transform: Pipeline
 
     def __init__(self, scale: bool = False, smooth: bool = False):
 
@@ -56,14 +57,14 @@ class ScoreDistribution:
 
             print("Scaling score distributions.")
 
-            transform = Pipeline(
+            self.transform = Pipeline(
                     [
                         ("robust_scaler", RobustScaler()),
                         ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1)))
                     ]
                 )
 
-            data = transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
+            data = self.transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
 
             self.x_axis = np.linspace(start=-2, stop=2, num=1000)[
                           :, np.newaxis
@@ -116,6 +117,14 @@ class ScoreDistribution:
 
         target_areas = []
         decoy_areas = []
+
+        if self.scale:
+
+            print("Scaling scores.")
+
+            scores = self.transform.transform(
+                scores.reshape((-1, 1))
+            ).reshape((-1))
 
         for score in scores:
 
