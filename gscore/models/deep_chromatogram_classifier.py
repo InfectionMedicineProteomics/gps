@@ -133,41 +133,179 @@ class DeepChromScorer(Scorer):
         self.model = DeepChromModel.load_from_checkpoint(checkpoint_path=model_path)
 
 
+class InceptionBlock(nn.Module):
+    """
+    Inputs:
+        c_in - Number of input feature maps from the previous layers
+        c_red - Dictionary with keys "3x3" and "5x5" specifying the output of the dimensionality reducing 1x1 convolutions
+        c_out - Dictionary with keys "1x1", "3x3", "5x5", and "max"
+        act_fn - Activation class constructor (e.g. nn.ReLU)
+    """
+
+    def __init__(self, c_in, c_red: dict, c_out):
+
+        super().__init__()
+
+        # 1x1 convolution branch
+        self.conv_1x1 = nn.Sequential(
+            nn.Conv2d(c_in, c_out["1x1"], kernel_size=1),
+            nn.BatchNorm2d(c_out["1x1"]),
+            nn.ReLU()
+        )
+
+        # 3x3 convolution branch
+        self.conv_3x3 = nn.Sequential(
+            nn.Conv2d(c_in, c_red["3x3"], kernel_size=1),
+            nn.BatchNorm2d(c_red["3x3"]),
+            nn.ReLU(),
+            nn.Conv2d(c_red["3x3"], c_out["3x3"], kernel_size=3, padding=1),
+            nn.BatchNorm2d(c_out["3x3"]),
+            nn.ReLU()
+        )
+
+        # 5x5 convolution branch
+        self.conv_5x5 = nn.Sequential(
+            nn.Conv2d(c_in, c_red["5x5"], kernel_size=1),
+            nn.BatchNorm2d(c_red["5x5"]),
+            nn.ReLU(),
+            nn.Conv2d(c_red["5x5"], c_out["5x5"], kernel_size=5, padding=2),
+            nn.BatchNorm2d(c_out["5x5"]),
+            nn.ReLU()
+        )
+
+        # Max-pool branch
+        self.max_pool = nn.Sequential(
+            nn.MaxPool2d(kernel_size=3, padding=1, stride=1),
+            nn.Conv2d(c_in, c_out["max"], kernel_size=1),
+            nn.BatchNorm2d(c_out["max"]),
+            nn.ReLU()
+        )
+
+    def forward(self, x):
+        x_1x1 = self.conv_1x1(x)
+        x_3x3 = self.conv_3x3(x)
+        x_5x5 = self.conv_5x5(x)
+        x_max = self.max_pool(x)
+        x_out = torch.cat([x_1x1, x_3x3, x_5x5, x_max], dim=1)
+        return x_out
+
 class DeepChromModel(pl.LightningModule):
     def __init__(self, learning_rate=0.0005):
         self.lr = learning_rate
 
         super().__init__()
 
-        self.conv_layers = nn.Sequential(
+        self.input_conv = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
-                out_channels=10,
-                kernel_size=5,
+                out_channels=64,
+                kernel_size=3,
                 padding="same",
             ),
-            nn.BatchNorm2d(10),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=1),
-            nn.Conv2d(
-                10,
-                42,
-                kernel_size=5,
-                padding="same",
-            ),
-            nn.BatchNorm2d(42),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Flatten(),
+            nn.BatchNorm2d(64),
+            nn.ReLU()
         )
 
-        self.linear_layers = nn.Sequential(
-            nn.Linear(1008, 1008),
-            nn.ReLU(),
-            nn.Linear(1008, 1008),
-            nn.ReLU(),
-            nn.Linear(1008, 1),
+        self.inception_blocks = nn.Sequential(
+            InceptionBlock(
+                64,
+                c_red={
+                    "3x3": 32,
+                    "5x5": 16
+                },
+                c_out={
+                    "1x1": 16,
+                    "3x3": 32,
+                    "5x5": 8,
+                    "max": 8
+                }
+            ),
+            InceptionBlock(
+                64,
+                c_red={"3x3": 32, "5x5": 16},
+                c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
+            ),
+            nn.MaxPool2d(3, stride=2, padding=1),  # 32x32 => 16x16
+            InceptionBlock(
+                96,
+                c_red={"3x3": 32, "5x5": 16},
+                c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
+            ),
+            InceptionBlock(
+                96,
+                c_red={"3x3": 32, "5x5": 16},
+                c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
+            ),
+            InceptionBlock(
+                96,
+                c_red={"3x3": 32, "5x5": 16},
+                c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
+            ),
+            InceptionBlock(
+                96,
+                c_red={"3x3": 32, "5x5": 16},
+                c_out={"1x1": 32, "3x3": 48, "5x5": 24, "max": 24}
+            ),
+            nn.MaxPool2d(3, stride=2, padding=1),  # 16x16 => 8x8
+            InceptionBlock(
+                128,
+                c_red={"3x3": 48, "5x5": 16},
+                c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
+            ),
+            InceptionBlock(
+                128,
+                c_red={"3x3": 48, "5x5": 16},
+                c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
+            ),
         )
+
+        self.output_net = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(128, 1)
+        )
+
+        self._init_params()
+
+        # self.conv_layers = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels=1,
+        #         out_channels=10,
+        #         kernel_size=5,
+        #         padding="same",
+        #     ),
+        #     nn.BatchNorm2d(10),
+        #     nn.ReLU(),
+        #     nn.MaxPool2d(kernel_size=2, stride=1),
+        #     nn.Conv2d(
+        #         10,
+        #         42,
+        #         kernel_size=5,
+        #         padding="same",
+        #     ),
+        #     nn.BatchNorm2d(42),
+        #     nn.ReLU(),
+        #     nn.MaxPool2d(kernel_size=2, stride=2),
+        #     nn.Flatten(),
+        # )
+        #
+        # self.linear_layers = nn.Sequential(
+        #     nn.Linear(1008, 1008),
+        #     nn.ReLU(),
+        #     nn.Linear(1008, 1008),
+        #     nn.ReLU(),
+        #     nn.Linear(1008, 1),
+        # )
+
+    def _init_params(self):
+        # Based on our discussion in Tutorial 4, we should initialize the
+        # convolutions according to the activation function
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -230,8 +368,15 @@ class DeepChromModel(pl.LightningModule):
         return self(chromatograms)
 
     def forward(self, chromatogram):
-        out = self.conv_layers(chromatogram)
 
-        out = self.linear_layers(out)
+        # out = self.conv_layers(chromatogram)
+        #
+        # out = self.linear_layers(out)
+
+        out = self.input_conv(chromatogram)
+
+        out = self.inception_blocks(out)
+
+        out = self.output_net(out)
 
         return out

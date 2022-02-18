@@ -216,7 +216,7 @@ class GlobalDistribution:
         self._parse_scores()
 
         self.score_distribution = ScoreDistribution(
-            scale=True,
+            scale=False,
             smooth=False
         )
 
