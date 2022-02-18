@@ -243,7 +243,7 @@ class DeepChromModel(pl.LightningModule):
             nn.ReLU()
         )
 
-        backbone = models.resnet50(pretrained=False)
+        backbone = models.resnet18(pretrained=False)
 
         num_filters = backbone.fc.in_features
 
