@@ -42,8 +42,8 @@ class ScoreDistribution:
 
     def __init__(self, scale: bool = False, smooth: bool = False):
 
-        self.target_model = KernelDensity(bandwidth=0.3, kernel="epanechnikov")
-        self.decoy_model = KernelDensity(bandwidth=0.3, kernel="epanechnikov")
+        self.target_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
+        self.decoy_model = KernelDensity(bandwidth=0.5, kernel="epanechnikov")
         self.scale = scale
         self.smooth = smooth
 

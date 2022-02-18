@@ -17,29 +17,51 @@ from sklearn.pipeline import Pipeline  # type: ignore
 
 class DeepChromScorer(Scorer):
     def __init__(
-        self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25
+        self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25,
+            training=True
     ):
         super().__init__()
-        self.model = DeepChromModel(learning_rate=initial_lr)
+        self.model = DeepChromModel(learning_rate=initial_lr, training=training)
 
         ###TODO:
         ### set trainer base dir so that the checkpoints are not everywhere.
         ### Pass in by CLI
 
-        self.trainer = Trainer(
-            max_epochs=max_epochs,
-            gpus=gpus,
-            callbacks=[
-                LearningRateMonitor(logging_interval="epoch"),
-                EarlyStopping(
-                    monitor="train_loss",
-                    min_delta=0.00,
-                    patience=early_stopping,
-                    verbose=True,
-                    mode="min",
-                ),
-            ],
-        )
+        if gpus > 0:
+
+            self.trainer = Trainer(
+                max_epochs=max_epochs,
+                gpus=gpus,
+                callbacks=[
+                    LearningRateMonitor(logging_interval="epoch"),
+                    EarlyStopping(
+                        monitor="train_loss",
+                        min_delta=0.00,
+                        patience=early_stopping,
+                        verbose=True,
+                        mode="min",
+                    ),
+                ],
+                auto_select_gpus=True
+            )
+
+        else:
+
+            self.trainer = Trainer(
+                max_epochs=max_epochs,
+                gpus=gpus,
+                callbacks=[
+                    LearningRateMonitor(logging_interval="epoch"),
+                    EarlyStopping(
+                        monitor="train_loss",
+                        min_delta=0.00,
+                        patience=early_stopping,
+                        verbose=True,
+                        mode="min",
+                    ),
+                ],
+            )
+
         self.threads = threads
         self.gpus = gpus
 
@@ -75,7 +97,13 @@ class DeepChromScorer(Scorer):
 
     def score(self, data: np.ndarray) -> np.ndarray:
 
-        trainer = Trainer(gpus=self.gpus)
+        if self.gpus > 0:
+
+            trainer = Trainer(gpus=self.gpus, auto_select_gpus=True)
+
+        else:
+
+            trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
 
@@ -107,7 +135,13 @@ class DeepChromScorer(Scorer):
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
-        trainer = Trainer(gpus=self.gpus)
+        if self.gpus > 0:
+
+            trainer = Trainer(gpus=self.gpus, auto_select_gpus=True)
+
+        else:
+
+            trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
 
@@ -189,8 +223,11 @@ class InceptionBlock(nn.Module):
         x_out = torch.cat([x_1x1, x_3x3, x_5x5, x_max], dim=1)
         return x_out
 
+
+import torchvision.models as models
+
 class DeepChromModel(pl.LightningModule):
-    def __init__(self, learning_rate=0.0005):
+    def __init__(self, learning_rate=0.0005, training=False):
         self.lr = learning_rate
 
         super().__init__()
@@ -198,72 +235,82 @@ class DeepChromModel(pl.LightningModule):
         self.input_conv = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
-                out_channels=64,
-                kernel_size=3,
+                out_channels=3,
+                kernel_size=1,
                 padding="same",
             ),
-            nn.BatchNorm2d(64),
+            nn.BatchNorm2d(3),
             nn.ReLU()
         )
 
-        self.inception_blocks = nn.Sequential(
-            InceptionBlock(
-                64,
-                c_red={
-                    "3x3": 32,
-                    "5x5": 16
-                },
-                c_out={
-                    "1x1": 16,
-                    "3x3": 32,
-                    "5x5": 8,
-                    "max": 8
-                }
-            ),
-            InceptionBlock(
-                64,
-                c_red={"3x3": 32, "5x5": 16},
-                c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
-            ),
-            nn.MaxPool2d(3, stride=2, padding=1),  # 32x32 => 16x16
-            InceptionBlock(
-                96,
-                c_red={"3x3": 32, "5x5": 16},
-                c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
-            ),
-            InceptionBlock(
-                96,
-                c_red={"3x3": 32, "5x5": 16},
-                c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
-            ),
-            InceptionBlock(
-                96,
-                c_red={"3x3": 32, "5x5": 16},
-                c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
-            ),
-            InceptionBlock(
-                96,
-                c_red={"3x3": 32, "5x5": 16},
-                c_out={"1x1": 32, "3x3": 48, "5x5": 24, "max": 24}
-            ),
-            nn.MaxPool2d(3, stride=2, padding=1),  # 16x16 => 8x8
-            InceptionBlock(
-                128,
-                c_red={"3x3": 48, "5x5": 16},
-                c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
-            ),
-            InceptionBlock(
-                128,
-                c_red={"3x3": 48, "5x5": 16},
-                c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
-            ),
-        )
+        backbone = models.resnet50(pretrained=False)
 
-        self.output_net = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(128, 1)
-        )
+        num_filters = backbone.fc.in_features
+
+        layers = list(backbone.children())[:-1]
+
+        self.feature_extractor = nn.Sequential(*layers)
+
+        self.output_net = nn.Linear(num_filters, 1)
+
+        # self.inception_blocks = nn.Sequential(
+        #     InceptionBlock(
+        #         64,
+        #         c_red={
+        #             "3x3": 32,
+        #             "5x5": 16
+        #         },
+        #         c_out={
+        #             "1x1": 16,
+        #             "3x3": 32,
+        #             "5x5": 8,
+        #             "max": 8
+        #         }
+        #     ),
+        #     InceptionBlock(
+        #         64,
+        #         c_red={"3x3": 32, "5x5": 16},
+        #         c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
+        #     ),
+        #     nn.MaxPool2d(3, stride=2, padding=1),  # 32x32 => 16x16
+        #     InceptionBlock(
+        #         96,
+        #         c_red={"3x3": 32, "5x5": 16},
+        #         c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
+        #     ),
+        #     InceptionBlock(
+        #         96,
+        #         c_red={"3x3": 32, "5x5": 16},
+        #         c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
+        #     ),
+        #     InceptionBlock(
+        #         96,
+        #         c_red={"3x3": 32, "5x5": 16},
+        #         c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
+        #     ),
+        #     InceptionBlock(
+        #         96,
+        #         c_red={"3x3": 32, "5x5": 16},
+        #         c_out={"1x1": 32, "3x3": 48, "5x5": 24, "max": 24}
+        #     ),
+        #     nn.MaxPool2d(3, stride=2, padding=1),  # 16x16 => 8x8
+        #     InceptionBlock(
+        #         128,
+        #         c_red={"3x3": 48, "5x5": 16},
+        #         c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
+        #     ),
+        #     InceptionBlock(
+        #         128,
+        #         c_red={"3x3": 48, "5x5": 16},
+        #         c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
+        #     ),
+        # )
+        #
+        # self.output_net = nn.Sequential(
+        #     nn.AdaptiveAvgPool2d((1, 1)),
+        #     nn.Flatten(),
+        #     nn.Linear(128, 1)
+        # )
 
         self._init_params()
 
@@ -375,7 +422,7 @@ class DeepChromModel(pl.LightningModule):
 
         out = self.input_conv(chromatogram)
 
-        out = self.inception_blocks(out)
+        out = self.feature_extractor(out).flatten(1)
 
         out = self.output_net(out)
 
