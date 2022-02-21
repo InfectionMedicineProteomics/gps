@@ -42,6 +42,19 @@ class Export:
 
             use_chromatograms = True
 
+        print("Denoising...")
+
+        precursors.denoise(
+            num_folds=args.num_folds,
+            num_classifiers=args.num_classifiers,
+            num_threads=args.threads,
+            vote_percentage=args.vote_percentage,
+        )
+
+        print("Writing scores to OSW file...")
+
+        osw_file.add_score_records(precursors)
+
         print(f"Filtering and writing output.")
 
         precursors.dump_training_data(
@@ -99,10 +112,35 @@ class Export:
         )
 
         self.parser.add_argument(
-            "--include-score-columns",
-            dest="include_score_columns",
-            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
-            action="store_true",
+            "--num-classifiers",
+            dest="num_classifiers",
+            help="The number of ensemble learners used to denoise each fold",
+            default=10,
+            type=int,
+        )
+
+        self.parser.add_argument(
+            "--num-folds",
+            dest="num_folds",
+            help="The number of folds used to denoise the target labels",
+            default=10,
+            type=int,
+        )
+
+        self.parser.add_argument(
+            "--vote-percentage",
+            dest="vote_percentage",
+            help="The minimum probability needed to be counted as a positive vote",
+            default=0.8,
+            type=float,
+        )
+
+        self.parser.add_argument(
+            "--threads",
+            dest="threads",
+            help="The number of threads to use",
+            default=10,
+            type=int,
         )
 
         self.parser.set_defaults(run=self)

@@ -64,7 +64,7 @@ def reformat_data(peakgroups):
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = peakgroup.get_sub_score_column_array()
+        score_array = peakgroup.get_sub_score_column_array(include_probability=False)
 
         scores.append(score_array)
 
@@ -84,11 +84,12 @@ def reformat_data(peakgroups):
 
 def reformat_chromatogram_data(
     peakgroups, use_relative_intensities=False, training=True
-) -> Tuple[ndarray, ndarray, ndarray]:
+) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
 
     labels = list()
     indices = list()
     chromatograms = list()
+    scores = list()
 
     skipped_peakgroups = 0
 
@@ -98,6 +99,7 @@ def reformat_chromatogram_data(
 
             labels.append([peakgroup.target])
             indices.append(peakgroup.idx)
+            scores.append(peakgroup.get_sub_score_column_array(include_probability=True))
 
             peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
                 use_relative_intensities=use_relative_intensities
@@ -111,6 +113,7 @@ def reformat_chromatogram_data(
 
                 labels.append([peakgroup.target])
                 indices.append(peakgroup.idx)
+                scores.append(peakgroup.get_sub_score_column_array(include_probability=True))
 
                 peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
 
@@ -132,8 +135,13 @@ def reformat_chromatogram_data(
                 f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring"
             )
 
+    scores = np.array(scores, dtype=np.float64)
+    scores = scores[:, ~np.all(scores == 0, axis=0)]
+    scores = scores[:, ~np.all(np.isnan(scores), axis=0)]
+    scores_array = np.array(scores, dtype=np.float64)
+
     label_array = np.array(labels, dtype=np.float64)
     indice_array = np.array(indices, dtype=str)
     chromatogram_array = np.array(chromatograms, dtype=np.float64)
 
-    return label_array, indice_array, chromatogram_array
+    return label_array, indice_array, chromatogram_array, scores_array

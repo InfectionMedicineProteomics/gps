@@ -476,6 +476,7 @@ class Precursors:
             all_data_labels,
             all_data_indices,
             all_chromatograms,
+            all_scores
         ) = preprocess.reformat_chromatogram_data(
             all_peakgroups,
             use_relative_intensities=use_relative_intensities,
@@ -483,14 +484,16 @@ class Precursors:
         )
 
         scoring_model = DeepChromScorer(
-            max_epochs=1, gpus=gpus, threads=threads
+            max_epochs=1, gpus=gpus, threads=threads, num_scores=all_scores.shape[1]
         )  # type: Scorer
 
         scoring_model.load(model_path)
 
-        model_scores = scoring_model.score(all_chromatograms)
+        all_scores = pipeline.transform(all_scores)
 
-        model_probabilities = scoring_model.probability(all_chromatograms)
+        model_scores = scoring_model.score(all_chromatograms, all_scores)
+
+        model_probabilities = scoring_model.probability(all_chromatograms, all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
@@ -561,9 +564,10 @@ class Precursors:
             all_data_labels,
             all_data_indices,
             all_chromatograms,
+            all_scores
         ) = preprocess.reformat_chromatogram_data(
             combined, use_relative_intensities=use_relateive_intensities
         )
 
         with open(file_path, "wb") as npfh:
-            np.savez(npfh, labels=all_data_labels, chromatograms=all_chromatograms)
+            np.savez(npfh, labels=all_data_labels, chromatograms=all_chromatograms, scores=all_scores)

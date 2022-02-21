@@ -18,10 +18,15 @@ from sklearn.pipeline import Pipeline  # type: ignore
 class DeepChromScorer(Scorer):
     def __init__(
         self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25,
-            training=True
+            training=True, num_scores: int = 0
     ):
         super().__init__()
-        self.model = DeepChromModel(learning_rate=initial_lr, training=training)
+
+        self.model = DeepChromModel(
+            learning_rate=initial_lr,
+            training=training,
+            num_scores=num_scores
+        )
 
         ###TODO:
         ### set trainer base dir so that the checkpoints are not everywhere.
@@ -64,13 +69,17 @@ class DeepChromScorer(Scorer):
 
         self.threads = threads
         self.gpus = gpus
+        self.initial_lr = initial_lr
+        self.num_scores = num_scores
+        self.training = training
 
-    def fit(self, data, labels) -> None:
+    def fit(self, data, input_scores, labels) -> None:
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
 
-        chromatogram_dataset = TensorDataset(chromatograms, labels)
+        chromatogram_dataset = TensorDataset(chromatograms, scores, labels)
 
         train_length = int(0.9 * len(chromatogram_dataset))
 
@@ -95,7 +104,7 @@ class DeepChromScorer(Scorer):
         )
 
 
-    def score(self, data: np.ndarray) -> np.ndarray:
+    def score(self, data: np.ndarray, input_scores: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
 
@@ -106,9 +115,12 @@ class DeepChromScorer(Scorer):
             trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
+            TensorDataset(chromatograms, scores),
+            num_workers=self.threads,
+            batch_size=10000
         )
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
@@ -133,7 +145,7 @@ class DeepChromScorer(Scorer):
 
         return predictions.numpy()
 
-    def probability(self, data: np.ndarray) -> np.ndarray:
+    def probability(self, data: np.ndarray, input_scores: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
 
@@ -144,9 +156,12 @@ class DeepChromScorer(Scorer):
             trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
+            TensorDataset(chromatograms, scores),
+            num_workers=self.threads,
+            batch_size=10000
         )
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
@@ -164,7 +179,12 @@ class DeepChromScorer(Scorer):
         self.trainer.save_checkpoint(model_path)
 
     def load(self, model_path: str):
-        self.model = DeepChromModel.load_from_checkpoint(checkpoint_path=model_path)
+        self.model = DeepChromModel.load_from_checkpoint(
+            checkpoint_path=model_path,
+            learning_rate=self.initial_lr,
+            training=self.training,
+            num_scores=self.num_scores
+        )
 
 
 class InceptionBlock(nn.Module):
@@ -227,8 +247,10 @@ class InceptionBlock(nn.Module):
 import torchvision.models as models
 
 class DeepChromModel(pl.LightningModule):
-    def __init__(self, learning_rate=0.0005, training=False):
+    def __init__(self, learning_rate=0.0005, training=False, num_scores: int = 0):
+
         self.lr = learning_rate
+        self.num_scores = num_scores
 
         super().__init__()
 
@@ -251,7 +273,13 @@ class DeepChromModel(pl.LightningModule):
 
         self.feature_extractor = nn.Sequential(*layers)
 
-        self.output_net = nn.Linear(num_filters, 1)
+        self.output_net = nn.Sequential(
+            nn.Linear(num_filters + num_scores, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1)
+        )
 
         # self.inception_blocks = nn.Sequential(
         #     InceptionBlock(
@@ -369,9 +397,9 @@ class DeepChromModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        chromatograms, labels = batch
+        chromatograms, scores, labels = batch
 
-        y_hat = self(chromatograms)
+        y_hat = self(chromatograms, scores)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
@@ -382,18 +410,18 @@ class DeepChromModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        chromatograms, labels = batch
+        chromatograms, scores, labels = batch
 
-        y_hat = self(chromatograms)
+        y_hat = self(chromatograms, scores)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
         return loss
 
     def test_step(self, batch, batch_idx):
-        chromatograms, labels = batch
+        chromatograms, scores, labels = batch
 
-        y_hat = self(chromatograms)
+        y_hat = self(chromatograms, scores)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
@@ -410,11 +438,11 @@ class DeepChromModel(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
 
-        (chromatograms,) = batch
+        (chromatograms, scores) = batch
 
-        return self(chromatograms)
+        return self(chromatograms, scores)
 
-    def forward(self, chromatogram):
+    def forward(self, chromatogram, scores):
 
         # out = self.conv_layers(chromatogram)
         #
@@ -423,6 +451,8 @@ class DeepChromModel(pl.LightningModule):
         out = self.input_conv(chromatogram)
 
         out = self.feature_extractor(out).flatten(1)
+
+        out = torch.cat((out, scores), 1)
 
         out = self.output_net(out)
 
