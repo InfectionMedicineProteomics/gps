@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from typing import List, Dict, Union, Tuple, Optional
 
 import numpy as np
@@ -9,7 +10,6 @@ from sklearn.utils import shuffle, class_weight  # type: ignore
 
 from gscore import preprocess
 from gscore.chromatograms import Chromatogram
-from gscore.models.deep_chrom_feature_classifier import DeepChromFeatureScorer
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
@@ -17,6 +17,8 @@ from gscore.fdr import ScoreDistribution
 from gscore.models.base_model import Scorer
 
 from typing import TYPE_CHECKING
+
+from gscore.scorer import XGBoostScorer
 
 if TYPE_CHECKING:
     from gscore.peakgroups import PeakGroup
@@ -458,6 +460,7 @@ class Precursors:
         self,
         model_path: str,
         scaler_path: str,
+        encoder_path: str,
         threads: int,
         gpus: int,
         use_relative_intensities: bool,
@@ -465,10 +468,9 @@ class Precursors:
 
         scoring_model: Optional[Scorer]
 
-        if scaler_path:
-            pipeline = Scaler()
+        pipeline = Scaler()
 
-            pipeline.load(scaler_path)
+        pipeline.load(scaler_path)
 
         all_peakgroups = self.get_all_peakgroups()
 
@@ -483,24 +485,39 @@ class Precursors:
             training=False,
         )
 
-        scoring_model = DeepChromScorer(
-            max_epochs=1, gpus=gpus, threads=threads, num_scores=all_scores.shape[1]
-        )  # type: Scorer
+        chromatogram_encoder= DeepChromScorer(
+            max_epochs=1, gpus=gpus, threads=threads
+        )  # type: DeepChromScorer
+
+        chromatogram_encoder.load(encoder_path)
+
+        chromatogram_embeddings = chromatogram_encoder.encode(
+            all_chromatograms
+        )
+
+        all_scores = np.concatenate(
+            (all_scores, chromatogram_embeddings),
+            axis=1
+        )
+
+        counter: Counter = Counter(all_data_labels.ravel())
+        scale_pos_weight = counter[0] / counter[1]
+
+        scoring_model = Scorer()
 
         scoring_model.load(model_path)
 
         all_scores = pipeline.transform(all_scores)
 
-        model_scores = scoring_model.score(all_chromatograms, all_scores)
+        model_scores = scoring_model.score(all_scores)
 
-        model_probabilities = scoring_model.probability(all_chromatograms, all_scores)
+        model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
             peakgroup.d_score = model_scores[idx].item()
 
             peakgroup.probability = model_probabilities[idx].item()
-
 
         return self
 

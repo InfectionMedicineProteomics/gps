@@ -24,15 +24,6 @@ class Score:
             query=SelectPeakGroups.FETCH_FEATURES_REDUCED
         )
 
-        print("Denoising...")
-
-        precursors.denoise(
-            num_folds=args.num_folds,
-            num_classifiers=args.num_classifiers,
-            num_threads=args.threads,
-            vote_percentage=args.vote_percentage,
-        )
-
         if args.chromatogram_file:
 
             print("Parsing Chromatograms...")
@@ -50,6 +41,7 @@ class Score:
         precursors.score_run(
             model_path=args.scoring_model,
             scaler_path=args.scaler,
+            encoder_path=args.chromatogram_encoder,
             threads=args.threads,
             gpus=args.gpus,
             use_relative_intensities=args.use_relative_intensities,
@@ -82,6 +74,7 @@ class Score:
             help="File containing chromatograms associated with the peakgroups.",
             type=str,
             default="",
+            required=True
         )
 
         self.parser.add_argument(
@@ -89,6 +82,7 @@ class Score:
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
             type=str,
+            required=True
         )
 
         self.parser.add_argument(
@@ -97,30 +91,15 @@ class Score:
             help="Path to scaler to transform data.",
             type=str,
             default="",
+            required=True
         )
 
         self.parser.add_argument(
-            "--num-classifiers",
-            dest="num_classifiers",
-            help="The number of ensemble learners used to denoise each fold",
-            default=10,
-            type=int,
-        )
-
-        self.parser.add_argument(
-            "--num-folds",
-            dest="num_folds",
-            help="The number of folds used to denoise the target labels",
-            default=10,
-            type=int,
-        )
-
-        self.parser.add_argument(
-            "--vote-percentage",
-            dest="vote_percentage",
-            help="The minimum probability needed to be counted as a positive vote",
-            default=0.5,
-            type=float,
+            "--chromatogram-encoder",
+            dest="chromatogram_encoder",
+            help="Path to trained encoder model.",
+            type=str,
+            required=True
         )
 
         self.parser.add_argument(
