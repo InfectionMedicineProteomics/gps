@@ -24,8 +24,14 @@ class Score:
             query=SelectPeakGroups.FETCH_FEATURES_REDUCED
         )
 
-        use_chromatograms: bool = False
-        include_denoise: bool = False
+        print("Denoising...")
+
+        precursors.denoise(
+            num_folds=args.num_folds,
+            num_classifiers=args.num_classifiers,
+            num_threads=args.threads,
+            vote_percentage=args.vote_percentage,
+        )
 
         if args.chromatogram_file:
 
@@ -38,8 +44,6 @@ class Score:
             print("Matching chromatograms with precursors...")
 
             precursors.set_chromatograms(chromatograms)
-
-            use_chromatograms = True
 
         print("Scoring...")
 
@@ -58,7 +62,7 @@ class Score:
         print("Updating Q Values in file")
 
         osw_file.add_score_and_q_value_records(
-            precursors, include_denoise=include_denoise
+            precursors
         )
 
         print("Done!")

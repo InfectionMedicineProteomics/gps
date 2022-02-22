@@ -262,7 +262,7 @@ class OSWFile:
 
             sqlite_file.add_records(table_name="GHOST_SCORE_TABLE", records=records)
 
-    def add_score_and_q_value_records(self, precursors, include_denoise=False):
+    def add_score_and_q_value_records(self, precursors):
 
         records = list()
 
@@ -270,23 +270,12 @@ class OSWFile:
 
             for peakgroup in precursor.peakgroups:
 
-                if include_denoise:
-                    record = {
-                        "feature_id": peakgroup.idx,
-                        "probability": peakgroup.probability,
-                        "vote_percentage": peakgroup.vote_percentage,
-                        "d_score": peakgroup.d_score,
-                        "q_value": peakgroup.q_value,
-                    }
-
-                else:
-
-                    record = {
-                        "feature_id": peakgroup.idx,
-                        "d_score": peakgroup.d_score,
-                        "q_value": peakgroup.q_value,
-                        "probability": peakgroup.probability
-                    }
+                record = {
+                    "feature_id": peakgroup.idx,
+                    "d_score": peakgroup.d_score,
+                    "q_value": peakgroup.q_value,
+                    "probability": peakgroup.probability
+                }
 
                 records.append(record)
 

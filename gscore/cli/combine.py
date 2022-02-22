@@ -49,10 +49,10 @@ class Combine:
                         charge=precursor.charge,
                         decoy=precursor.decoy,
                         protein_accession=precursor.protein_accession,
-                        protein_q_value=global_protein_model.get_probability(
+                        protein_q_value=global_protein_model.get_q_value(
                             precursor.protein_accession
                         ),
-                        peptide_q_value=global_peptide_model.get_probability(
+                        peptide_q_value=global_peptide_model.get_q_value(
                             precursor.modified_sequence
                         ),
                     )

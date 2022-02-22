@@ -131,8 +131,12 @@ class PeakGroup:
 
         self.scores[key] = value
 
-    def get_sub_score_column_array(self):
+    def get_sub_score_column_array(self, include_probability):
 
         score_values = [score for score in self.scores.values()]
+
+        if include_probability:
+
+            score_values.append(self.probability)
 
         return np.asarray(score_values, dtype=np.double)
