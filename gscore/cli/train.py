@@ -57,14 +57,47 @@ class Train:
 
         if args.train_deep_chromatogram_model:
 
-            self.train_deep_model(
+            print("Fitting chromatogram encoder.")
+
+            chromatogram_encoder = self.train_deep_model(
                 combined_chromatograms,
                 combined_labels,
-                args.model_output,
+                args.chromatogram_encoder_output,
                 args.threads,
                 args.gpus,
                 args.epochs
             )
+
+            print("Augmenting scores with learned chromatogram embeddings.")
+
+            combined_scores = self.augment_score_columns(
+                combined_chromatograms,
+                combined_scores,
+                chromatogram_encoder
+            )
+
+        print("Training scoring model.")
+
+        self.train_model(
+            combined_data=combined_scores,
+            combined_labels=combined_labels,
+            model_output=args.model_output,
+            scaler_output=args.scaler_output
+        )
+
+
+
+    def augment_score_columns (self, combined_chromatograms, combined_scores, chromatogram_encoder):
+
+        chromatogram_embeddings = chromatogram_encoder.encode(
+            combined_chromatograms
+        )
+
+        return np.concatenate(
+            (combined_scores, chromatogram_embeddings),
+            axis=1
+        )
+
 
     def train_deep_model(
         self,
@@ -101,6 +134,8 @@ class Train:
         roc_auc = model.evaluate(testing_data, testing_labels)
 
         print(f"ROC-AUC: {roc_auc}")
+
+        return model
 
     def train_model(self, combined_data, combined_labels, model_output, scaler_output):
 
@@ -153,7 +188,15 @@ class Train:
         )
 
         self.parser.add_argument(
-            "--model-output", dest="model_output", help="Output path for scoring model."
+            "--model-output",
+            dest="model_output",
+            help="Output path for scoring model."
+        )
+
+        self.parser.add_argument(
+            "--chromatogram-encoder-output",
+            dest="chromatogram_encoder_output",
+            help="Output path for chromatogram encoder model."
         )
 
         self.parser.add_argument(
