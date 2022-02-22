@@ -59,59 +59,46 @@ class Train:
 
             self.train_deep_model(
                 combined_chromatograms,
-                combined_scores,
                 combined_labels,
                 args.model_output,
                 args.threads,
                 args.gpus,
-                args.epochs,
-                args.scaler_output
+                args.epochs
             )
 
     def train_deep_model(
         self,
         combined_chromatograms,
-        combined_scores,
         combined_labels,
         model_output,
         threads,
         gpus,
-        epochs,
-        scaler_output
+        epochs
     ):
 
-        scaler = Scaler()
 
-        training_data, testing_data, training_scores, testing_scores, training_labels, testing_labels = train_test_split(
-            combined_chromatograms, combined_scores, combined_labels, test_size=0.2, shuffle=True
+        training_data, testing_data, training_labels, testing_labels = train_test_split(
+            combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
         )
-
-        training_scores = scaler.fit_transform(training_scores)
 
         model = DeepChromScorer(
             threads=threads,
             max_epochs=epochs,
             gpus=gpus,
-            num_scores=training_scores.shape[1]
         )
 
         print("Training model...")
 
         model.fit(data=training_data,
-                  input_scores=training_scores,
                   labels=training_labels)
 
         print("Saving model...")
 
         model.save(model_output)
 
-        scaler.save(scaler_output)
-
         print("Testing model...")
 
-        testing_scores = scaler.transform(testing_scores)
-
-        roc_auc = model.evaluate(testing_data, testing_scores, testing_labels)
+        roc_auc = model.evaluate(testing_data, testing_labels)
 
         print(f"ROC-AUC: {roc_auc}")
 

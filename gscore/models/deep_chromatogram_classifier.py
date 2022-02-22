@@ -18,14 +18,14 @@ from sklearn.pipeline import Pipeline  # type: ignore
 class DeepChromScorer(Scorer):
     def __init__(
         self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25,
-            training=True, num_scores: int = 0
+            training=True, embedding=False
     ):
         super().__init__()
 
         self.model = DeepChromModel(
             learning_rate=initial_lr,
             training=training,
-            num_scores=num_scores
+            embedding=embedding
         )
 
         ###TODO:
@@ -70,16 +70,15 @@ class DeepChromScorer(Scorer):
         self.threads = threads
         self.gpus = gpus
         self.initial_lr = initial_lr
-        self.num_scores = num_scores
         self.training = training
+        self.embedding = embedding
 
-    def fit(self, data, input_scores, labels) -> None:
+    def fit(self, data, labels) -> None:
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
-        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
 
-        chromatogram_dataset = TensorDataset(chromatograms, scores, labels)
+        chromatogram_dataset = TensorDataset(chromatograms, labels)
 
         train_length = int(0.9 * len(chromatogram_dataset))
 
@@ -104,7 +103,7 @@ class DeepChromScorer(Scorer):
         )
 
 
-    def score(self, data: np.ndarray, input_scores: np.ndarray) -> np.ndarray:
+    def score(self, data: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
 
@@ -115,10 +114,9 @@ class DeepChromScorer(Scorer):
             trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
-        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms, scores),
+            TensorDataset(chromatograms),
             num_workers=self.threads,
             batch_size=10000
         )
@@ -127,25 +125,9 @@ class DeepChromScorer(Scorer):
 
         predictions = torch.cat(predictions, 0)
 
-        #probabilities = torch.sigmoid(predictions.to(dtype=torch.float64)).numpy()
-
-        # transform = Pipeline(
-        #     [
-        #         ("robust_scaler", StandardScaler()),
-        #         ("min_max_scaler", MinMaxScaler(feature_range=(-1, 1))
-        #          )
-        #     ]
-        # )
-
-        #probabilities = torch.sigmoid(probabilities.to(dtype=torch.float64)).numpy()
-
-        #probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
-
-        #scores = transform.fit_transform(predictions.numpy())
-
         return predictions.numpy()
 
-    def probability(self, data: np.ndarray, input_scores: np.ndarray) -> np.ndarray:
+    def encode(self, data: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
 
@@ -156,10 +138,38 @@ class DeepChromScorer(Scorer):
             trainer = Trainer(gpus=self.gpus)
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
-        scores = torch.from_numpy(input_scores).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms, scores),
+            TensorDataset(chromatograms),
+            num_workers=self.threads,
+            batch_size=10000
+        )
+
+        self.model.embedding = True
+
+        embeddings = trainer.predict(self.model, dataloaders=prediction_dataloader)
+
+        combined_embeddings = torch.cat(embeddings, 0)
+
+        self.model.embedding = False
+
+        return np.array(combined_embeddings.numpy(), dtype=np.float64)
+
+
+    def probability(self, data: np.ndarray) -> np.ndarray:
+
+        if self.gpus > 0:
+
+            trainer = Trainer(gpus=self.gpus, auto_select_gpus=True)
+
+        else:
+
+            trainer = Trainer(gpus=self.gpus)
+
+        chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+
+        prediction_dataloader = DataLoader(
+            TensorDataset(chromatograms),
             num_workers=self.threads,
             batch_size=10000
         )
@@ -183,74 +193,17 @@ class DeepChromScorer(Scorer):
             checkpoint_path=model_path,
             learning_rate=self.initial_lr,
             training=self.training,
-            num_scores=self.num_scores
+            embedding=self.embedding
         )
-
-
-class InceptionBlock(nn.Module):
-    """
-    Inputs:
-        c_in - Number of input feature maps from the previous layers
-        c_red - Dictionary with keys "3x3" and "5x5" specifying the output of the dimensionality reducing 1x1 convolutions
-        c_out - Dictionary with keys "1x1", "3x3", "5x5", and "max"
-        act_fn - Activation class constructor (e.g. nn.ReLU)
-    """
-
-    def __init__(self, c_in, c_red: dict, c_out):
-
-        super().__init__()
-
-        # 1x1 convolution branch
-        self.conv_1x1 = nn.Sequential(
-            nn.Conv2d(c_in, c_out["1x1"], kernel_size=1),
-            nn.BatchNorm2d(c_out["1x1"]),
-            nn.ReLU()
-        )
-
-        # 3x3 convolution branch
-        self.conv_3x3 = nn.Sequential(
-            nn.Conv2d(c_in, c_red["3x3"], kernel_size=1),
-            nn.BatchNorm2d(c_red["3x3"]),
-            nn.ReLU(),
-            nn.Conv2d(c_red["3x3"], c_out["3x3"], kernel_size=3, padding=1),
-            nn.BatchNorm2d(c_out["3x3"]),
-            nn.ReLU()
-        )
-
-        # 5x5 convolution branch
-        self.conv_5x5 = nn.Sequential(
-            nn.Conv2d(c_in, c_red["5x5"], kernel_size=1),
-            nn.BatchNorm2d(c_red["5x5"]),
-            nn.ReLU(),
-            nn.Conv2d(c_red["5x5"], c_out["5x5"], kernel_size=5, padding=2),
-            nn.BatchNorm2d(c_out["5x5"]),
-            nn.ReLU()
-        )
-
-        # Max-pool branch
-        self.max_pool = nn.Sequential(
-            nn.MaxPool2d(kernel_size=3, padding=1, stride=1),
-            nn.Conv2d(c_in, c_out["max"], kernel_size=1),
-            nn.BatchNorm2d(c_out["max"]),
-            nn.ReLU()
-        )
-
-    def forward(self, x):
-        x_1x1 = self.conv_1x1(x)
-        x_3x3 = self.conv_3x3(x)
-        x_5x5 = self.conv_5x5(x)
-        x_max = self.max_pool(x)
-        x_out = torch.cat([x_1x1, x_3x3, x_5x5, x_max], dim=1)
-        return x_out
 
 
 import torchvision.models as models
 
 class DeepChromModel(pl.LightningModule):
-    def __init__(self, learning_rate=0.0005, training=False, num_scores: int = 0):
+    def __init__(self, learning_rate=0.0005, training=False, embedding=False):
 
         self.lr = learning_rate
-        self.num_scores = num_scores
+        self.embedding = embedding
 
         super().__init__()
 
@@ -271,106 +224,24 @@ class DeepChromModel(pl.LightningModule):
 
         layers = list(backbone.children())[:-1]
 
-        self.feature_extractor = nn.Sequential(*layers)
+        self.resnet = nn.Sequential(*layers)
 
-        self.output_net = nn.Sequential(
-            nn.Linear(num_filters + num_scores, 128),
+        self.encoder = nn.Sequential(
+            nn.Linear(num_filters, 200),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(200, 200),
             nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(200, 50)
+
         )
 
-        # self.inception_blocks = nn.Sequential(
-        #     InceptionBlock(
-        #         64,
-        #         c_red={
-        #             "3x3": 32,
-        #             "5x5": 16
-        #         },
-        #         c_out={
-        #             "1x1": 16,
-        #             "3x3": 32,
-        #             "5x5": 8,
-        #             "max": 8
-        #         }
-        #     ),
-        #     InceptionBlock(
-        #         64,
-        #         c_red={"3x3": 32, "5x5": 16},
-        #         c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
-        #     ),
-        #     nn.MaxPool2d(3, stride=2, padding=1),  # 32x32 => 16x16
-        #     InceptionBlock(
-        #         96,
-        #         c_red={"3x3": 32, "5x5": 16},
-        #         c_out={"1x1": 24, "3x3": 48, "5x5": 12, "max": 12}
-        #     ),
-        #     InceptionBlock(
-        #         96,
-        #         c_red={"3x3": 32, "5x5": 16},
-        #         c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
-        #     ),
-        #     InceptionBlock(
-        #         96,
-        #         c_red={"3x3": 32, "5x5": 16},
-        #         c_out={"1x1": 16, "3x3": 48, "5x5": 16, "max": 16}
-        #     ),
-        #     InceptionBlock(
-        #         96,
-        #         c_red={"3x3": 32, "5x5": 16},
-        #         c_out={"1x1": 32, "3x3": 48, "5x5": 24, "max": 24}
-        #     ),
-        #     nn.MaxPool2d(3, stride=2, padding=1),  # 16x16 => 8x8
-        #     InceptionBlock(
-        #         128,
-        #         c_red={"3x3": 48, "5x5": 16},
-        #         c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
-        #     ),
-        #     InceptionBlock(
-        #         128,
-        #         c_red={"3x3": 48, "5x5": 16},
-        #         c_out={"1x1": 32, "3x3": 64, "5x5": 16, "max": 16}
-        #     ),
-        # )
-        #
-        # self.output_net = nn.Sequential(
-        #     nn.AdaptiveAvgPool2d((1, 1)),
-        #     nn.Flatten(),
-        #     nn.Linear(128, 1)
-        # )
+        self.output_net = nn.Sequential(
+            nn.Linear(50, 50),
+            nn.ReLU(),
+            nn.Linear(50, 1)
+        )
 
         self._init_params()
-
-        # self.conv_layers = nn.Sequential(
-        #     nn.Conv2d(
-        #         in_channels=1,
-        #         out_channels=10,
-        #         kernel_size=5,
-        #         padding="same",
-        #     ),
-        #     nn.BatchNorm2d(10),
-        #     nn.ReLU(),
-        #     nn.MaxPool2d(kernel_size=2, stride=1),
-        #     nn.Conv2d(
-        #         10,
-        #         42,
-        #         kernel_size=5,
-        #         padding="same",
-        #     ),
-        #     nn.BatchNorm2d(42),
-        #     nn.ReLU(),
-        #     nn.MaxPool2d(kernel_size=2, stride=2),
-        #     nn.Flatten(),
-        # )
-        #
-        # self.linear_layers = nn.Sequential(
-        #     nn.Linear(1008, 1008),
-        #     nn.ReLU(),
-        #     nn.Linear(1008, 1008),
-        #     nn.ReLU(),
-        #     nn.Linear(1008, 1),
-        # )
 
     def _init_params(self):
         # Based on our discussion in Tutorial 4, we should initialize the
@@ -397,9 +268,9 @@ class DeepChromModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        chromatograms, scores, labels = batch
+        chromatograms, labels = batch
 
-        y_hat = self(chromatograms, scores)
+        y_hat = self(chromatograms)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
@@ -410,18 +281,18 @@ class DeepChromModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        chromatograms, scores, labels = batch
+        chromatograms, labels = batch
 
-        y_hat = self(chromatograms, scores)
+        y_hat = self(chromatograms)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
         return loss
 
     def test_step(self, batch, batch_idx):
-        chromatograms, scores, labels = batch
+        chromatograms, labels = batch
 
-        y_hat = self(chromatograms, scores)
+        y_hat = self(chromatograms)
 
         loss = F.binary_cross_entropy_with_logits(y_hat, labels)
 
@@ -438,21 +309,29 @@ class DeepChromModel(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
 
-        (chromatograms, scores) = batch
+        (chromatograms,) = batch
 
-        return self(chromatograms, scores)
+        if self.embedding:
 
-    def forward(self, chromatogram, scores):
+            out = self.input_conv(chromatograms)
 
-        # out = self.conv_layers(chromatogram)
-        #
-        # out = self.linear_layers(out)
+            out = self.resnet(out).flatten(1)
+
+            out = self.encoder(out)
+
+        else:
+
+            out = self(chromatograms)
+
+        return out
+
+    def forward(self, chromatogram):
 
         out = self.input_conv(chromatogram)
 
-        out = self.feature_extractor(out).flatten(1)
+        out = self.resnet(out).flatten(1)
 
-        out = torch.cat((out, scores), 1)
+        out = self.encoder(out)
 
         out = self.output_net(out)
 

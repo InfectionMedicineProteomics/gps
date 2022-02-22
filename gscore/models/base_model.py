@@ -12,9 +12,9 @@ class Scorer:
 
         self.model.fit(data, labels)
 
-    def probability(self, data: np.ndarray, input_scores: np.ndarray) -> np.ndarray:
+    def probability(self, data: np.ndarray) -> np.ndarray:
 
-        return self.model.predict_proba(data, input_scores)[:, 1]
+        return self.model.predict_proba(data)[:, 1]
 
     def predict_proba(self, data: np.ndarray) -> np.ndarray:
 
@@ -34,8 +34,8 @@ class Scorer:
 
         self.model = load(model_path)
 
-    def evaluate(self, data: np.ndarray, input_scores: np.ndarray, labels: np.ndarray) -> float:
+    def evaluate(self, data: np.ndarray, labels: np.ndarray) -> float:
 
-        probabilities = self.probability(data, input_scores)
+        probabilities = self.probability(data)
 
         return roc_auc_score(labels, probabilities)

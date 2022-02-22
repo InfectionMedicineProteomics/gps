@@ -109,22 +109,22 @@ class DeepChromFeatureScorer(Scorer):
 
         return predictions
 
-    def probability(self, chromatograms: np.ndarray, scores: np.ndarray) -> np.ndarray:
+    def probability(self, chromatograms: np.ndarray) -> np.ndarray:
 
         return torch.sigmoid(
-            torch.from_numpy(self.score(chromatograms, scores)).type(torch.FloatTensor)
+            torch.from_numpy(self.score(chromatograms)).type(torch.FloatTensor)
         ).numpy()
 
     def predict_proba(
-        self, chromatograms: np.ndarray, scores: np.ndarray
+        self, chromatograms: np.ndarray
     ) -> np.ndarray:
-        return self.probability(chromatograms, scores)
+        return self.probability(chromatograms)
 
     def evaluate(
-        self, chromatograms: np.ndarray, scores: np.ndarray, labels: np.ndarray
+        self, chromatograms: np.ndarray, labels: np.ndarray
     ) -> float:
 
-        probabilities = self.predict_proba(chromatograms, scores)
+        probabilities = self.predict_proba(chromatograms)
 
         return roc_auc_score(labels, probabilities)
 

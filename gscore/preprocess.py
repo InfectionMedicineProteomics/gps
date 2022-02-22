@@ -93,13 +93,15 @@ def reformat_chromatogram_data(
 
     skipped_peakgroups = 0
 
+    print("Reformat")
+
     for idx, peakgroup in enumerate(peakgroups):
 
         if peakgroup.chromatograms:
 
             labels.append([peakgroup.target])
             indices.append(peakgroup.idx)
-            scores.append(peakgroup.get_sub_score_column_array(include_probability=True))
+            scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
 
             peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
                 use_relative_intensities=use_relative_intensities
@@ -113,7 +115,7 @@ def reformat_chromatogram_data(
 
                 labels.append([peakgroup.target])
                 indices.append(peakgroup.idx)
-                scores.append(peakgroup.get_sub_score_column_array(include_probability=True))
+                scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
 
                 peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
 
