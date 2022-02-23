@@ -4,9 +4,6 @@ from sklearn.metrics import roc_auc_score  # type: ignore
 
 
 class Scorer:
-    def __init__(self):
-
-        pass
 
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
@@ -14,20 +11,23 @@ class Scorer:
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
-        return self.model.predict_proba(data)[:, 1]
+        probabilities = self.model.predict_proba(data)[:, 1]
+
+        probabilities = 1 / (1 + np.exp(-probabilities))
+
+        return probabilities
 
     def predict_proba(self, data: np.ndarray) -> np.ndarray:
 
-        return self.model.predict_proba(data)[:, 1]
+        probabilities = self.model.predict_proba(data)[:, 1]
+
+        probabilities = 1 / (1 + np.exp(-probabilities))
+
+        return probabilities
 
     def score(self, data: np.ndarray) -> np.ndarray:
 
-        probabilities = self.model.predict_proba(data)[:, 1]
-
-        # Set probabilities that equal 1.0 to the next highest probability in the array for stable logit transforms
-        probabilities[probabilities == 1.0] = probabilities[probabilities < 1.0].max()
-
-        return np.log(probabilities / (1 - probabilities), dtype=np.float64)
+        return self.model.predict_proba(data)[:, 1]
 
     def save(self, model_path: str):
 
@@ -39,6 +39,8 @@ class Scorer:
 
     def evaluate(self, data: np.ndarray, labels: np.ndarray) -> float:
 
-        probabilities = self.probability(data)
+        probabilities = self.model.predict_proba(data)[:, 1]
+
+        probabilities = 1 / (1 + np.exp(-probabilities))
 
         return roc_auc_score(labels, probabilities)
