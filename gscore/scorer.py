@@ -101,6 +101,7 @@ class XGBoostScorer(Scorer):
             n_jobs=10,
             random_state=42,
             scale_pos_weight=scale_pos_weight,
+            eval_metric="logloss"
         )
 
 

@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 import torch  # type: ignore
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
+from sklearn.metrics import roc_auc_score
 from torch import nn  # type: ignore
 from torch.optim.lr_scheduler import ReduceLROnPlateau  # type: ignore
 from torch.nn import functional as F  # type: ignore
@@ -195,6 +196,12 @@ class DeepChromScorer(Scorer):
             training=self.training,
             embedding=self.embedding
         )
+
+    def evaluate(self, data: np.ndarray, labels: np.ndarray) -> float:
+
+        predictions = self.probability(data)
+
+        return roc_auc_score(labels, predictions)
 
 
 import torchvision.models as models
