@@ -461,10 +461,11 @@ class Precursors:
         self,
         model_path: str,
         scaler_path: str,
-        encoder_path: str,
-        threads: int,
-        gpus: int,
-        use_relative_intensities: bool
+        encoder_path: str = None,
+        threads: int = 10,
+        gpus: int = 1,
+        use_relative_intensities: bool = False,
+        chromatogram_only: bool = False
     ):
 
         scoring_model: Optional[Scorer]
@@ -486,20 +487,30 @@ class Precursors:
             training=False,
         )
 
-        chromatogram_encoder= DeepChromScorer(
-            max_epochs=1, gpus=gpus, threads=threads
-        )  # type: DeepChromScorer
+        if encoder_path:
 
-        chromatogram_encoder.load(encoder_path)
+            chromatogram_encoder= DeepChromScorer(
+                max_epochs=1, gpus=gpus, threads=threads
+            )  # type: DeepChromScorer
 
-        chromatogram_embeddings = chromatogram_encoder.encode(
-            all_chromatograms
-        )
+            chromatogram_encoder.load(encoder_path)
 
-        all_scores = np.concatenate(
-            (all_scores, chromatogram_embeddings),
-            axis=1
-        )
+            chromatogram_embeddings = chromatogram_encoder.encode(
+                all_chromatograms
+            )
+
+            if chromatogram_only:
+
+                print("Only using chromatograms.")
+
+                all_scores = chromatogram_embeddings
+
+            else:
+
+                all_scores = np.concatenate(
+                    (all_scores, chromatogram_embeddings),
+                    axis=1
+                )
 
         counter: Counter = Counter(all_data_labels.ravel())
         scale_pos_weight = counter[0] / counter[1]

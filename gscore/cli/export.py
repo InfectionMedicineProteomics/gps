@@ -57,12 +57,23 @@ class Export:
 
         print(f"Filtering and writing output.")
 
-        precursors.dump_training_data(
-            args.output,
-            filter_field=args.filter_field,
-            filter_value=args.filter_value,
-            use_relateive_intensities=args.use_relative_intensities,
-        )
+        if args.no_filter:
+
+            precursors.dump_training_data(
+                args.output,
+                filter_field="PROBABILITY",
+                filter_value=0.0,
+                use_relateive_intensities=args.use_relative_intensities,
+            )
+
+        else:
+
+            precursors.dump_training_data(
+                args.output,
+                filter_field=args.filter_field,
+                filter_value=args.filter_value,
+                use_relateive_intensities=args.use_relative_intensities,
+            )
 
     def build_subparser(self, subparser):
 
@@ -142,6 +153,14 @@ class Export:
             default=10,
             type=int,
         )
+
+        self.parser.add_argument(
+            "--no-filter",
+            dest="no_filter",
+            help="Do not filter exported data.",
+            action="store_true",
+        )
+
 
         self.parser.set_defaults(run=self)
 

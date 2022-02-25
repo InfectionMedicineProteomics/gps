@@ -44,7 +44,9 @@ class Score:
             encoder_path=args.chromatogram_encoder,
             threads=args.threads,
             gpus=args.gpus,
-            use_relative_intensities=args.use_relative_intensities
+            use_relative_intensities=args.use_relative_intensities,
+            chromatogram_only=args.use_only_chromatogram_features
+
         )
 
         print("Calculating Q Values")
@@ -76,8 +78,7 @@ class Score:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             type=str,
-            default="",
-            required=True
+            default=""
         )
 
         self.parser.add_argument(
@@ -102,7 +103,7 @@ class Score:
             dest="chromatogram_encoder",
             help="Path to trained encoder model.",
             type=str,
-            required=True
+            default=""
         )
 
         self.parser.add_argument(
@@ -133,6 +134,13 @@ class Score:
             dest="use_relative_intensities",
             help="Scale each chromatogram to use relative intensities.",
             action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--use-only-chromatogram-features",
+            dest="use_only_chromatogram_features",
+            action="store_true",
+            help="Use only features from the deepchrom model"
         )
 
         self.parser.add_argument(

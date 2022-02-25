@@ -70,10 +70,35 @@ class Train:
 
             print("Augmenting scores with learned chromatogram embeddings.")
 
+            if args.use_only_chromatogram_features:
+
+                print("Using only chromatogram features.")
+
             combined_scores = self.augment_score_columns(
                 combined_chromatograms,
                 combined_scores,
-                chromatogram_encoder
+                chromatogram_encoder,
+                args.use_only_chromatogram_features
+            )
+
+        if args.chromatogram_encoder_input:
+
+            print("Using pretrained encoder model.")
+
+            chromatogram_encoder = DeepChromScorer(
+                max_epochs=1, gpus=args.gpus, threads=args.threads
+            )  # type: DeepChromScorer
+
+            chromatogram_encoder.load(args.chromatogram_encoder_input)
+
+            if args.use_only_chromatogram_features:
+                print("Using only chromatogram features.")
+
+            combined_scores = self.augment_score_columns(
+                combined_chromatograms,
+                combined_scores,
+                chromatogram_encoder,
+                args.use_only_chromatogram_features
             )
 
         print("Training scoring model.")
@@ -83,20 +108,27 @@ class Train:
             combined_labels=combined_labels,
             model_output=args.model_output,
             scaler_output=args.scaler_output
+
         )
 
 
 
-    def augment_score_columns (self, combined_chromatograms, combined_scores, chromatogram_encoder):
+    def augment_score_columns (self, combined_chromatograms, combined_scores, chromatogram_encoder, chromatogram_only=False):
 
         chromatogram_embeddings = chromatogram_encoder.encode(
             combined_chromatograms
         )
 
-        return np.concatenate(
-            (combined_scores, chromatogram_embeddings),
-            axis=1
-        )
+        if chromatogram_only:
+
+            return chromatogram_embeddings
+
+        else:
+
+            return np.concatenate(
+                (combined_scores, chromatogram_embeddings),
+                axis=1
+            )
 
 
     def train_deep_model(
@@ -145,12 +177,6 @@ class Train:
             combined_data, combined_labels, test_size=0.2, shuffle=True
         )
 
-        class_weights = class_weight.compute_class_weight(
-            class_weight="balanced",
-            classes=np.unique(training_labels),
-            y=training_labels.ravel(),
-        )
-
         counter: Counter = Counter(training_labels.ravel())
         scale_pos_weight = counter[0] / counter[1]
 
@@ -194,6 +220,14 @@ class Train:
         )
 
         self.parser.add_argument(
+            "--chromatogram-encoder-input",
+            dest="chromatogram_encoder_input",
+            help="Input path for chromatogram encoder model.",
+            default=""
+        )
+
+
+        self.parser.add_argument(
             "--chromatogram-encoder-output",
             dest="chromatogram_encoder_output",
             help="Output path for chromatogram encoder model."
@@ -210,6 +244,13 @@ class Train:
             dest="train_deep_chromatogram_model",
             action="store_true",
             help="Flag to indicate that a deep learning model should be trained on raw chromatograms.",
+        )
+
+        self.parser.add_argument(
+            "--use-only-chromatogram-features",
+            dest="use_only_chromatogram_features",
+            action="store_true",
+            help="Use only features from the deepchrom model"
         )
 
         self.parser.add_argument(

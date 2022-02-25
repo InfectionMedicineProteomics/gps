@@ -14,14 +14,14 @@ from gscore.models.base_model import Scorer
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler  # type: ignore
 
 from sklearn.pipeline import Pipeline  # type: ignore
+from sklearn.base import BaseEstimator, ClassifierMixin
 
+class DeepChromScorer(BaseEstimator, ClassifierMixin):
 
-class DeepChromScorer(Scorer):
     def __init__(
         self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25,
             training=True, embedding=False
     ):
-        super().__init__()
 
         self.model = DeepChromModel(
             learning_rate=initial_lr,
