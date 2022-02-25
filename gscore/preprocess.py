@@ -100,7 +100,9 @@ def reformat_chromatogram_data(
         if peakgroup.chromatograms:
 
             labels.append([peakgroup.target])
+
             indices.append(peakgroup.idx)
+
             scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
 
             peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
@@ -114,7 +116,9 @@ def reformat_chromatogram_data(
             if not training:
 
                 labels.append([peakgroup.target])
+
                 indices.append(peakgroup.idx)
+
                 scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
 
                 peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)

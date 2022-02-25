@@ -44,12 +44,15 @@ class Score:
             encoder_path=args.chromatogram_encoder,
             threads=args.threads,
             gpus=args.gpus,
-            use_relative_intensities=args.use_relative_intensities,
+            use_relative_intensities=args.use_relative_intensities
         )
 
         print("Calculating Q Values")
 
-        precursors.calculate_q_values(sort_key="d_score", use_decoys=True)
+        precursors.calculate_q_values(
+            sort_key="d_score",
+            decoy_free=args.decoy_free
+        )
 
         print("Updating Q Values in file")
 
@@ -137,6 +140,13 @@ class Score:
             dest="include_score_columns",
             help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
             action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--decoy-free",
+            dest="decoy_free",
+            help="Use the second ranked target peakgroups as decoys for modelling the scores and calculating q-values",
+            action="store_true"
         )
 
         self.parser.set_defaults(run=self)

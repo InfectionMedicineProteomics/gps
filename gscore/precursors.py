@@ -226,16 +226,17 @@ class Precursors:
 
         filtered_peakgroups = []
 
-        rank = rank - 1
-
         for precursor in self.precursors.values():
 
             precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=reverse)
 
-            peakgroup = precursor.peakgroups[rank]
+            if (rank) <= len(precursor.peakgroups):
 
-            if peakgroup.target == 1:
-                filtered_peakgroups.append(peakgroup)
+                peakgroup = precursor.peakgroups[rank - 1]
+
+                if peakgroup.target == 1:
+
+                    filtered_peakgroups.append(peakgroup)
 
         return filtered_peakgroups
 
@@ -463,7 +464,7 @@ class Precursors:
         encoder_path: str,
         threads: int,
         gpus: int,
-        use_relative_intensities: bool,
+        use_relative_intensities: bool
     ):
 
         scoring_model: Optional[Scorer]
@@ -521,21 +522,30 @@ class Precursors:
 
         return self
 
-    def calculate_q_values(self, sort_key: str, use_decoys: bool = True):
+    def calculate_q_values(self, sort_key: str, decoy_free: bool = False):
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True
         )
 
-        if use_decoys:
+        if not decoy_free:
 
             decoy_peakgroups = self.get_decoy_peakgroups(filter_field="D_SCORE")
 
         else:
 
+            print("Decoy free scoring")
+
             decoy_peakgroups = self.get_target_peakgroups_by_rank(
                 rank=2, score_key=sort_key, reverse=True
             )
+
+            decoy_free_labels = []
+
+            for peakgroup in decoy_peakgroups:
+
+                peakgroup.target = 0
+                peakgroup.decoy = 1
 
         modelling_peakgroups = target_peakgroups + decoy_peakgroups
 
