@@ -6,6 +6,7 @@ from gscore.combiner import PrecursorExport, PrecursorExportRecord
 from gscore.fdr import GlobalDistribution
 from gscore.parsers import queries
 from gscore.parsers.osw import OSWFile
+from gscore.parsers.score_file import ScoreFile
 
 
 class Combine:
@@ -32,11 +33,19 @@ class Combine:
 
             export.add_sample(sample_name)
 
-            osw_file = OSWFile(input_file)
+            if input_file.lower().endswith(".tsv"):
 
-            precursors = osw_file.parse_to_precursors(
-                query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
-            )
+                gscore_file = ScoreFile(input_file)
+
+                precursors = gscore_file.parse_to_precursors()
+
+            elif input_file.lower().endswith("osw"):
+
+                osw_file = OSWFile(input_file)
+
+                precursors = osw_file.parse_to_precursors(
+                    query=queries.SelectPeakGroups.FETCH_PRECURSORS_FOR_EXPORT_REDUCED
+                )
 
             for precursor in precursors:
 

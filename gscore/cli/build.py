@@ -3,6 +3,7 @@ import argparse
 from gscore.fdr import GlobalDistribution
 from gscore.parsers import queries
 from gscore.parsers.osw import OSWFile
+from gscore.parsers.score_file import ScoreFile
 
 
 class Build:
@@ -22,19 +23,33 @@ class Build:
 
             print(f"Processing {input_file}...")
 
-            osw_file = OSWFile(input_file)
+            if input_file.lower().endswith(".tsv"):
 
-            if args.level == "protein":
+                gscore_file = ScoreFile(input_file)
 
-                groups = osw_file.parse_to_proteins(
-                    query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
-                )
+                if args.level == "protein":
 
-            elif args.level == "peptide":
+                    groups = gscore_file.parse_to_proteins()
 
-                groups = osw_file.parse_to_peptides(
-                    query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
-                )
+                elif args.level == "peptide":
+
+                    groups = gscore_file.parse_to_peptides( )
+
+            elif input_file.lower().endswith("osw"):
+
+                osw_file = OSWFile(input_file)
+
+                if args.level == "protein":
+
+                    groups = osw_file.parse_to_proteins(
+                        query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
+                    )
+
+                elif args.level == "peptide":
+
+                    groups = osw_file.parse_to_peptides(
+                        query=queries.SelectPeakGroups.BUILD_GLOBAL_MODEL_QUERY
+                    )
 
             print(f"Comparing {args.level} level scores...")
 

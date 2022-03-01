@@ -56,11 +56,20 @@ class Score:
             decoy_free=args.decoy_free
         )
 
-        print("Updating Q Values in file")
+        if args.output:
 
-        osw_file.add_score_and_q_value_records(
-            precursors
-        )
+            precursors.write_tsv(
+                file_path=args.output,
+                ranked=1
+            )
+
+        else:
+
+            print("Updating Q Values in file")
+
+            osw_file.add_score_and_q_value_records(
+                precursors
+            )
 
         print("Done!")
 
@@ -71,6 +80,13 @@ class Score:
         )
 
         self.parser.add_argument("-i", "--input", help="OSW file to process", type=str)
+
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            help="Output TSV file.",
+            type=str
+        )
 
         self.parser.add_argument(
             "-c",

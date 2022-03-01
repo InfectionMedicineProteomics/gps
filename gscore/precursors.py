@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from csv import DictWriter
 from typing import List, Dict, Union, Tuple, Optional
 
 import numpy as np
@@ -609,3 +610,51 @@ class Precursors:
 
         with open(file_path, "wb") as npfh:
             np.savez(npfh, labels=all_data_labels, chromatograms=all_chromatograms, scores=all_scores)
+
+    def write_tsv(self, file_path: str = "", ranked: int = 1) -> None:
+
+        field_names = [
+            "UnmodifiedSequence",
+            "ModifiedSequence",
+            "Charge",
+            "Protein",
+            "Decoy",
+            "RT",
+            "Intensity",
+            "QValue",
+            "DScore",
+            "Probability",
+        ]
+
+        with open(file_path, 'w') as out_file:
+
+            csv_writer = DictWriter(
+                out_file,
+                delimiter="\t",
+                fieldnames=field_names
+            )
+
+            csv_writer.writeheader()
+
+            for precursor in self:
+
+                precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+                peakgroups = precursor.peakgroups[:ranked]
+
+                for peakgroup in peakgroups:
+
+                    record = {
+                        "UnmodifiedSequence": precursor.unmodified_sequence,
+                        "ModifiedSequence": precursor.modified_sequence,
+                        "Charge": precursor.charge,
+                        "Protein": precursor.protein_accession,
+                        "Decoy": precursor.decoy,
+                        "RT": peakgroup.retention_time,
+                        "Intensity": peakgroup.intensity,
+                        "QValue": peakgroup.q_value,
+                        "DScore": peakgroup.d_score,
+                        "Probability": peakgroup.probability
+                    }
+
+                    csv_writer.writerow(record)
