@@ -25,6 +25,7 @@ class PeakGroup:
     probability: float
     vote_percentage: float
     true_target_score: float
+    true_target_probability: float
     d_score: float
     q_value: float
     scores: Dict[str, float]
@@ -45,6 +46,7 @@ class PeakGroup:
         d_score=0.0,
         q_value=0.0,
         true_target_score=0.0,
+        true_target_probability=0.0,
         scores=None,
     ):
 
@@ -76,8 +78,10 @@ class PeakGroup:
         self.probability = probability
         self.vote_percentage = vote_percentage
         self.true_target_score = true_target_score
+        self.true_target_probability = true_target_probability
         self.d_score = d_score
         self.q_value = q_value
+
 
         self.scaled_rt_start = 0.0
         self.scaled_rt_apex = 0.0

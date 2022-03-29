@@ -112,10 +112,12 @@ class Precursor:
 class Precursors:
 
     precursors: Dict[str, Precursor]
+    pit: float
 
     def __init__(self):
 
         self.precursors = dict()
+        self.pit = 1.0
 
     def __contains__(self, item):
 
@@ -427,7 +429,7 @@ class Precursors:
 
                 peakgroup.true_target_score = true_target_scores[idx]
 
-                peakgroup.probability = probabilities[idx]
+                peakgroup.true_target_probability = probabilities[idx]
 
                 peakgroup.vote_percentage = vote_percentages[idx]
 
@@ -539,7 +541,39 @@ class Precursors:
 
         return self
 
-    def calculate_q_values(self, sort_key: str, decoy_free: bool = False, count_decoys=True, num_threads: int = 10):
+    def estimate_pit(self):
+
+        all_peakgroups = self.filter_target_peakgroups(
+            rank=1,
+            filter_key="D_SCORE",
+            value=0.0
+        )
+
+        true_target_peakgroups = []
+
+        false_target_peakgroups = []
+
+        for peakgroup in all_peakgroups:
+
+            if peakgroup.vote_percentage >= 1.0:
+
+                true_target_peakgroups.append(peakgroup)
+
+            elif peakgroup.vote_percentage < 1.0:
+
+                false_target_peakgroups.append(peakgroup)
+
+        decoy_peakgroups = self.get_decoy_peakgroups(
+            filter_field="D_SCORE",
+            use_second_ranked=False
+        )
+
+        self.pit = len(false_target_peakgroups) / len(decoy_peakgroups)
+
+        return self.pit
+
+
+    def calculate_q_values(self, sort_key: str, decoy_free: bool = False, count_decoys=True, num_threads: int = 10, pit: float = 1.0):
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True
@@ -572,7 +606,7 @@ class Precursors:
                 all_peakgroups
             )
 
-            q_values = DecoyCounter(num_threads=num_threads).calc_q_values(
+            q_values = DecoyCounter(num_threads=num_threads, pit=pit).calc_q_values(
                 all_data_scores,
                 all_data_labels
             )

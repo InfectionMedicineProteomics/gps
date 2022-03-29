@@ -251,7 +251,7 @@ class GlobalDistribution:
 
 
 @njit(nogil=True)
-def _calculate_q_value(labels):
+def _calculate_q_value(labels, pit):
 
     target_count = 0
     decoy_count = 0
@@ -271,13 +271,15 @@ def _calculate_q_value(labels):
 
     if decoy_count > 0:
 
+        decoy_count = decoy_count * pit
+
         q_value = decoy_count / (decoy_count + target_count)
 
     return q_value
 
 
 @njit(parallel=True)
-def _calculate_q_values(scores, labels):
+def _calculate_q_values(scores, labels, pit):
 
     sorted_score_indices = np.argsort(scores)[::-1]
 
@@ -299,7 +301,7 @@ def _calculate_q_values(scores, labels):
 
             local_labels[idx] = labels[indices_to_check[idx]]
 
-        q_value = _calculate_q_value(local_labels)
+        q_value = _calculate_q_value(local_labels, pit)
 
         real_idx = sorted_score_indices[i]
 
@@ -309,12 +311,12 @@ def _calculate_q_values(scores, labels):
 
 
 class DecoyCounter:
-    def __init__(self, num_threads: int = 10, pi0: float = 1.0):
+    def __init__(self, num_threads: int = 10, pit: float = 1.0):
 
         numba.set_num_threads(num_threads)
 
-        self.pi0 = pi0
+        self.pit = pit
 
     def calc_q_values(self, scores, labels):
 
-        return _calculate_q_values(scores, labels)
+        return _calculate_q_values(scores, labels, self.pit)

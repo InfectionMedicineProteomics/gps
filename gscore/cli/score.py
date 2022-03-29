@@ -48,13 +48,31 @@ class Score:
             chromatogram_only=args.use_only_chromatogram_features,
         )
 
+        if args.estimate_pit:
+
+            print("Estimating PIT.")
+
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_percentage=args.vote_percentage,
+            )
+
+            pit = precursors.estimate_pit()
+
+        else:
+
+            pit = 1.0
+
         print("Calculating Q Values")
 
         precursors.calculate_q_values(
             sort_key="d_score",
             decoy_free=args.decoy_free,
             count_decoys=args.count_decoys,
-            num_threads=args.threads
+            num_threads=args.threads,
+            pit=pit
         )
 
         if args.output:
@@ -138,6 +156,14 @@ class Score:
         )
 
         self.parser.add_argument(
+            "--estimate-pit",
+            dest="estimate_pit",
+            help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
+            action="store_true",
+            default=False
+        )
+
+        self.parser.add_argument(
             "--use-interpolated-chroms",
             dest="use_interpolated_chroms",
             help="Export interpolated chromatograms of a uniform length.",
@@ -170,6 +196,30 @@ class Score:
             dest="decoy_free",
             help="Use the second ranked target peakgroups as decoys for modelling the scores and calculating q-values",
             action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--num-classifiers",
+            dest="num_classifiers",
+            help="The number of ensemble learners used to denoise each fold",
+            default=10,
+            type=int,
+        )
+
+        self.parser.add_argument(
+            "--num-folds",
+            dest="num_folds",
+            help="The number of folds used to denoise the target labels",
+            default=10,
+            type=int,
+        )
+
+        self.parser.add_argument(
+            "--vote-percentage",
+            dest="vote_percentage",
+            help="The minimum probability needed to be counted as a positive vote",
+            default=0.8,
+            type=float,
         )
 
         self.parser.set_defaults(run=self)
