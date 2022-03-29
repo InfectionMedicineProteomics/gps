@@ -242,7 +242,7 @@ class Precursors:
         return filtered_peakgroups
 
     def filter_target_peakgroups(
-        self, rank: int, filter_key: str, value: float
+        self, rank: int, filter_key: str = "PROBABILITY", value: float = 0.0
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -251,24 +251,25 @@ class Precursors:
 
         for precursor in self.precursors.values():
 
-            precursor.peakgroups.sort(key=lambda x: x.probability, reverse=True)
+            if filter_key == "PROBABILITY":
 
-            peakgroup = precursor.peakgroups[rank]
+                precursor.peakgroups.sort(key=lambda x: x.probability, reverse=True)
 
-            try:
+            elif filter_key == "D_SCORE":
+
+                precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+            elif filter_key == "TRUE_TARGET_SCORE":
+
+                precursor.peakgroups.sort(key=lambda x: x.true_target_score, reverse=True)
+
+            if rank + 1 <= len(precursor.peakgroups):
+
+                peakgroup = precursor.peakgroups[rank]
 
                 if peakgroup.target == 1 and peakgroup.vote_percentage >= value:
+
                     filtered_peakgroups.append(peakgroup)
-
-            except KeyError as e:
-
-                print(filter_key)
-
-                print("[WARNING] peakgroup found without correct subscore")
-
-                print(peakgroup.scores)
-
-                raise e
 
         return filtered_peakgroups
 
@@ -413,12 +414,17 @@ class Precursors:
 
             probabilities = denoizer.predict_proba(testing_scores)[:, class_index]
 
+            true_target_scores = denoizer.decision_function(testing_scores)
+
             if verbose:
                 print(
                     "Updating peakgroups", len(probabilities), len(peakgroups_to_score)
                 )
 
             for idx, peakgroup in enumerate(peakgroups_to_score):
+
+                peakgroup.true_target_score = true_target_scores[idx]
+
                 peakgroup.probability = probabilities[idx]
 
                 peakgroup.vote_percentage = vote_percentages[idx]

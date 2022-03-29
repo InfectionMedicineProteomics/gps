@@ -55,6 +55,22 @@ def reformat_distribution_data(peakgroups):
 
     return scores, score_labels
 
+def reformat_true_target_scores(peakgroups):
+
+    scores = list()
+    score_labels = list()
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        scores.append(peakgroup.true_target_score)
+
+        score_labels.append(peakgroup.target)
+
+    scores = np.array(scores, dtype=np.float64)
+    score_labels = np.array(score_labels, dtype=np.float)
+
+    return scores, score_labels
+
 
 def reformat_data(peakgroups):
 
