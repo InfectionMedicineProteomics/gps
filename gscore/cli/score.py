@@ -45,31 +45,22 @@ class Score:
             threads=args.threads,
             gpus=args.gpus,
             use_relative_intensities=args.use_relative_intensities,
-            chromatogram_only=args.use_only_chromatogram_features
-
+            chromatogram_only=args.use_only_chromatogram_features,
         )
 
         print("Calculating Q Values")
 
-        precursors.calculate_q_values(
-            sort_key="d_score",
-            decoy_free=args.decoy_free
-        )
+        precursors.calculate_q_values(sort_key="d_score", decoy_free=args.decoy_free)
 
         if args.output:
 
-            precursors.write_tsv(
-                file_path=args.output,
-                ranked=1
-            )
+            precursors.write_tsv(file_path=args.output, ranked=1)
 
         else:
 
             print("Updating Q Values in file")
 
-            osw_file.add_score_and_q_value_records(
-                precursors
-            )
+            osw_file.add_score_and_q_value_records(precursors)
 
         print("Done!")
 
@@ -81,12 +72,7 @@ class Score:
 
         self.parser.add_argument("-i", "--input", help="OSW file to process", type=str)
 
-        self.parser.add_argument(
-            "-o",
-            "--output",
-            help="Output TSV file.",
-            type=str
-        )
+        self.parser.add_argument("-o", "--output", help="Output TSV file.", type=str)
 
         self.parser.add_argument(
             "-c",
@@ -94,7 +80,7 @@ class Score:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             type=str,
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
@@ -102,7 +88,7 @@ class Score:
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
             type=str,
-            required=True
+            required=True,
         )
 
         self.parser.add_argument(
@@ -111,7 +97,7 @@ class Score:
             help="Path to scaler to transform data.",
             type=str,
             default="",
-            required=True
+            required=True,
         )
 
         self.parser.add_argument(
@@ -119,7 +105,7 @@ class Score:
             dest="chromatogram_encoder",
             help="Path to trained encoder model.",
             type=str,
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
@@ -156,7 +142,7 @@ class Score:
             "--use-only-chromatogram-features",
             dest="use_only_chromatogram_features",
             action="store_true",
-            help="Use only features from the deepchrom model"
+            help="Use only features from the deepchrom model",
         )
 
         self.parser.add_argument(
@@ -170,7 +156,7 @@ class Score:
             "--decoy-free",
             dest="decoy_free",
             help="Use the second ranked target peakgroups as decoys for modelling the scores and calculating q-values",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.set_defaults(run=self)

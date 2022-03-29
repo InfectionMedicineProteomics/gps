@@ -18,7 +18,7 @@ class Peptide:
         decoy: int = 0,
         q_value: float = 0.0,
         d_score: float = 0.0,
-        probability = 0.0
+        probability=0.0,
     ):
 
         self.sequence = sequence

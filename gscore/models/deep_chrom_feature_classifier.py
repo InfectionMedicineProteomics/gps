@@ -115,14 +115,10 @@ class DeepChromFeatureScorer(Scorer):
             torch.from_numpy(self.score(chromatograms)).type(torch.FloatTensor)
         ).numpy()
 
-    def predict_proba(
-        self, chromatograms: np.ndarray
-    ) -> np.ndarray:
+    def predict_proba(self, chromatograms: np.ndarray) -> np.ndarray:
         return self.probability(chromatograms)
 
-    def evaluate(
-        self, chromatograms: np.ndarray, labels: np.ndarray
-    ) -> float:
+    def evaluate(self, chromatograms: np.ndarray, labels: np.ndarray) -> float:
 
         probabilities = self.predict_proba(chromatograms)
 

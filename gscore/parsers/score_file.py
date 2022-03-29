@@ -7,11 +7,9 @@ from gscore.proteins import Proteins, Protein
 
 
 class ScoreFile:
-
     def __init__(self, file_path):
 
         self.file_path = file_path
-
 
     def parse_to_peptides(self) -> Peptides:
 
@@ -27,28 +25,30 @@ class ScoreFile:
 
                     peptide = Peptide(
                         sequence=record["UnmodifiedSequence"],
-                        modified_sequence=record['ModifiedSequence'],
+                        modified_sequence=record["ModifiedSequence"],
                         decoy=int(record["Decoy"]),
                         q_value=float(record["QValue"]),
-                        d_score=float(record["DScore"])
+                        d_score=float(record["DScore"]),
                     )
 
                     peptides[record["ModifiedSequence"]] = peptide
 
-                elif (float(record["DScore"]) > peptides[record["ModifiedSequence"]].d_score):
+                elif (
+                    float(record["DScore"])
+                    > peptides[record["ModifiedSequence"]].d_score
+                ):
 
                     peptide = Peptide(
                         sequence=record["UnmodifiedSequence"],
-                        modified_sequence=record['ModifiedSequence'],
+                        modified_sequence=record["ModifiedSequence"],
                         decoy=int(record["Decoy"]),
                         q_value=float(record["QValue"]),
-                        d_score=float(record["DScore"])
+                        d_score=float(record["DScore"]),
                     )
 
                     peptides[record["ModifiedSequence"]] = peptide
 
         return peptides
-
 
     def parse_to_proteins(self) -> Proteins:
 
@@ -66,18 +66,18 @@ class ScoreFile:
                         protein_accession=record["Protein"],
                         decoy=int(record["Decoy"]),
                         q_value=float(record["QValue"]),
-                        d_score=float(record["DScore"])
+                        d_score=float(record["DScore"]),
                     )
 
                     proteins[record["Protein"]] = protein
 
-                elif (float(record["DScore"]) > proteins[record["Protein"]].d_score):
+                elif float(record["DScore"]) > proteins[record["Protein"]].d_score:
 
                     protein = Protein(
                         protein_accession=record["Protein"],
                         decoy=int(record["Decoy"]),
                         q_value=float(record["QValue"]),
-                        d_score=float(record["DScore"])
+                        d_score=float(record["DScore"]),
                     )
 
                     proteins[record["Protein"]] = protein
@@ -118,7 +118,7 @@ class ScoreFile:
                     intensity=float(record.get("Intensity", 0.0)),
                     probability=float(record.get("Probability", 0.0)),
                     q_value=float(record.get("QValue", 0.0)),
-                    d_score=float(record.get("DScore", 0.0))
+                    d_score=float(record.get("DScore", 0.0)),
                 )
 
                 precursors.add_peakgroup(precursor_id, peakgroup)

@@ -24,7 +24,6 @@ MODELS = {"adaboost": AdaBoostClassifier}
 
 
 class Scorer:
-
     def fit(self, data: np.ndarray, labels: np.ndarray):
 
         self.model.fit(data, labels)
@@ -101,7 +100,7 @@ class XGBoostScorer(Scorer):
             n_jobs=10,
             random_state=42,
             scale_pos_weight=scale_pos_weight,
-            eval_metric="logloss"
+            eval_metric="logloss",
         )
 
 

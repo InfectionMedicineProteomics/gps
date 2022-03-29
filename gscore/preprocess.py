@@ -55,6 +55,7 @@ def reformat_distribution_data(peakgroups):
 
     return scores, score_labels
 
+
 def reformat_true_target_scores(peakgroups):
 
     scores = list()
@@ -119,7 +120,9 @@ def reformat_chromatogram_data(
 
             indices.append(peakgroup.idx)
 
-            scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
+            scores.append(
+                peakgroup.get_sub_score_column_array(include_probability=False)
+            )
 
             peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
                 use_relative_intensities=use_relative_intensities
@@ -135,7 +138,9 @@ def reformat_chromatogram_data(
 
                 indices.append(peakgroup.idx)
 
-                scores.append(peakgroup.get_sub_score_column_array(include_probability=False))
+                scores.append(
+                    peakgroup.get_sub_score_column_array(include_probability=False)
+                )
 
                 peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
 

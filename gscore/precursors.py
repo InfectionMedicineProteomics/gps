@@ -261,7 +261,9 @@ class Precursors:
 
             elif filter_key == "TRUE_TARGET_SCORE":
 
-                precursor.peakgroups.sort(key=lambda x: x.true_target_score, reverse=True)
+                precursor.peakgroups.sort(
+                    key=lambda x: x.true_target_score, reverse=True
+                )
 
             if rank + 1 <= len(precursor.peakgroups):
 
@@ -472,7 +474,7 @@ class Precursors:
         threads: int = 10,
         gpus: int = 1,
         use_relative_intensities: bool = False,
-        chromatogram_only: bool = False
+        chromatogram_only: bool = False,
     ):
 
         scoring_model: Optional[Scorer]
@@ -487,7 +489,7 @@ class Precursors:
             all_data_labels,
             all_data_indices,
             all_chromatograms,
-            all_scores
+            all_scores,
         ) = preprocess.reformat_chromatogram_data(
             all_peakgroups,
             use_relative_intensities=use_relative_intensities,
@@ -496,15 +498,13 @@ class Precursors:
 
         if encoder_path:
 
-            chromatogram_encoder= DeepChromScorer(
+            chromatogram_encoder = DeepChromScorer(
                 max_epochs=1, gpus=gpus, threads=threads
             )  # type: DeepChromScorer
 
             chromatogram_encoder.load(encoder_path)
 
-            chromatogram_embeddings = chromatogram_encoder.encode(
-                all_chromatograms
-            )
+            chromatogram_embeddings = chromatogram_encoder.encode(all_chromatograms)
 
             if chromatogram_only:
 
@@ -515,8 +515,7 @@ class Precursors:
             else:
 
                 all_scores = np.concatenate(
-                    (all_scores, chromatogram_embeddings),
-                    axis=1
+                    (all_scores, chromatogram_embeddings), axis=1
                 )
 
         counter: Counter = Counter(all_data_labels.ravel())
@@ -569,10 +568,7 @@ class Precursors:
 
         scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
 
-        self.score_distribution = ScoreDistribution(
-            scale=False,
-            smooth=False
-        )
+        self.score_distribution = ScoreDistribution(scale=False, smooth=False)
 
         self.score_distribution.fit(scores, labels)
 
@@ -609,13 +605,18 @@ class Precursors:
             all_data_labels,
             all_data_indices,
             all_chromatograms,
-            all_scores
+            all_scores,
         ) = preprocess.reformat_chromatogram_data(
             combined, use_relative_intensities=use_relateive_intensities
         )
 
         with open(file_path, "wb") as npfh:
-            np.savez(npfh, labels=all_data_labels, chromatograms=all_chromatograms, scores=all_scores)
+            np.savez(
+                npfh,
+                labels=all_data_labels,
+                chromatograms=all_chromatograms,
+                scores=all_scores,
+            )
 
     def write_tsv(self, file_path: str = "", ranked: int = 1) -> None:
 
@@ -632,13 +633,9 @@ class Precursors:
             "Probability",
         ]
 
-        with open(file_path, 'w') as out_file:
+        with open(file_path, "w") as out_file:
 
-            csv_writer = DictWriter(
-                out_file,
-                delimiter="\t",
-                fieldnames=field_names
-            )
+            csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
 
             csv_writer.writeheader()
 
@@ -660,7 +657,7 @@ class Precursors:
                         "Intensity": peakgroup.intensity,
                         "QValue": peakgroup.q_value,
                         "DScore": peakgroup.d_score,
-                        "Probability": peakgroup.probability
+                        "Probability": peakgroup.probability,
                     }
 
                     csv_writer.writerow(record)

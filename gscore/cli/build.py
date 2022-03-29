@@ -33,7 +33,7 @@ class Build:
 
                 elif args.level == "peptide":
 
-                    groups = gscore_file.parse_to_peptides( )
+                    groups = gscore_file.parse_to_peptides()
 
             elif input_file.lower().endswith("osw"):
 

@@ -16,17 +16,21 @@ from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler  # 
 from sklearn.pipeline import Pipeline  # type: ignore
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-class DeepChromScorer(BaseEstimator, ClassifierMixin):
 
+class DeepChromScorer(BaseEstimator, ClassifierMixin):
     def __init__(
-        self, max_epochs: int = 1000, gpus: int = 1, threads: int = 1, initial_lr=0.005, early_stopping=25,
-            training=True, embedding=False
+        self,
+        max_epochs: int = 1000,
+        gpus: int = 1,
+        threads: int = 1,
+        initial_lr=0.005,
+        early_stopping=25,
+        training=True,
+        embedding=False,
     ):
 
         self.model = DeepChromModel(
-            learning_rate=initial_lr,
-            training=training,
-            embedding=embedding
+            learning_rate=initial_lr, training=training, embedding=embedding
         )
 
         ###TODO:
@@ -48,7 +52,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
                         mode="min",
                     ),
                 ],
-                auto_select_gpus=True
+                auto_select_gpus=True,
             )
 
         else:
@@ -103,7 +107,6 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
             val_dataloaders=validation_dataloader,
         )
 
-
     def score(self, data: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
@@ -117,9 +120,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms),
-            num_workers=self.threads,
-            batch_size=10000
+            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
         )
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
@@ -141,9 +142,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms),
-            num_workers=self.threads,
-            batch_size=10000
+            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
         )
 
         self.model.embedding = True
@@ -155,7 +154,6 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
         self.model.embedding = False
 
         return np.array(combined_embeddings.numpy(), dtype=np.float64)
-
 
     def probability(self, data: np.ndarray) -> np.ndarray:
 
@@ -170,9 +168,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
 
         prediction_dataloader = DataLoader(
-            TensorDataset(chromatograms),
-            num_workers=self.threads,
-            batch_size=10000
+            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
         )
 
         predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
@@ -194,7 +190,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
             checkpoint_path=model_path,
             learning_rate=self.initial_lr,
             training=self.training,
-            embedding=self.embedding
+            embedding=self.embedding,
         )
 
     def evaluate(self, data: np.ndarray, labels: np.ndarray) -> float:
@@ -205,6 +201,7 @@ class DeepChromScorer(BaseEstimator, ClassifierMixin):
 
 
 import torchvision.models as models
+
 
 class DeepChromModel(pl.LightningModule):
     def __init__(self, learning_rate=0.0005, training=False, embedding=False):
@@ -222,7 +219,7 @@ class DeepChromModel(pl.LightningModule):
                 padding="same",
             ),
             nn.BatchNorm2d(3),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         backbone = models.resnet18(pretrained=False)
@@ -238,15 +235,10 @@ class DeepChromModel(pl.LightningModule):
             nn.ReLU(),
             nn.Linear(200, 200),
             nn.ReLU(),
-            nn.Linear(200, 50)
-
+            nn.Linear(200, 50),
         )
 
-        self.output_net = nn.Sequential(
-            nn.Linear(50, 50),
-            nn.ReLU(),
-            nn.Linear(50, 1)
-        )
+        self.output_net = nn.Sequential(nn.Linear(50, 50), nn.ReLU(), nn.Linear(50, 1))
 
         self._init_params()
 

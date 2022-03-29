@@ -65,7 +65,7 @@ class Train:
                 args.chromatogram_encoder_output,
                 args.threads,
                 args.gpus,
-                args.epochs
+                args.epochs,
             )
 
             print("Augmenting scores with learned chromatogram embeddings.")
@@ -78,7 +78,7 @@ class Train:
                 combined_chromatograms,
                 combined_scores,
                 chromatogram_encoder,
-                args.use_only_chromatogram_features
+                args.use_only_chromatogram_features,
             )
 
         if args.chromatogram_encoder_input:
@@ -98,7 +98,7 @@ class Train:
                 combined_chromatograms,
                 combined_scores,
                 chromatogram_encoder,
-                args.use_only_chromatogram_features
+                args.use_only_chromatogram_features,
             )
 
         print("Training scoring model.")
@@ -107,17 +107,18 @@ class Train:
             combined_data=combined_scores,
             combined_labels=combined_labels,
             model_output=args.model_output,
-            scaler_output=args.scaler_output
-
+            scaler_output=args.scaler_output,
         )
 
+    def augment_score_columns(
+        self,
+        combined_chromatograms,
+        combined_scores,
+        chromatogram_encoder,
+        chromatogram_only=False,
+    ):
 
-
-    def augment_score_columns (self, combined_chromatograms, combined_scores, chromatogram_encoder, chromatogram_only=False):
-
-        chromatogram_embeddings = chromatogram_encoder.encode(
-            combined_chromatograms
-        )
+        chromatogram_embeddings = chromatogram_encoder.encode(combined_chromatograms)
 
         if chromatogram_only:
 
@@ -125,11 +126,7 @@ class Train:
 
         else:
 
-            return np.concatenate(
-                (combined_scores, chromatogram_embeddings),
-                axis=1
-            )
-
+            return np.concatenate((combined_scores, chromatogram_embeddings), axis=1)
 
     def train_deep_model(
         self,
@@ -138,9 +135,8 @@ class Train:
         model_output,
         threads,
         gpus,
-        epochs
+        epochs,
     ):
-
 
         training_data, testing_data, training_labels, testing_labels = train_test_split(
             combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
@@ -154,8 +150,7 @@ class Train:
 
         print("Training model...")
 
-        model.fit(data=training_data,
-                  labels=training_labels)
+        model.fit(data=training_data, labels=training_labels)
 
         print("Saving model...")
 
@@ -214,23 +209,20 @@ class Train:
         )
 
         self.parser.add_argument(
-            "--model-output",
-            dest="model_output",
-            help="Output path for scoring model."
+            "--model-output", dest="model_output", help="Output path for scoring model."
         )
 
         self.parser.add_argument(
             "--chromatogram-encoder-input",
             dest="chromatogram_encoder_input",
             help="Input path for chromatogram encoder model.",
-            default=""
+            default="",
         )
-
 
         self.parser.add_argument(
             "--chromatogram-encoder-output",
             dest="chromatogram_encoder_output",
-            help="Output path for chromatogram encoder model."
+            help="Output path for chromatogram encoder model.",
         )
 
         self.parser.add_argument(
@@ -250,7 +242,7 @@ class Train:
             "--use-only-chromatogram-features",
             dest="use_only_chromatogram_features",
             action="store_true",
-            help="Use only features from the deepchrom model"
+            help="Use only features from the deepchrom model",
         )
 
         self.parser.add_argument(
