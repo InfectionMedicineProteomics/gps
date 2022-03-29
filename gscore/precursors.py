@@ -14,7 +14,7 @@ from gscore.chromatograms import Chromatogram
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
-from gscore.fdr import ScoreDistribution
+from gscore.fdr import ScoreDistribution, DecoyCounter
 from gscore.models.base_model import Scorer
 
 from typing import TYPE_CHECKING
@@ -539,7 +539,7 @@ class Precursors:
 
         return self
 
-    def calculate_q_values(self, sort_key: str, decoy_free: bool = False):
+    def calculate_q_values(self, sort_key: str, decoy_free: bool = False, count_decoys=True, num_threads: int = 10):
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True
@@ -564,21 +564,36 @@ class Precursors:
                 peakgroup.target = 0
                 peakgroup.decoy = 1
 
-        modelling_peakgroups = target_peakgroups + decoy_peakgroups
+        if count_decoys:
 
-        scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
+            all_peakgroups = self.get_all_peakgroups()
 
-        self.score_distribution = ScoreDistribution(scale=False, smooth=False)
+            all_data_scores, all_data_labels = preprocess.reformat_distribution_data(
+                all_peakgroups
+            )
 
-        self.score_distribution.fit(scores, labels)
+            q_values = DecoyCounter(num_threads=num_threads).calc_q_values(
+                all_data_scores,
+                all_data_labels
+            )
 
-        all_peakgroups = self.get_all_peakgroups()
+        else:
 
-        all_data_scores, all_data_labels = preprocess.reformat_distribution_data(
-            all_peakgroups
-        )
+            modelling_peakgroups = target_peakgroups + decoy_peakgroups
 
-        q_values = self.score_distribution.calculate_q_values(all_data_scores)
+            scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
+
+            self.score_distribution = ScoreDistribution(scale=False, smooth=False)
+
+            self.score_distribution.fit(scores, labels)
+
+            all_peakgroups = self.get_all_peakgroups()
+
+            all_data_scores, all_data_labels = preprocess.reformat_distribution_data(
+                all_peakgroups
+            )
+
+            q_values = self.score_distribution.calculate_q_values(all_data_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
             peakgroup.q_value = q_values[idx].item()

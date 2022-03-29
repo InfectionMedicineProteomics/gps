@@ -50,7 +50,12 @@ class Score:
 
         print("Calculating Q Values")
 
-        precursors.calculate_q_values(sort_key="d_score", decoy_free=args.decoy_free)
+        precursors.calculate_q_values(
+            sort_key="d_score",
+            decoy_free=args.decoy_free,
+            count_decoys=args.count_decoys,
+            num_threads=args.threads
+        )
 
         if args.output:
 
@@ -122,6 +127,14 @@ class Score:
             type=int,
             help="Number of GPUs to use to train model.",
             default=1,
+        )
+
+        self.parser.add_argument(
+            "--count-decoys",
+            dest="count_decoys",
+            help="Count decoys to calculate q-values for each peakgroup",
+            action="store_true",
+            default=False
         )
 
         self.parser.add_argument(

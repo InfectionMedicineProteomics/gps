@@ -285,8 +285,6 @@ def _calculate_q_values(scores, labels):
 
     q_values = np.zeros((num_scores,), dtype=np.float64)
 
-    print(num_scores)
-
     for i in prange(1, num_scores):
 
         indices_to_check = np.zeros((i,), dtype=int64)
