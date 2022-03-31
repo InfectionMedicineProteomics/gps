@@ -210,6 +210,39 @@ class GlobalDistribution:
                 idx
             ].item()
 
+    def estimate_pit(self, initial_cutoff: float = 0.01):
+
+        features = list(self.features.values())
+
+        scores = np.zeros((len(self.features.values()),), dtype=np.float64)
+
+        labels = np.zeros((len(self.features.values()),), dtype=int)
+
+        for i in range(len(features)):
+            scores[i] = features[i].d_score
+            labels[i] = features[i].target
+
+        score_distribution = ScoreDistribution()
+
+        score_distribution.fit(
+            X=scores,
+            y=labels
+        )
+
+        q_values = score_distribution.calculate_q_values(scores)
+
+        initial_indices = np.argwhere(q_values >= initial_cutoff)
+
+        passed_labels = labels[initial_indices]
+
+        false_target_counts = passed_labels[passed_labels == 1].shape[0]
+
+        decoy_counts = labels[labels == 0].shape[0]
+
+        self.pit = false_target_counts / decoy_counts
+
+        return self.pit
+
     def get_score(self, feature_key: str):
 
         return self.score_map[feature_key]

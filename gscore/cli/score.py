@@ -36,18 +36,6 @@ class Score:
 
             precursors.set_chromatograms(chromatograms)
 
-        print("Scoring...")
-
-        precursors.score_run(
-            model_path=args.scoring_model,
-            scaler_path=args.scaler,
-            encoder_path=args.chromatogram_encoder,
-            threads=args.threads,
-            gpus=args.gpus,
-            use_relative_intensities=args.use_relative_intensities,
-            chromatogram_only=args.use_only_chromatogram_features,
-        )
-
         if args.estimate_pit:
 
             print("Estimating PIT.")
@@ -61,9 +49,23 @@ class Score:
 
             pit = precursors.estimate_pit()
 
+            print(f"PIT estimate to be: {pit}")
+
         else:
 
             pit = 1.0
+
+        print("Scoring...")
+
+        precursors.score_run(
+            model_path=args.scoring_model,
+            scaler_path=args.scaler,
+            encoder_path=args.chromatogram_encoder,
+            threads=args.threads,
+            gpus=args.gpus,
+            use_relative_intensities=args.use_relative_intensities,
+            chromatogram_only=args.use_only_chromatogram_features,
+        )
 
         print("Calculating Q Values")
 
