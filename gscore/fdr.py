@@ -6,7 +6,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline  # type: ignore
 
 from sklearn.neighbors import KernelDensity  # type: ignore
 
-from typing import TypeVar, Dict, Union
+from typing import TypeVar, Dict, Union, Tuple
 
 from joblib import dump, load  # type: ignore
 
@@ -32,141 +32,123 @@ G = TypeVar(
     "G",
 )
 
+@njit(nogil=True)
+def _fast_distribution_q_value(target_values, decoy_values, pit):
+
+    target_area = np.trapz(target_values)
+
+    decoy_area = np.trapz(decoy_values)
+
+    if decoy_area == 0.0 and target_area == 0.0:
+
+        q_value = 0.0
+
+    else:
+
+        decoy_area = decoy_area * pit
+
+        q_value = decoy_area / (decoy_area + target_area)
+
+    return q_value
+
+@njit(cache=True, parallel=True)
+def _fast_distribution_q_values(scores, target_function, decoy_function, pit):
+
+    q_values = np.ones((len(scores),), dtype=np.float64)
+
+    max_score = np.max(scores)
+
+    for i in prange(len(scores)):
+
+        integral_bounds = np.arange(scores[i], max_score, 0.1)
+
+        target_data = np.interp(integral_bounds, target_function[0], target_function[1])
+
+        decoy_data = np.interp(integral_bounds, decoy_function[0], decoy_function[1])
+
+        q_value = _fast_distribution_q_value(target_data, decoy_data, pit)
+
+        q_values[i] = q_value
+
+    return q_values
+
 
 class ScoreDistribution:
 
-    x_axis: np.ndarray
-    target_model: KernelDensity
-    decoy_model: KernelDensity
-    target_function: InterpolatedUnivariateSpline
-    decoy_function: InterpolatedUnivariateSpline
-    scale: bool
-    smooth: bool
-    transform: Pipeline
+    pit: float
+    X: np.ndarray
+    y: np.ndarray
+    target_spline: Tuple[np.ndarray, np.ndarray]
+    decoy_spline: Tuple[np.ndarray, np.ndarray]
+    target_scores: np.ndarray
+    decoy_scores: np.ndarray
 
-    def __init__(self, scale: bool = False, smooth: bool = False):
+    def __init__(self, pit: float = 1.0, num_threads: int = 10):
 
-        self.target_model = KernelDensity(bandwidth=1.0, kernel="epanechnikov")
-        self.decoy_model = KernelDensity(bandwidth=1.0, kernel="epanechnikov")
-        self.scale = scale
-        self.smooth = smooth
+        numba.set_num_threads(num_threads)
 
-    def fit(self, data: np.ndarray, labels: np.ndarray):
+        self.pit = pit
 
-        self.x_axis = np.linspace(start=data.min(), stop=data.max(), num=1000)[
-            :, np.newaxis
-        ]
+    def fit(self, X, y):
 
-        if self.scale:
+        self.X = X
+        self.y = y
 
-            print("Scaling score distributions.")
+        self._estimate_bin_number()
 
-            self.transform = Pipeline(
-                [
-                    # ("standard_scaler", PowerTransformer()),
-                    ("robust_scaler", RobustScaler()),
-                    # ("robust_scaler", QuantileTransformer(output_distribution="normal")),
-                ]
-            )
+        target_indices = np.argwhere(y == 1)
+        decoy_indices = np.argwhere(y == 0)
 
-            data = self.transform.fit_transform(data.reshape((-1, 1))).reshape((-1))
+        self.target_scores = X[target_indices]
+        self.decoy_scores = X[decoy_indices]
 
-            self.x_axis = np.linspace(
-                start=data.min() - 1, stop=data.max() + 1, num=1000
-            )[:, np.newaxis]
+        self.target_spline = self._fit_function(self.target_scores)
+        self.decoy_spline = self._fit_function(self.decoy_scores)
 
-        if self.smooth:
+        return self
 
-            data = sm.nonparametric.lowess(data, self.x_axis)
+    def min(self):
 
-        self.target_data = data[np.argwhere(labels == 1.0)]
+        return np.min(self.X)
 
-        self.decoy_data = data[np.argwhere(labels == 0.0)]
+    def max(self):
 
-        self.target_model.fit(self.target_data)
+        return np.max(self.X)
 
-        self.decoy_model.fit(self.decoy_data)
+    def _estimate_bin_number(self):
 
-        self.target_scores = self.score(model="target")
-        self.decoy_scores = self.score(model="decoy")
+        hist, bins = np.histogram(self.X, bins="auto")
 
-        self.target_function = InterpolatedUnivariateSpline(
-            x=self.x_axis, y=self.target_scores, ext=2
+        self.num_bins = (bins[1:] + bins[:-1]) / 2
+
+    def _fit_function(self, scores):
+
+        hist, bins = np.histogram(scores, bins=self.num_bins)
+
+        bin_centers = (bins[1:] + bins[:-1])/2
+
+        return bin_centers, hist
+
+    def calculate_q_values(self, X):
+
+        return _fast_distribution_q_values(
+            X,
+            self.target_spline,
+            self.decoy_spline,
+            self.pit
         )
-
-        self.decoy_function = InterpolatedUnivariateSpline(
-            x=self.x_axis, y=self.decoy_scores, ext=2
-        )
-
-    def score(self, model: str):
-
-        if model == "target":
-
-            log_density = self.target_model.score_samples(self.x_axis)
-
-        else:
-
-            log_density = self.decoy_model.score_samples(self.x_axis)
-
-        return np.exp(log_density)
-
-    def calculate_q_values(self, scores: np.ndarray) -> np.ndarray:
-
-        target_areas = []
-        decoy_areas = []
-
-        if self.scale:
-
-            print("Scaling scores.")
-
-            scores = self.transform.transform(scores.reshape((-1, 1))).reshape((-1))
-
-        for score in scores:
-
-            if score > self.decoy_data.max().item():
-
-                decoy_area = 0.0
-
-            else:
-
-                decoy_area = self.decoy_function.integral(
-                    a=score,
-                    b=self.x_axis[-1].item(),
-                )
-
-            if score >= self.target_data.max().item():
-
-                target_area = 1.0
-
-            else:
-
-                target_area = self.target_function.integral(
-                    a=score, b=self.x_axis[-1].item()
-                )
-
-            target_areas.append(target_area)
-            decoy_areas.append(decoy_area)
-
-        target_areas_array = np.array(target_areas)
-        decoy_areas_array = np.array(decoy_areas)
-
-        total_areas = target_areas_array + decoy_areas_array
-
-        print(total_areas.min(), total_areas.max())
-
-        q_values = decoy_areas_array / total_areas
-
-        return q_values
 
 
 class GlobalDistribution:
 
     features: Dict[str, Union[Peptide, Protein]]
     score_distribution: ScoreDistribution
+    pit: float
 
-    def __init__(self) -> None:
+    def __init__(self, pit: float = 1.0) -> None:
 
         self.features: Dict[str, Union[Peptide, Protein]] = dict()
+        self.pit = pit
 
     def __contains__(self, item) -> bool:
 
@@ -212,7 +194,7 @@ class GlobalDistribution:
 
         self._parse_scores()
 
-        self.score_distribution = ScoreDistribution(scale=False, smooth=False)
+        self.score_distribution = ScoreDistribution(pit=self.pit)
 
         self.score_distribution.fit(self.scores, self.labels)
 
