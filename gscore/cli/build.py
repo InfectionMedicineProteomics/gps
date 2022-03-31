@@ -63,8 +63,21 @@ class Build:
 
                     global_distribution.compare_score(group.identifier, group)
 
+
+        if args.estimate_pit:
+
+            print("Estimating PIT...")
+
+            pit = global_distribution.estimate_pit()
+
+            print(f"PIT estimated to be: {pit}")
+
         print("Fitting distribution...")
         global_distribution.fit()
+
+        num_below_001 = global_distribution.q_values[global_distribution.q_values <= 0.01].shape[0]
+
+        print(f"Features below 0.01: {num_below_001}")
 
         print(f"Saving model: {args.output}")
 
@@ -93,6 +106,14 @@ class Build:
 
         self.parser.add_argument(
             "--output", dest="output", help="Output path for scoring model."
+        )
+
+        self.parser.add_argument(
+            "--estimate-pit",
+            dest="estimate_pit",
+            help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
+            action="store_true",
+            default=False
         )
 
         self.parser.set_defaults(run=self)
