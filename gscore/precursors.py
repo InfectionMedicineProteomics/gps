@@ -617,7 +617,7 @@ class Precursors:
 
             scores, labels = preprocess.reformat_distribution_data(modelling_peakgroups)
 
-            self.score_distribution = ScoreDistribution(scale=False, smooth=False)
+            self.score_distribution = ScoreDistribution(pit=pit)
 
             self.score_distribution.fit(scores, labels)
 
@@ -632,7 +632,7 @@ class Precursors:
         for idx, peakgroup in enumerate(all_peakgroups):
             peakgroup.q_value = q_values[idx].item()
 
-        return self
+        return q_values
 
     def dump_training_data(
         self,

@@ -69,7 +69,7 @@ class Score:
 
         print("Calculating Q Values")
 
-        precursors.calculate_q_values(
+        q_values = precursors.calculate_q_values(
             sort_key="d_score",
             decoy_free=args.decoy_free,
             count_decoys=args.count_decoys,
@@ -220,7 +220,7 @@ class Score:
             "--vote-percentage",
             dest="vote_percentage",
             help="The minimum probability needed to be counted as a positive vote",
-            default=0.8,
+            default=0.5,
             type=float,
         )
 
