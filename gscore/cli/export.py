@@ -23,7 +23,7 @@ class Export:
         osw_file = OSWFile(args.input)
 
         precursors = osw_file.parse_to_precursors(
-            query=queries.SelectPeakGroups.FETCH_PREC_RECORDS
+            query=queries.SelectPeakGroups.FETCH_TRAINING_RECORDS
         )
 
         use_chromatograms: bool = False
