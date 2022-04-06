@@ -276,7 +276,7 @@ def _calculate_q_value(labels, pit):
 
         label = labels[i]
 
-        if label == 0:
+        if label == 1:
 
             target_count += 1
 
