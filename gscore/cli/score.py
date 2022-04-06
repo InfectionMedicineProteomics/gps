@@ -65,9 +65,18 @@ class Score:
             gpus=args.gpus,
             use_relative_intensities=args.use_relative_intensities,
             chromatogram_only=args.use_only_chromatogram_features,
+            use_deep_chrom_score=args.use_deep_chrom_score
         )
 
         print("Calculating Q Values")
+
+        if args.count_decoys:
+
+            print("Counting decoys.")
+
+        else:
+
+            print("Estimating score distributions.")
 
         q_values = precursors.calculate_q_values(
             sort_key="d_score",
@@ -121,8 +130,7 @@ class Score:
             dest="scaler",
             help="Path to scaler to transform data.",
             type=str,
-            default="",
-            required=True,
+            default=""
         )
 
         self.parser.add_argument(
@@ -176,6 +184,13 @@ class Score:
             "--use-relative-intensities",
             dest="use_relative_intensities",
             help="Scale each chromatogram to use relative intensities.",
+            action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--use-deep-chrom-score",
+            dest="use_deep_chrom_score",
+            help="Use deep chromatogram score to calculate peakgroup quality.",
             action="store_true",
         )
 

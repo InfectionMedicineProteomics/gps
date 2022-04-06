@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.metrics import precision_score, recall_score  # type: ignore
 from sklearn.utils import shuffle, class_weight  # type: ignore
 
+import torch
 
 from gscore import preprocess
 from gscore.chromatograms import Chromatogram
@@ -477,13 +478,10 @@ class Precursors:
         gpus: int = 1,
         use_relative_intensities: bool = False,
         chromatogram_only: bool = False,
+        use_deep_chrom_score: bool = False
     ):
 
         scoring_model: Optional[Scorer]
-
-        pipeline = Scaler()
-
-        pipeline.load(scaler_path)
 
         all_peakgroups = self.get_all_peakgroups()
 
@@ -520,18 +518,39 @@ class Precursors:
                     (all_scores, chromatogram_embeddings), axis=1
                 )
 
-        counter: Counter = Counter(all_data_labels.ravel())
-        scale_pos_weight = counter[0] / counter[1]
+        if use_deep_chrom_score:
 
-        scoring_model = Scorer()
+            all_scores = all_chromatograms
 
-        scoring_model.load(model_path)
+            scoring_model = DeepChromScorer(
+                max_epochs=1, gpus=gpus, threads=threads
+            )  # type: DeepChromScorer
 
-        all_scores = pipeline.transform(all_scores)
+            scoring_model.load(model_path)
+
+        else:
+
+            scoring_model = Scorer()
+
+            scoring_model.load(model_path)
+
+        if scaler_path:
+
+            pipeline = Scaler()
+
+            pipeline.load(scaler_path)
+
+            all_scores = pipeline.transform(all_scores)
 
         model_scores = scoring_model.score(all_scores)
 
-        model_probabilities = scoring_model.probability(all_scores)
+        if use_deep_chrom_score:
+
+            model_probabilities = torch.sigmoid(torch.from_numpy(model_scores).type(torch.FloatTensor)).numpy()
+
+        else:
+
+            model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 

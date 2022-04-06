@@ -17,7 +17,7 @@ from sklearn.pipeline import Pipeline  # type: ignore
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
-class DeepChromScorer(BaseEstimator, ClassifierMixin):
+class DeepChromScorer(Scorer):
     def __init__(
         self,
         max_epochs: int = 1000,
