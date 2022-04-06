@@ -142,13 +142,17 @@ class ScoreDistribution:
 class GlobalDistribution:
 
     features: Dict[str, Union[Peptide, Protein]]
-    score_distribution: ScoreDistribution
+    score_distribution: Union[ScoreDistribution, DecoyCounter]
     pit: float
+    count_decoys: bool
+    num_threads: int
 
-    def __init__(self, pit: float = 1.0) -> None:
+    def __init__(self, pit: float = 1.0, count_decoys: bool = False, num_threads: int = 1) -> None:
 
         self.features: Dict[str, Union[Peptide, Protein]] = dict()
         self.pit = pit
+        self.count_decoys = count_decoys
+        self.num_threads = num_threads
 
     def __contains__(self, item) -> bool:
 
@@ -194,11 +198,23 @@ class GlobalDistribution:
 
         self._parse_scores()
 
-        self.score_distribution = ScoreDistribution(pit=self.pit)
+        if self.count_decoys:
 
-        self.score_distribution.fit(self.scores, self.labels)
+            self.score_distribution = DecoyCounter(
+                num_threads=self.num_threads,
+                pit=self.pit
+            )
 
-        self.q_values = self.score_distribution.calculate_q_values(self.scores)
+            self.q_values = self.score_distribution.calc_q_values(self.scores, self.labels)
+
+        else:
+
+            self.score_distribution = ScoreDistribution(pit=self.pit)
+
+            self.score_distribution.fit(self.scores, self.labels)
+
+            self.q_values = self.score_distribution.calculate_q_values(self.scores)
+
 
         for idx in range(len(self.q_values)):
 
@@ -222,14 +238,26 @@ class GlobalDistribution:
             scores[i] = features[i].d_score
             labels[i] = features[i].target
 
-        score_distribution = ScoreDistribution()
+        if self.count_decoys:
 
-        score_distribution.fit(
-            X=scores,
-            y=labels
-        )
+            score_distribution = DecoyCounter(
+                num_threads=self.num_threads,
+                pit=self.pit
+            )
 
-        q_values = score_distribution.calculate_q_values(scores)
+            q_values = score_distribution.calc_q_values(scores, labels)
+
+
+        else:
+
+            score_distribution = ScoreDistribution()
+
+            score_distribution.fit(
+                X=scores,
+                y=labels
+            )
+
+            q_values = score_distribution.calculate_q_values(scores)
 
         initial_indices = np.argwhere(q_values >= initial_cutoff)
 

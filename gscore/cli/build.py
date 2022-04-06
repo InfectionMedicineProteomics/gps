@@ -17,7 +17,10 @@ class Build:
 
     def __call__(self, args: argparse.Namespace):
 
-        global_distribution = GlobalDistribution()
+        global_distribution = GlobalDistribution(
+            count_decoys=args.count_decoys,
+            num_threads=args.threads
+        )
 
         for input_file in args.input_files:
 
@@ -114,6 +117,22 @@ class Build:
             help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
             action="store_true",
             default=False
+        )
+
+        self.parser.add_argument(
+            "--count-decoys",
+            dest="count_decoys",
+            help="Count decoys to calculate q-values for each peakgroup",
+            action="store_true",
+            default=False
+        )
+
+        self.parser.add_argument(
+            "--threads",
+            dest="threads",
+            help="The number of threads to use",
+            default=1,
+            type=int,
         )
 
         self.parser.set_defaults(run=self)
