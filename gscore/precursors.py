@@ -20,8 +20,6 @@ from gscore.models.base_model import Scorer
 
 from typing import TYPE_CHECKING
 
-from gscore.scorer import XGBoostScorer
-
 if TYPE_CHECKING:
     from gscore.peakgroups import PeakGroup
 

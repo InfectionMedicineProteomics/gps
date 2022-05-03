@@ -209,35 +209,39 @@ class OSWFile:
 
     def fetch_all_records(self, query):
 
-        cursor = self.conn.cursor()
+        with self.sqlite_file as sqlite_file:
 
-        cursor.execute(query)
+            cursor = sqlite_file.conn.cursor()
 
-        fetching_records = True
+            cursor.arraysize = 1000
 
-        records = []
+            cursor.execute(query)
 
-        while fetching_records:
+            fetching_records = True
 
-            record_batch = cursor.fetchmany(10000)
+            records = []
 
-            if record_batch:
+            while fetching_records:
 
-                records.extend(record_batch)
+                record_batch = cursor.fetchmany()
 
-            else:
+                if record_batch:
 
-                fetching_records = False
+                    records.extend(record_batch)
 
-        formatted_records = []
+                else:
 
-        for row in records:
+                    fetching_records = False
 
-            record = {column: value for column, value in zip(row.keys(), row)}
+            # formatted_records = []
+            #
+            # for row in records:
+            #
+            #     record = {column: value for column, value in zip(row.keys(), row)}
+            #
+            #     formatted_records.append(record)
 
-            formatted_records.append(record)
-
-        return formatted_records
+        return records
 
     def add_score_records(self, precursors):
 

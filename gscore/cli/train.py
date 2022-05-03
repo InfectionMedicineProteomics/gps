@@ -59,56 +59,46 @@ class Train:
 
             print("Fitting chromatogram encoder.")
 
-            chromatogram_encoder = self.train_deep_model(
+            self.train_deep_model(
+
                 combined_chromatograms,
                 combined_labels,
-                args.chromatogram_encoder_output,
+                args.model_output,
                 args.threads,
                 args.gpus,
                 args.epochs,
             )
 
-            print("Augmenting scores with learned chromatogram embeddings.")
+        elif args.train_combined_model:
 
-            if args.use_only_chromatogram_features:
+            if args.chromatogram_encoder_input:
 
-                print("Using only chromatogram features.")
+                print("Using pretrained encoder model.")
 
-            combined_scores = self.augment_score_columns(
-                combined_chromatograms,
-                combined_scores,
-                chromatogram_encoder,
-                args.use_only_chromatogram_features,
+                chromatogram_encoder = DeepChromScorer(
+                    max_epochs=1, gpus=args.gpus, threads=args.threads
+                )  # type: DeepChromScorer
+
+                chromatogram_encoder.load(args.chromatogram_encoder_input)
+
+                if args.use_only_chromatogram_features:
+                    print("Using only chromatogram features.")
+
+                combined_scores = self.augment_score_columns(
+                    combined_chromatograms,
+                    combined_scores,
+                    chromatogram_encoder,
+                    args.use_only_chromatogram_features,
+                )
+
+            print("Training scoring model.")
+
+            self.train_model(
+                combined_data=combined_scores,
+                combined_labels=combined_labels,
+                model_output=args.model_output,
+                scaler_output=args.scaler_output,
             )
-
-        if args.chromatogram_encoder_input:
-
-            print("Using pretrained encoder model.")
-
-            chromatogram_encoder = DeepChromScorer(
-                max_epochs=1, gpus=args.gpus, threads=args.threads
-            )  # type: DeepChromScorer
-
-            chromatogram_encoder.load(args.chromatogram_encoder_input)
-
-            if args.use_only_chromatogram_features:
-                print("Using only chromatogram features.")
-
-            combined_scores = self.augment_score_columns(
-                combined_chromatograms,
-                combined_scores,
-                chromatogram_encoder,
-                args.use_only_chromatogram_features,
-            )
-
-        print("Training scoring model.")
-
-        self.train_model(
-            combined_data=combined_scores,
-            combined_labels=combined_labels,
-            model_output=args.model_output,
-            scaler_output=args.scaler_output,
-        )
 
     def augment_score_columns(
         self,
@@ -220,12 +210,6 @@ class Train:
         )
 
         self.parser.add_argument(
-            "--chromatogram-encoder-output",
-            dest="chromatogram_encoder_output",
-            help="Output path for chromatogram encoder model.",
-        )
-
-        self.parser.add_argument(
             "--scaler-output",
             dest="scaler_output",
             help="Output path for scoring scaler.",
@@ -243,13 +227,6 @@ class Train:
             dest="use_only_chromatogram_features",
             action="store_true",
             help="Use only features from the deepchrom model",
-        )
-
-        self.parser.add_argument(
-            "--include-score-columns",
-            dest="include_score_columns",
-            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
-            action="store_true",
         )
 
         self.parser.add_argument(
@@ -274,14 +251,6 @@ class Train:
             type=int,
             help="Number of Epochs to use to train deep chrom model.",
             default=1,
-        )
-
-        self.parser.add_argument(
-            "--early-stopping",
-            dest="early_stopping",
-            type=int,
-            help="Number of epochs with unchanged error to stop training.",
-            default=25,
         )
 
         self.parser.set_defaults(run=self)

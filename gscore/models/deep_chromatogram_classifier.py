@@ -8,13 +8,13 @@ from torch import nn  # type: ignore
 from torch.optim.lr_scheduler import ReduceLROnPlateau  # type: ignore
 from torch.nn import functional as F  # type: ignore
 from torch.utils.data import TensorDataset, DataLoader  # type: ignore
+import torchvision.models as models
 
 from gscore.models.base_model import Scorer
 
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler  # type: ignore
 
 from sklearn.pipeline import Pipeline  # type: ignore
-from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 class DeepChromScorer(Scorer):
@@ -200,7 +200,7 @@ class DeepChromScorer(Scorer):
         return roc_auc_score(labels, predictions)
 
 
-import torchvision.models as models
+
 
 
 class DeepChromModel(pl.LightningModule):
@@ -243,8 +243,6 @@ class DeepChromModel(pl.LightningModule):
         self._init_params()
 
     def _init_params(self):
-        # Based on our discussion in Tutorial 4, we should initialize the
-        # convolutions according to the activation function
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity="relu")

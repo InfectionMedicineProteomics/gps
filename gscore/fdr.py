@@ -10,17 +10,10 @@ from typing import TypeVar, Dict, Union, Tuple
 
 from joblib import dump, load  # type: ignore
 
-
 from typing import TYPE_CHECKING
 
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import RobustScaler
-
-
 import numba
-from numba import int64, njit, prange, config, threading_layer
-
-import statsmodels.api as sm
+from numba import int64, njit, prange
 
 if TYPE_CHECKING:
     from gscore.peptides import Peptide
