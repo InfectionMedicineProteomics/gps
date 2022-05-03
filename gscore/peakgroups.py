@@ -82,7 +82,6 @@ class PeakGroup:
         self.d_score = d_score
         self.q_value = q_value
 
-
         self.scaled_rt_start = 0.0
         self.scaled_rt_apex = 0.0
         self.scaled_rt_end = 0.0
@@ -101,9 +100,7 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(
-        self, num_chromatograms=6
-    ):
+    def get_chromatogram_intensity_arrays(self, num_chromatograms=6):
 
         intensities = list()
 

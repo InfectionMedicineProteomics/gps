@@ -475,7 +475,7 @@ class Precursors:
         threads: int = 10,
         gpus: int = 1,
         chromatogram_only: bool = False,
-        use_deep_chrom_score: bool = False
+        use_deep_chrom_score: bool = False,
     ):
 
         scoring_model: Optional[Scorer]
@@ -542,7 +542,9 @@ class Precursors:
 
         if use_deep_chrom_score:
 
-            model_probabilities = torch.sigmoid(torch.from_numpy(model_scores).type(torch.FloatTensor)).numpy()
+            model_probabilities = torch.sigmoid(
+                torch.from_numpy(model_scores).type(torch.FloatTensor)
+            ).numpy()
 
         else:
 
@@ -559,9 +561,7 @@ class Precursors:
     def estimate_pit(self):
 
         all_peakgroups = self.filter_target_peakgroups(
-            rank=1,
-            filter_key="D_SCORE",
-            value=0.0
+            rank=1, filter_key="D_SCORE", value=0.0
         )
 
         true_target_peakgroups = []
@@ -579,16 +579,21 @@ class Precursors:
                 false_target_peakgroups.append(peakgroup)
 
         decoy_peakgroups = self.get_decoy_peakgroups(
-            filter_field="D_SCORE",
-            use_second_ranked=False
+            filter_field="D_SCORE", use_second_ranked=False
         )
 
         self.pit = len(false_target_peakgroups) / len(decoy_peakgroups)
 
         return self.pit
 
-
-    def calculate_q_values(self, sort_key: str, decoy_free: bool = False, count_decoys=True, num_threads: int = 10, pit: float = 1.0):
+    def calculate_q_values(
+        self,
+        sort_key: str,
+        decoy_free: bool = False,
+        count_decoys=True,
+        num_threads: int = 10,
+        pit: float = 1.0,
+    ):
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True
@@ -622,8 +627,7 @@ class Precursors:
             )
 
             q_values = DecoyCounter(num_threads=num_threads, pit=pit).calc_q_values(
-                all_data_scores,
-                all_data_labels
+                all_data_scores, all_data_labels
             )
 
         else:
@@ -650,10 +654,7 @@ class Precursors:
         return q_values
 
     def dump_training_data(
-        self,
-        file_path: str,
-        filter_field: str,
-        filter_value: float
+        self, file_path: str, filter_field: str, filter_value: float
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(

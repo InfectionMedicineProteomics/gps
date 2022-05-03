@@ -200,9 +200,6 @@ class DeepChromScorer(Scorer):
         return roc_auc_score(labels, predictions)
 
 
-
-
-
 class DeepChromModel(pl.LightningModule):
     def __init__(self, learning_rate=0.0005, training=False, embedding=False):
 

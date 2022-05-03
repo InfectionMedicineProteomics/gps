@@ -59,7 +59,6 @@ class Train:
             print("Fitting chromatogram encoder.")
 
             self.train_deep_model(
-
                 combined_chromatograms,
                 combined_labels,
                 args.model_output,

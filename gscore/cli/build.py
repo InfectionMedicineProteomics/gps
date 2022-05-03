@@ -18,8 +18,7 @@ class Build:
     def __call__(self, args: argparse.Namespace):
 
         global_distribution = GlobalDistribution(
-            count_decoys=args.count_decoys,
-            num_threads=args.threads
+            count_decoys=args.count_decoys, num_threads=args.threads
         )
 
         for input_file in args.input_files:
@@ -66,7 +65,6 @@ class Build:
 
                     global_distribution.compare_score(group.identifier, group)
 
-
         if args.estimate_pit:
 
             print("Estimating PIT...")
@@ -78,7 +76,9 @@ class Build:
         print("Fitting distribution...")
         global_distribution.fit()
 
-        num_below_001 = global_distribution.q_values[global_distribution.q_values <= 0.01].shape[0]
+        num_below_001 = global_distribution.q_values[
+            global_distribution.q_values <= 0.01
+        ].shape[0]
 
         print(f"Features below 0.01: {num_below_001}")
 
@@ -116,7 +116,7 @@ class Build:
             dest="estimate_pit",
             help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
             action="store_true",
-            default=False
+            default=False,
         )
 
         self.parser.add_argument(
@@ -124,7 +124,7 @@ class Build:
             dest="count_decoys",
             help="Count decoys to calculate q-values for each peakgroup",
             action="store_true",
-            default=False
+            default=False,
         )
 
         self.parser.add_argument(

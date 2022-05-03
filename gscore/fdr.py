@@ -25,6 +25,7 @@ G = TypeVar(
     "G",
 )
 
+
 @njit(nogil=True)
 def _fast_distribution_q_value(target_values, decoy_values, pit):
 
@@ -43,6 +44,7 @@ def _fast_distribution_q_value(target_values, decoy_values, pit):
         q_value = decoy_area / (decoy_area + target_area)
 
     return q_value
+
 
 @njit(cache=True, parallel=True)
 def _fast_distribution_q_values(scores, target_function, decoy_function, pit):
@@ -118,17 +120,14 @@ class ScoreDistribution:
 
         hist, bins = np.histogram(scores, bins=self.num_bins)
 
-        bin_centers = (bins[1:] + bins[:-1])/2
+        bin_centers = (bins[1:] + bins[:-1]) / 2
 
         return bin_centers, hist
 
     def calculate_q_values(self, X):
 
         return _fast_distribution_q_values(
-            X,
-            self.target_spline,
-            self.decoy_spline,
-            self.pit
+            X, self.target_spline, self.decoy_spline, self.pit
         )
 
 
@@ -140,7 +139,9 @@ class GlobalDistribution:
     count_decoys: bool
     num_threads: int
 
-    def __init__(self, pit: float = 1.0, count_decoys: bool = False, num_threads: int = 1) -> None:
+    def __init__(
+        self, pit: float = 1.0, count_decoys: bool = False, num_threads: int = 1
+    ) -> None:
 
         self.features: Dict[str, Union[Peptide, Protein]] = dict()
         self.pit = pit
@@ -194,11 +195,12 @@ class GlobalDistribution:
         if self.count_decoys:
 
             self.score_distribution = DecoyCounter(
-                num_threads=self.num_threads,
-                pit=self.pit
+                num_threads=self.num_threads, pit=self.pit
             )
 
-            self.q_values = self.score_distribution.calc_q_values(self.scores, self.labels)
+            self.q_values = self.score_distribution.calc_q_values(
+                self.scores, self.labels
+            )
 
         else:
 
@@ -207,7 +209,6 @@ class GlobalDistribution:
             self.score_distribution.fit(self.scores, self.labels)
 
             self.q_values = self.score_distribution.calculate_q_values(self.scores)
-
 
         for idx in range(len(self.q_values)):
 
@@ -234,21 +235,16 @@ class GlobalDistribution:
         if self.count_decoys:
 
             score_distribution = DecoyCounter(
-                num_threads=self.num_threads,
-                pit=self.pit
+                num_threads=self.num_threads, pit=self.pit
             )
 
             q_values = score_distribution.calc_q_values(scores, labels)
-
 
         else:
 
             score_distribution = ScoreDistribution()
 
-            score_distribution.fit(
-                X=scores,
-                y=labels
-            )
+            score_distribution.fit(X=scores, y=labels)
 
             q_values = score_distribution.calculate_q_values(scores)
 

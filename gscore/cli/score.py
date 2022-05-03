@@ -64,7 +64,7 @@ class Score:
             threads=args.threads,
             gpus=args.gpus,
             chromatogram_only=args.use_only_chromatogram_features,
-            use_deep_chrom_score=args.use_deep_chrom_score
+            use_deep_chrom_score=args.use_deep_chrom_score,
         )
 
         print("Calculating Q Values")
@@ -82,7 +82,7 @@ class Score:
             decoy_free=args.decoy_free,
             count_decoys=args.count_decoys,
             num_threads=args.threads,
-            pit=pit
+            pit=pit,
         )
 
         if args.output:
@@ -129,7 +129,7 @@ class Score:
             dest="scaler",
             help="Path to scaler to transform data.",
             type=str,
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
@@ -161,7 +161,7 @@ class Score:
             dest="count_decoys",
             help="Count decoys to calculate q-values for each peakgroup",
             action="store_true",
-            default=False
+            default=False,
         )
 
         self.parser.add_argument(
@@ -169,7 +169,7 @@ class Score:
             dest="estimate_pit",
             help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
             action="store_true",
-            default=False
+            default=False,
         )
 
         self.parser.add_argument(

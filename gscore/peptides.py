@@ -82,10 +82,7 @@ class Peptides:
 
         score_distribution = ScoreDistribution()
 
-        score_distribution.fit(
-            X=scores,
-            y=labels
-        )
+        score_distribution.fit(X=scores, y=labels)
 
         q_values = score_distribution.calculate_q_values(scores)
 
