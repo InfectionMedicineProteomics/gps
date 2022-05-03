@@ -24,7 +24,7 @@ class DeepChromScorer(Scorer):
         gpus: int = 1,
         threads: int = 1,
         initial_lr=0.005,
-        early_stopping=25,
+        early_stopping=10,
         training=True,
         embedding=False,
     ):
@@ -46,7 +46,7 @@ class DeepChromScorer(Scorer):
                     LearningRateMonitor(logging_interval="epoch"),
                     EarlyStopping(
                         monitor="train_loss",
-                        min_delta=0.00,
+                        min_delta=0.00001,
                         patience=early_stopping,
                         verbose=True,
                         mode="min",
