@@ -474,7 +474,6 @@ class Precursors:
         encoder_path: str = None,
         threads: int = 10,
         gpus: int = 1,
-        use_relative_intensities: bool = False,
         chromatogram_only: bool = False,
         use_deep_chrom_score: bool = False
     ):
@@ -490,7 +489,6 @@ class Precursors:
             all_scores,
         ) = preprocess.reformat_chromatogram_data(
             all_peakgroups,
-            use_relative_intensities=use_relative_intensities,
             training=False,
         )
 
@@ -655,8 +653,7 @@ class Precursors:
         self,
         file_path: str,
         filter_field: str,
-        filter_value: float,
-        use_relateive_intensities: bool = False,
+        filter_value: float
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -672,9 +669,7 @@ class Precursors:
             all_data_indices,
             all_chromatograms,
             all_scores,
-        ) = preprocess.reformat_chromatogram_data(
-            combined, use_relative_intensities=use_relateive_intensities
-        )
+        ) = preprocess.reformat_chromatogram_data(combined)
 
         with open(file_path, "wb") as npfh:
             np.savez(

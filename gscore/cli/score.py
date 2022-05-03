@@ -63,7 +63,6 @@ class Score:
             encoder_path=args.chromatogram_encoder,
             threads=args.threads,
             gpus=args.gpus,
-            use_relative_intensities=args.use_relative_intensities,
             chromatogram_only=args.use_only_chromatogram_features,
             use_deep_chrom_score=args.use_deep_chrom_score
         )
@@ -174,20 +173,6 @@ class Score:
         )
 
         self.parser.add_argument(
-            "--use-interpolated-chroms",
-            dest="use_interpolated_chroms",
-            help="Export interpolated chromatograms of a uniform length.",
-            action="store_true",
-        )
-
-        self.parser.add_argument(
-            "--use-relative-intensities",
-            dest="use_relative_intensities",
-            help="Scale each chromatogram to use relative intensities.",
-            action="store_true",
-        )
-
-        self.parser.add_argument(
             "--use-deep-chrom-score",
             dest="use_deep_chrom_score",
             help="Use deep chromatogram score to calculate peakgroup quality.",
@@ -199,13 +184,6 @@ class Score:
             dest="use_only_chromatogram_features",
             action="store_true",
             help="Use only features from the deepchrom model",
-        )
-
-        self.parser.add_argument(
-            "--include-score-columns",
-            dest="include_score_columns",
-            help="Include VOTE_PERCENTAGE and PROBABILITY columns as sub-scores.",
-            action="store_true",
         )
 
         self.parser.add_argument(

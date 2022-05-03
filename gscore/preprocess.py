@@ -100,7 +100,7 @@ def reformat_data(peakgroups):
 
 
 def reformat_chromatogram_data(
-    peakgroups, use_relative_intensities=False, training=True
+    peakgroups, training=True
 ) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
 
     labels = list()
@@ -124,9 +124,7 @@ def reformat_chromatogram_data(
                 peakgroup.get_sub_score_column_array(include_probability=False)
             )
 
-            peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays(
-                use_relative_intensities=use_relative_intensities
-            )
+            peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays()
 
             chromatograms.append(peakgroup_chromatograms.reshape(1, 6, 25))
 

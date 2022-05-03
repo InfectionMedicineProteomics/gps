@@ -62,8 +62,7 @@ class Export:
             precursors.dump_training_data(
                 args.output,
                 filter_field="PROBABILITY",
-                filter_value=0.0,
-                use_relateive_intensities=args.use_relative_intensities,
+                filter_value=0.0
             )
 
         else:
@@ -71,8 +70,7 @@ class Export:
             precursors.dump_training_data(
                 args.output,
                 filter_field=args.filter_field,
-                filter_value=args.filter_value,
-                use_relateive_intensities=args.use_relative_intensities,
+                filter_value=args.filter_value
             )
 
     def build_subparser(self, subparser):
@@ -113,13 +111,6 @@ class Export:
             dest="chromatogram_file",
             help="File containing chromatograms associated with the peakgroups.",
             default="",
-        )
-
-        self.parser.add_argument(
-            "--use-relative-intensities",
-            dest="use_relative_intensities",
-            help="Scale each chromatogram to use relative intensities.",
-            action="store_true",
         )
 
         self.parser.add_argument(

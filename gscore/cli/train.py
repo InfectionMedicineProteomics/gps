@@ -7,8 +7,7 @@ from sklearn.model_selection import train_test_split  # type: ignore
 from sklearn.utils import class_weight  # type: ignore
 
 from gscore import preprocess
-from gscore.models.deep_chrom_feature_classifier import DeepChromFeatureScorer
-from gscore.models.deep_chromatogram_classifier import DeepChromModel, DeepChromScorer
+from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.scorer import XGBoostScorer
 
