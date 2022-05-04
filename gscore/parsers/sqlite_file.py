@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import sqlite3
+from typing import Generator, Dict, List, Any
 
 
 class SQLiteFile:
@@ -17,7 +20,7 @@ class SQLiteFile:
 
         self.db_path = file_path
 
-    def __enter__(self):
+    def __enter__(self) -> SQLiteFile:
 
         self.conn = sqlite3.connect(self.db_path)
 
@@ -29,7 +32,7 @@ class SQLiteFile:
 
         self.conn.close()
 
-    def iterate_records(self, query: str):
+    def iterate_records(self, query: str) -> Generator[Dict[str, Any], None, None]:
 
         cursor = self.conn.cursor()
 
@@ -43,7 +46,7 @@ class SQLiteFile:
 
                 yield record
 
-    def add_records(self, table_name="", records=[]):
+    def add_records(self, table_name: str = "" , records: List[Any] = []) -> None:
 
         input_records = list()
 
@@ -93,7 +96,7 @@ class SQLiteFile:
 
             input_records = list()
 
-    def update_records(self, table_name="", key_field="", records={}):
+    def update_records(self, table_name: str = "", key_field: str = "", records: Dict[str, Any] = {}) -> None:
 
         """
         records = dict()
@@ -198,17 +201,17 @@ class SQLiteFile:
 
             self.conn.commit()
 
-    def run_raw_sql(self, sql):
+    def run_raw_sql(self, sql: str) -> None:
 
         cursor = self.conn.cursor()
 
         cursor.execute(sql)
 
-    def create_table(self, query):
+    def create_table(self, query: str) -> None:
 
         self.run_raw_sql(query)
 
-    def drop_table(self, table_name):
+    def drop_table(self, table_name: str) -> None:
 
         query = f"drop table if exists {table_name};"
 

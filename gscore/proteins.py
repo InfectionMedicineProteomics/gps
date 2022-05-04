@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Generator
 
 
 class Protein:
@@ -12,7 +12,7 @@ class Protein:
     scores: Dict[str, float]
 
     def __init__(
-        self, protein_accession="", decoy=0, q_value=0.0, d_score=0.0, probability=0.0
+        self, protein_accession: str = "", decoy: int = 0, q_value: float = 0.0, d_score: float = 0.0, probability: float = 0.0
     ):
 
         self.protein_accession = protein_accession
@@ -29,7 +29,7 @@ class Protein:
         self.scores = dict()
 
     @property
-    def identifier(self):
+    def identifier(self) -> str:
 
         return self.protein_accession
 
@@ -38,15 +38,15 @@ class Proteins:
 
     proteins: Dict[str, Protein]
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.proteins = dict()
 
-    def __contains__(self, item: str):
+    def __contains__(self, item: str) -> bool:
 
         return item in self.proteins
 
-    def __setitem__(self, key: str, protein: Protein):
+    def __setitem__(self, key: str, protein: Protein) -> None:
 
         self.proteins[key] = protein
 
@@ -54,7 +54,7 @@ class Proteins:
 
         return self.proteins[item]
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Protein, None, None]:
 
         for protein_accession, protein in self.proteins.items():
 

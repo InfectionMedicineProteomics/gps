@@ -707,7 +707,8 @@ class Precursors:
             "DScore",
             "Probability",
             "Rank",
-            "VotePercentage"
+            "VotePercentage",
+            "TargetProbability"
         ]
 
         with open(file_path, "w") as out_file:
@@ -738,7 +739,8 @@ class Precursors:
                         "DScore": peakgroup.d_score,
                         "Probability": peakgroup.probability,
                         "Rank": rank,
-                        "VotePercentage": peakgroup.vote_percentage
+                        "VotePercentage": peakgroup.vote_percentage,
+                        "TargetProbability": peakgroup.true_target_probability
                     }
 
                     csv_writer.writerow(record)
