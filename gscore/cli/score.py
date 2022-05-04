@@ -36,6 +36,29 @@ class Score:
 
             precursors.set_chromatograms(chromatograms)
 
+        if args.decoy_free:
+
+            print("Denoising.")
+
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_percentage=args.vote_percentage,
+            )
+
+        if args.weight_scores:
+
+            print("Denoising.")
+
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_percentage=args.vote_percentage,
+            )
+
+
         if args.estimate_pit:
 
             print("Estimating PIT.")
@@ -65,6 +88,7 @@ class Score:
             gpus=args.gpus,
             chromatogram_only=args.use_only_chromatogram_features,
             use_deep_chrom_score=args.use_deep_chrom_score,
+            weight_scores=args.weight_scores
         )
 
         print("Calculating Q Values")
@@ -87,7 +111,13 @@ class Score:
 
         if args.output:
 
-            precursors.write_tsv(file_path=args.output, ranked=1)
+            if args.decoy_free:
+
+                precursors.write_tsv(file_path=args.output, ranked=2)
+
+            else:
+
+                precursors.write_tsv(file_path=args.output, ranked=1)
 
         else:
 
@@ -215,6 +245,13 @@ class Score:
             help="The minimum probability needed to be counted as a positive vote",
             default=0.5,
             type=float,
+        )
+
+        self.parser.add_argument(
+            "--weight-scores",
+            dest="weight_scores",
+            help="Use sample-specific data to weight the static score.",
+            action="store_true",
         )
 
         self.parser.set_defaults(run=self)

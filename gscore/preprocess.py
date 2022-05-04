@@ -99,6 +99,18 @@ def reformat_data(peakgroups):
     return scores, score_labels, score_indices
 
 
+def get_probability_vector(peakgroups):
+
+    target_probabilities = []
+
+    for idx, peakgroup in enumerate(peakgroups):
+
+        target_probabilities.append(
+            peakgroup.true_target_probability
+        )
+
+    return np.array(target_probabilities, dtype=np.float64)
+
 def reformat_chromatogram_data(
     peakgroups, training=True
 ) -> Tuple[ndarray, ndarray, ndarray, ndarray]:

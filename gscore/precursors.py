@@ -476,6 +476,7 @@ class Precursors:
         gpus: int = 1,
         chromatogram_only: bool = False,
         use_deep_chrom_score: bool = False,
+        weight_scores: bool = False,
     ):
 
         scoring_model: Optional[Scorer]
@@ -539,6 +540,12 @@ class Precursors:
             all_scores = pipeline.transform(all_scores)
 
         model_scores = scoring_model.score(all_scores)
+
+        if weight_scores:
+
+            target_probabilities = preprocess.get_probability_vector(all_peakgroups)
+
+            model_scores = np.exp(target_probabilities) * model_scores
 
         if use_deep_chrom_score:
 
@@ -607,11 +614,17 @@ class Precursors:
 
             print("Decoy free scoring")
 
-            decoy_peakgroups = self.get_target_peakgroups_by_rank(
+            all_decoy_peakgroups = self.get_target_peakgroups_by_rank(
                 rank=2, score_key=sort_key, reverse=True
             )
 
-            decoy_free_labels = []
+            decoy_peakgroups = []
+
+            for decoy in all_decoy_peakgroups:
+
+                if decoy.vote_percentage < 1.0:
+
+                    decoy_peakgroups.append(decoy)
 
             for peakgroup in decoy_peakgroups:
 
@@ -693,6 +706,8 @@ class Precursors:
             "QValue",
             "DScore",
             "Probability",
+            "Rank",
+            "VotePercentage"
         ]
 
         with open(file_path, "w") as out_file:
@@ -707,7 +722,9 @@ class Precursors:
 
                 peakgroups = precursor.peakgroups[:ranked]
 
-                for peakgroup in peakgroups:
+                for rank_idx, peakgroup in enumerate(peakgroups):
+
+                    rank = rank_idx + 1
 
                     record = {
                         "UnmodifiedSequence": precursor.unmodified_sequence,
@@ -720,6 +737,8 @@ class Precursors:
                         "QValue": peakgroup.q_value,
                         "DScore": peakgroup.d_score,
                         "Probability": peakgroup.probability,
+                        "Rank": rank,
+                        "VotePercentage": peakgroup.vote_percentage
                     }
 
                     csv_writer.writerow(record)

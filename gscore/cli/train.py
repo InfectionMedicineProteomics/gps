@@ -67,7 +67,7 @@ class Train:
                 args.epochs,
             )
 
-        elif args.train_combined_model:
+        else:
 
             if args.chromatogram_encoder_input:
 
