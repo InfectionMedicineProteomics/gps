@@ -12,8 +12,8 @@ from joblib import dump, load  # type: ignore
 
 from typing import TYPE_CHECKING
 
-import numba
-from numba import int64, njit, prange
+import numba # type: ignore
+from numba import int64, njit, prange # type: ignore
 
 if TYPE_CHECKING:
     from gscore.peptides import Peptide
@@ -231,6 +231,8 @@ class GlobalDistribution:
         for i in range(len(features)):
             scores[i] = features[i].d_score
             labels[i] = features[i].target
+
+        score_distribution: Union[DecoyCounter, ScoreDistribution]
 
         if self.count_decoys:
 

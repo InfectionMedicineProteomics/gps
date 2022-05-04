@@ -7,7 +7,7 @@ from gscore.proteins import Proteins, Protein
 
 
 class ScoreFile:
-    def __init__(self, file_path):
+    def __init__(self, file_path: str) -> None:
 
         self.file_path = file_path
 

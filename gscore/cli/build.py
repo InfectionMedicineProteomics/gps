@@ -1,9 +1,12 @@
 import argparse
+from typing import Union
 
 from gscore.fdr import GlobalDistribution
 from gscore.parsers import queries
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.score_file import ScoreFile
+from gscore.peptides import Peptides
+from gscore.proteins import Proteins
 
 
 class Build:
@@ -11,11 +14,11 @@ class Build:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "build"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         global_distribution = GlobalDistribution(
             count_decoys=args.count_decoys, num_threads=args.threads
@@ -24,6 +27,8 @@ class Build:
         for input_file in args.input_files:
 
             print(f"Processing {input_file}...")
+
+            groups: Union[Peptides, Proteins]
 
             if input_file.lower().endswith(".tsv"):
 

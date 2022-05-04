@@ -66,7 +66,7 @@ WHERE FEATURE_ID = {value};
 
 
 class OSWFile:
-    def __init__(self, db_path, set_indices=False):
+    def __init__(self, db_path: str, set_indices: bool = False) -> None:
 
         self.db_path = db_path
         self.sqlite_file = SQLiteFile(db_path)

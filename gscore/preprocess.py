@@ -1,18 +1,20 @@
 import random
 from typing import List, Tuple, Any
 
-import numpy as np
-from numpy import ndarray
+import numpy as np # type: ignore
+import numpy.typing as npt
+
+from gscore.peakgroups import PeakGroup
 
 
 def get_precursor_id_folds(
     precursor_ids: List[str], num_folds: int
-) -> List[np.ndarray]:
+) -> List[npt.NDArray[np.float64]]:
 
     random.seed(42)
     random.shuffle(precursor_ids)
 
-    folds = np.array_split(precursor_ids, num_folds)
+    folds: List[npt.NDArray[np.float64]] = np.array_split(precursor_ids, num_folds)
 
     return folds
 
@@ -24,7 +26,7 @@ def get_training_data_from_npz(file_path: str) -> Any:
     return npzfile
 
 
-def get_training_data(folds: List[np.ndarray], fold_num: int):
+def get_training_data(folds: List[npt.NDArray[np.float64]], fold_num: int) -> List[int]:
 
     training_data = list()
 
@@ -39,7 +41,7 @@ def get_training_data(folds: List[np.ndarray], fold_num: int):
     return training_data
 
 
-def reformat_distribution_data(peakgroups):
+def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float]]:
 
     scores = list()
     score_labels = list()
@@ -50,13 +52,10 @@ def reformat_distribution_data(peakgroups):
 
         score_labels.append(peakgroup.target)
 
-    scores = np.array(scores, dtype=np.float64)
-    score_labels = np.array(score_labels, dtype=np.float)
-
-    return scores, score_labels
+    return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=float)
 
 
-def reformat_true_target_scores(peakgroups):
+def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float]]:
 
     scores = list()
     score_labels = list()
@@ -67,13 +66,10 @@ def reformat_true_target_scores(peakgroups):
 
         score_labels.append(peakgroup.target)
 
-    scores = np.array(scores, dtype=np.float64)
-    score_labels = np.array(score_labels, dtype=np.float)
-
-    return scores, score_labels
+    return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=float)
 
 
-def reformat_data(peakgroups):
+def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float], npt.NDArray[str]]:
 
     scores = list()
     score_labels = list()
@@ -89,17 +85,14 @@ def reformat_data(peakgroups):
 
         score_indices.append(peakgroup.idx)
 
-    scores = np.array(scores, dtype=np.float64)
-    scores = scores[:, ~np.all(scores == 0, axis=0)]
-    scores = scores[:, ~np.all(np.isnan(scores), axis=0)]
+    array_scores = np.array(scores, dtype=np.float64)
+    array_scores = array_scores[:, ~np.all(array_scores == 0, axis=0)]
+    array_scores = array_scores[:, ~np.all(np.isnan(array_scores), axis=0)]
 
-    score_labels = np.array(score_labels, dtype=np.float)
-    score_indices = np.array(score_indices, dtype=np.str)
-
-    return scores, score_labels, score_indices
+    return array_scores, np.array(score_labels, dtype=float), np.array(score_indices, dtype=str)
 
 
-def get_probability_vector(peakgroups):
+def get_probability_vector(peakgroups: List[PeakGroup]) -> npt.NDArray[np.float64]:
 
     target_probabilities = []
 
@@ -113,7 +106,7 @@ def get_probability_vector(peakgroups):
 
 def reformat_chromatogram_data(
     peakgroups, training=True
-) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[str], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
 
     labels = list()
     indices = list()
@@ -172,10 +165,9 @@ def reformat_chromatogram_data(
                 f"[WARNING] {skipped_peakgroups} peakgroups with no found chromatograms found. Chromatograms set to 0 for scoring"
             )
 
-    scores = np.array(scores, dtype=np.float64)
-    scores = scores[:, ~np.all(scores == 0, axis=0)]
-    scores = scores[:, ~np.all(np.isnan(scores), axis=0)]
     scores_array = np.array(scores, dtype=np.float64)
+    scores_array = scores_array[:, ~np.all(scores_array == 0, axis=0)]
+    scores_array = scores_array[:, ~np.all(np.isnan(scores_array), axis=0)]
 
     label_array = np.array(labels, dtype=np.float64)
     indice_array = np.array(indices, dtype=str)

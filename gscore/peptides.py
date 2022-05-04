@@ -75,7 +75,7 @@ class Peptides:
 
         labels = np.zeros((len(self.peptides.values()),), dtype=int)
 
-        for i in range(peptides):
+        for i in range(len(peptides)):
 
             scores[i] = peptides[i].d_score
             labels[i] = peptides[i].target

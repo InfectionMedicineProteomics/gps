@@ -17,7 +17,6 @@ class Chromatogram:
     peptide_sequence: str
     start_rt: float
     end_rt: float
-    interpolated_chromatogram: interp1d
 
     def __init__(
         self,

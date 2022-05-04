@@ -107,6 +107,7 @@ class Score:
             count_decoys=args.count_decoys,
             num_threads=args.threads,
             pit=pit,
+            debug=args.debug
         )
 
         if args.output:
@@ -251,6 +252,12 @@ class Score:
             "--weight-scores",
             dest="weight_scores",
             help="Use sample-specific data to weight the static score.",
+            action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--debug",
+            dest="debug",
             action="store_true",
         )
 

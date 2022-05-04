@@ -3,7 +3,7 @@ from __future__ import annotations
 from pynumpress import decode_slof, decode_linear, decode_pic  # type: ignore
 
 from gscore.chromatograms import Chromatogram, Chromatograms
-import pyopenms
+import pyopenms # type: ignore
 
 # FETCH_PEPTIDE_CHROMATOGRAM = """
 #     select
@@ -63,6 +63,7 @@ import pyopenms
 
 
 class SqMassFile:
+
     def __init__(self, file_path: str):
 
         self.file_path = file_path
@@ -109,29 +110,3 @@ class SqMassFile:
                     )
 
         return chromatogram_records
-
-
-if __name__ == "__main__":
-
-    osw_file_path = (
-        "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
-    )
-    sqmass_file_path = (
-        "/home/aaron/projects/ghost/data/spike_in/chromatograms/AAS_P2009_167.sqMass"
-    )
-
-    sqmass_file = SqMassFile(sqmass_file_path)
-
-    chromatograms = sqmass_file.parse()
-
-    from gscore.parsers import queries
-    from gscore.parsers import osw
-
-    with osw.OSWFile(osw_file_path) as osw_file:
-        print(f"Parsing {osw_file_path}")
-
-        precursors = osw_file.parse_to_precursors(
-            query=queries.SelectPeakGroups.FETCH_CHROMATOGRAM_TRAINING_RECORDS
-        )
-
-    precursors.set_chromatograms(chromatograms)

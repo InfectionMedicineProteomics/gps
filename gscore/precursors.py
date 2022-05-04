@@ -479,7 +479,7 @@ class Precursors:
         weight_scores: bool = False,
     ):
 
-        scoring_model: Optional[Scorer]
+        scoring_model: Union[Scorer]
 
         all_peakgroups = self.get_all_peakgroups()
 
@@ -521,7 +521,7 @@ class Precursors:
 
             scoring_model = DeepChromScorer(
                 max_epochs=1, gpus=gpus, threads=threads
-            )  # type: DeepChromScorer
+            )
 
             scoring_model.load(model_path)
 
@@ -600,6 +600,7 @@ class Precursors:
         count_decoys=True,
         num_threads: int = 10,
         pit: float = 1.0,
+        debug: bool = False
     ):
 
         target_peakgroups = self.get_target_peakgroups_by_rank(

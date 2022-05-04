@@ -1,14 +1,15 @@
 import numpy as np
-import pytorch_lightning as pl
-import torch  # type: ignore
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
-from sklearn.metrics import roc_auc_score
-from torch import nn  # type: ignore
-from torch.optim.lr_scheduler import ReduceLROnPlateau  # type: ignore
-from torch.nn import functional as F  # type: ignore
-from torch.utils.data import TensorDataset, DataLoader  # type: ignore
-import torchvision.models as models
+import numpy.typing as npt
+import pytorch_lightning as pl # type: ignore
+import torch # type: ignore
+from pytorch_lightning import Trainer # type: ignore
+from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping # type: ignore
+from sklearn.metrics import roc_auc_score # type: ignore
+from torch import nn # type: ignore
+from torch.optim.lr_scheduler import ReduceLROnPlateau # type: ignore
+from torch.nn import functional as F # type: ignore
+from torch.utils.data import TensorDataset, DataLoader # type: ignore
+import torchvision.models as models # type: ignore
 
 from gscore.models.base_model import Scorer
 
@@ -23,14 +24,14 @@ class DeepChromScorer(Scorer):
         max_epochs: int = 1000,
         gpus: int = 1,
         threads: int = 1,
-        initial_lr=0.005,
-        early_stopping=10,
-        training=True,
-        embedding=False,
+        initial_lr: float = 0.005,
+        early_stopping: int = 10,
+        training: bool = True,
+        embedding: bool = False,
     ):
 
         self.model = DeepChromModel(
-            learning_rate=initial_lr, training=training, embedding=embedding
+            learning_rate=initial_lr, embedding=embedding
         )
 
         ###TODO:
@@ -78,7 +79,7 @@ class DeepChromScorer(Scorer):
         self.training = training
         self.embedding = embedding
 
-    def fit(self, data, labels) -> None:
+    def fit(self, data: npt.NDArray[float], labels: npt.NDArray[float]) -> None:
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
@@ -107,7 +108,7 @@ class DeepChromScorer(Scorer):
             val_dataloaders=validation_dataloader,
         )
 
-    def score(self, data: np.ndarray) -> np.ndarray:
+    def score(self, data: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
 
         if self.gpus > 0:
 
@@ -127,7 +128,9 @@ class DeepChromScorer(Scorer):
 
         predictions = torch.cat(predictions, 0)
 
-        return predictions.numpy()
+        predictions_array: npt.NDArray[np.float64] = predictions.numpy()
+
+        return predictions_array
 
     def encode(self, data: np.ndarray) -> np.ndarray:
 
@@ -201,7 +204,7 @@ class DeepChromScorer(Scorer):
 
 
 class DeepChromModel(pl.LightningModule):
-    def __init__(self, learning_rate=0.0005, training=False, embedding=False):
+    def __init__(self, learning_rate: float = 0.0005, embedding: bool = False):
 
         self.lr = learning_rate
         self.embedding = embedding
