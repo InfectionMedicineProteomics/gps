@@ -15,20 +15,13 @@ from joblib import dump, load
 from typing import TYPE_CHECKING
 
 import numba
-from numba import int64, njit, prange
+from numba import int64, njit, prange, jit
 
 if TYPE_CHECKING:
     from gscore.peptides import Peptide
     from gscore.proteins import Protein
 
-T = TypeVar("T")
 
-G = TypeVar(
-    "G",
-)
-
-
-@njit(nogil=True)
 def _fast_distribution_q_value(target_values, decoy_values, pit):  # type: ignore
 
     target_area = np.trapz(target_values)
@@ -47,15 +40,13 @@ def _fast_distribution_q_value(target_values, decoy_values, pit):  # type: ignor
 
     return q_value
 
-
-@njit(cache=True, parallel=True)
 def _fast_distribution_q_values(scores, target_function, decoy_function, pit):  # type: ignore
 
     q_values = np.ones((len(scores),), dtype=np.float64)
 
     max_score = np.max(scores)
 
-    for i in prange(len(scores)):
+    for i in range(len(scores)):
 
         integral_bounds = np.arange(scores[i], max_score, 0.1)
 
@@ -289,66 +280,6 @@ class GlobalDistribution:
         return load(file_path)
 
 
-@njit(nogil=True)
-def _calculate_q_value(labels, pit):  # type: ignore
-
-    target_count = 0
-    decoy_count = 0
-    q_value = 0.0
-
-    for i in range(labels.shape[0]):
-
-        label = labels[i]
-
-        if label == 1:
-
-            target_count += 1
-
-        else:
-
-            decoy_count += 1
-
-    if decoy_count > 0:
-
-        decoy_count = decoy_count * pit
-
-        q_value = decoy_count / (decoy_count + target_count)
-
-    return q_value
-
-
-@njit(parallel=True)
-def _calculate_q_values(scores, labels, pit):  # type: ignore
-
-    sorted_score_indices = np.argsort(scores)[::-1]
-
-    num_scores = sorted_score_indices.shape[0]
-
-    q_values = np.zeros((num_scores,), dtype=np.float64)
-
-    for i in prange(1, num_scores):
-
-        indices_to_check = np.zeros((i,), dtype=int64)
-
-        for idx in range(i):
-
-            indices_to_check[idx] = sorted_score_indices[idx]
-
-        local_labels = np.zeros((indices_to_check.shape[0],), dtype=int64)
-
-        for idx in range(indices_to_check.shape[0]):
-
-            local_labels[idx] = labels[indices_to_check[idx]]
-
-        q_value = _calculate_q_value(local_labels, pit)
-
-        real_idx = sorted_score_indices[i]
-
-        q_values[real_idx] = q_value
-
-    return q_values
-
-
 class DecoyCounter:
 
     pit: float
@@ -361,4 +292,31 @@ class DecoyCounter:
 
     def calc_q_values(self, scores: np.ndarray, labels: np.ndarray) -> np.ndarray:
 
-        return _calculate_q_values(scores, labels, self.pit)
+        sorted_score_indices = np.argsort(scores)[::-1]
+
+        num_scores = sorted_score_indices.shape[0]
+
+        q_values = np.zeros((num_scores,), dtype=np.float64)
+
+        num_targets = 0
+        num_decoys = 0
+
+        for idx in sorted_score_indices:
+
+            label = labels[idx]
+
+            if label == 1:
+
+                num_targets += 1
+
+            else:
+
+                num_decoys += 1
+
+            decoy_count = num_decoys * self.pit
+
+            q_value = decoy_count / (decoy_count + num_targets)
+
+            q_values[idx] = q_value
+
+        return q_values
