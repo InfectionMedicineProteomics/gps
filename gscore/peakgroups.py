@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from typing import List, Dict, Union, Tuple, Optional
+from typing import Dict, Union
 
 import numpy as np
 import numpy.typing as npt
-
-from sklearn.utils import shuffle, class_weight  # type: ignore
-from sklearn.metrics import precision_score, recall_score  # type: ignore
 
 from gscore.chromatograms import Chromatogram
 
@@ -87,11 +84,11 @@ class PeakGroup:
         self.scaled_rt_apex = 0.0
         self.scaled_rt_end = 0.0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.scores=}"
 
-    def get_chromatogram_rt_array(self, interpolated=False, num_rt_steps=25):
+    def get_chromatogram_rt_array(self, interpolated: bool=False, num_rt_steps: int=25) -> npt.NDArray[np.float64]:
 
         chromatogram = list(self.chromatograms.values())[0]
 
@@ -103,13 +100,7 @@ class PeakGroup:
 
     def get_chromatogram_intensity_arrays(self, num_chromatograms: int=6) -> npt.NDArray[np.float64]:
 
-        intensities = list()
-
-        for chromatogram in self.chromatograms.values():
-
-            intensities.append(chromatogram.intensities)
-
-        intensities = np.array(intensities)
+        intensities = np.array([chromatogram.intensities for chromatogram in self.chromatograms.values()])
 
         if intensities.shape[0] < num_chromatograms:
 
@@ -125,7 +116,7 @@ class PeakGroup:
 
         return intensities[intensities.mean(axis=1).argsort()]
 
-    def add_score_column(self, key, value):
+    def add_score_column(self, key: str, value: float) -> None:
 
         self.scores[key] = value
 
