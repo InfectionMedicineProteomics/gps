@@ -47,7 +47,7 @@ class PrecursorExportRecord:
 
         self.samples[sample_key] = peakgroup
 
-    def get_sample_intensity(self, sample_key: str = "") -> Union[np.NaN, float]:
+    def get_sample_intensity(self, sample_key: str = "") -> Any:
 
         if sample_key in self.samples:
 
