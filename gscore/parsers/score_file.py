@@ -102,7 +102,7 @@ class ScoreFile:
                         precursor_id=precursor_id,
                         charge=int(record["Charge"]),
                         decoy=int(record["Decoy"]),
-                        mz=record.get("PrecursorMz", 0.0),
+                        mz=float(record.get("PrecursorMz", 0.0)),
                         modified_sequence=record["ModifiedSequence"],
                         unmodified_sequence=record["UnmodifiedSequence"],
                         protein_accession=record.get("Protein", ""),
@@ -111,8 +111,8 @@ class ScoreFile:
                     precursors[precursor_id] = precursor
 
                 peakgroup = PeakGroup(
-                    idx=idx,
-                    mz=record.get("PrecursorMz", 0.0),
+                    idx=str(idx),
+                    mz=float(record.get("PrecursorMz", 0.0)),
                     rt=float(record["RT"]),
                     decoy=int(record["Decoy"]),
                     intensity=float(record.get("Intensity", 0.0)),

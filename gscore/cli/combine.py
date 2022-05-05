@@ -1,6 +1,7 @@
 import argparse
 
 from pathlib import Path
+from typing import Any
 
 from gscore.combiner import PrecursorExport, PrecursorExportRecord
 from gscore.fdr import GlobalDistribution
@@ -14,11 +15,11 @@ class Combine:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "combine"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         export = PrecursorExport(max_q_value=args.max_peakgroup_q_value)
 
@@ -56,7 +57,7 @@ class Combine:
                     export[precursor_id] = PrecursorExportRecord(
                         modified_sequence=precursor.modified_sequence,
                         charge=precursor.charge,
-                        decoy=precursor.decoy,
+                        decoy=bool(precursor.decoy),
                         protein_accession=precursor.protein_accession,
                         protein_q_value=global_protein_model.get_q_value(
                             precursor.protein_accession
@@ -76,7 +77,7 @@ class Combine:
 
         export.write(args.output)
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name,
@@ -116,5 +117,5 @@ class Combine:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Export> {self.name}"

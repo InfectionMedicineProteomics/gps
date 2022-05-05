@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
@@ -9,11 +10,11 @@ class Denoise:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "denoise"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         print(f"Processing file {args.input}")
 
@@ -38,7 +39,7 @@ class Denoise:
 
         print("Done!")
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name, help="Commands to denoise OSW files"
@@ -80,6 +81,6 @@ class Denoise:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return f"<Denoise> {self.name}"

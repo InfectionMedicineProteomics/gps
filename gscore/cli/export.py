@@ -1,5 +1,5 @@
 import argparse
-from typing import Union
+from typing import Union, Any
 
 from gscore.chromatograms import Chromatograms
 from gscore.parsers import queries
@@ -12,11 +12,11 @@ class Export:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "export"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         print(f"Parsing {args.input}")
 
@@ -71,7 +71,7 @@ class Export:
                 filter_value=args.filter_value,
             )
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name, help="Filter peakgroups and export training data."
@@ -152,5 +152,5 @@ class Export:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Export> {self.name}"

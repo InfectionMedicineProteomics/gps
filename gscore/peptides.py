@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Generator
 
 import numpy as np
 
@@ -17,13 +17,13 @@ class Peptide:
 
     def __init__(
         self,
-        sequence="",
+        sequence: str="",
         modified_sequence: str = "",
         decoy: int = 0,
         q_value: float = 0.0,
         d_score: float = 0.0,
-        probability=0.0,
-    ):
+        probability: float=0.0,
+    ) -> None:
 
         self.sequence = sequence
         self.modified_sequence = modified_sequence
@@ -36,7 +36,7 @@ class Peptide:
         self.probability = probability
 
     @property
-    def identifier(self):
+    def identifier(self) -> str:
 
         return self.modified_sequence
 
@@ -44,16 +44,17 @@ class Peptide:
 class Peptides:
 
     peptides: Dict[str, Peptide]
+    pit: float
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.peptides = dict()
 
-    def __contains__(self, item: str):
+    def __contains__(self, item: str) -> bool:
 
         return item in self.peptides
 
-    def __setitem__(self, key: str, peptide: Peptide):
+    def __setitem__(self, key: str, peptide: Peptide) -> None:
 
         self.peptides[key] = peptide
 
@@ -61,13 +62,13 @@ class Peptides:
 
         return self.peptides[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Peptide, None, None]:
 
         for modified_peptide_sequence, peptide in self.peptides.items():
 
             yield peptide
 
-    def estimate_pit(self, initial_cutoff: float = 0.01):
+    def estimate_pit(self, initial_cutoff: float = 0.01) -> float:
 
         peptides = list(self.peptides.values())
 

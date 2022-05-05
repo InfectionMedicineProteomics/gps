@@ -1,5 +1,5 @@
 import argparse
-from typing import Union
+from typing import Union, Any
 
 from gscore.fdr import GlobalDistribution
 from gscore.parsers import queries
@@ -91,7 +91,7 @@ class Build:
 
         global_distribution.save(args.output)
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name, help="Build q-value scoring models for different contexts."
@@ -142,6 +142,6 @@ class Build:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return f"<Build> {self.name}"

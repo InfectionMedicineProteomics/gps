@@ -1,20 +1,23 @@
+import numpy as np
+import numpy.typing as npt
+
 from typing import Union, Iterable, Any, Optional
 
-from sklearn.linear_model import SGDClassifier  # type: ignore
-from sklearn.ensemble import BaggingClassifier  # type: ignore
+from sklearn.linear_model import SGDClassifier
+from sklearn.ensemble import BaggingClassifier
 
 from gscore.preprocess import *
 
 
-class BaggedDenoiser(BaggingClassifier):
+class BaggedDenoiser(BaggingClassifier): # type: ignore
     def __init__(
         self,
-        base_estimator=None,
-        n_estimators=250,
-        max_samples=3,
-        n_jobs=5,
-        random_state=0,
-        class_weights: np.ndarray = np.array([1.0, 1.0]),
+        base_estimator: Optional[Any]=None,
+        n_estimators: int=250,
+        max_samples: int=3,
+        n_jobs: int=5,
+        random_state: int=0,
+        class_weights: npt.NDArray[np.float64] = np.array([1.0, 1.0]),
     ):
 
         if not base_estimator:
@@ -43,7 +46,7 @@ class BaggedDenoiser(BaggingClassifier):
             random_state=random_state,
         )
 
-    def vote(self, noisy_data, threshold=0.5):
+    def vote(self, noisy_data: npt.NDArray[np.float64], threshold: float=0.5) -> npt.NDArray[np.float64]:
 
         estimator_probabilities = list()
 
@@ -55,8 +58,8 @@ class BaggedDenoiser(BaggingClassifier):
 
             estimator_probabilities.append(probabilities)
 
-        estimator_probabilities = np.array(estimator_probabilities)
+        estimator_probability_array = np.array(estimator_probabilities, dtype=np.float64)
 
-        vote_percentages = estimator_probabilities.sum(axis=0) / len(self.estimators_)
+        vote_percentages = estimator_probability_array.sum(axis=0) / len(self.estimators_)
 
         return vote_percentages

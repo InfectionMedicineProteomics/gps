@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from collections import Counter
 from csv import DictWriter
-from typing import List, Dict, Union, Tuple, Optional
+from typing import List, Dict, Union, Tuple, Optional, Generator, KeysView, Any
 
 import numpy as np
-from sklearn.metrics import precision_score, recall_score  # type: ignore
-from sklearn.utils import shuffle, class_weight  # type: ignore
+import numpy.typing as npt
+from sklearn.metrics import precision_score, recall_score
+from sklearn.utils import shuffle, class_weight
 
 import torch
 
 from gscore import preprocess
-from gscore.chromatograms import Chromatogram
+from gscore.chromatograms import Chromatogram, Chromatograms
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
 from gscore.scaler import Scaler
 from gscore.denoiser import BaggedDenoiser
@@ -30,7 +31,7 @@ class Precursor:
     charge: int
     decoy: int
     target: int
-    q_value: float
+    q_value: Optional[float]
     peakgroups: List[PeakGroup]
     scores: Dict[str, float]
     modified_sequence: str
@@ -42,15 +43,15 @@ class Precursor:
 
     def __init__(
         self,
-        precursor_id="",
-        charge=0,
-        decoy=0,
-        q_value=None,
-        modified_sequence="",
-        unmodified_sequence="",
-        protein_accession="",
-        mz=0.0,
-    ):
+        precursor_id: str="",
+        charge: int=0,
+        decoy: int=0,
+        q_value: Optional[float] = None,
+        modified_sequence: str = "",
+        unmodified_sequence: str= "",
+        protein_accession: str= "",
+        mz: float = 0.0,
+    ) -> None:
 
         self.id = precursor_id
         self.charge = charge
@@ -65,11 +66,11 @@ class Precursor:
         self.mz = mz
         self.chromatograms = None
 
-    def set_chromatograms(self, chromatograms: Dict[str, Chromatogram]):
+    def set_chromatograms(self, chromatograms: Dict[str, Chromatogram]) -> None:
 
         self.chromatograms = chromatograms
 
-    def get_chromatograms(self, min_rt: float, max_rt: float) -> np.ndarray:
+    def get_chromatograms(self, min_rt: float, max_rt: float) -> npt.NDArray[np.float64]:
 
         chrom_list = []
 
@@ -113,16 +114,16 @@ class Precursors:
     precursors: Dict[str, Precursor]
     pit: float
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.precursors = dict()
         self.pit = 1.0
 
-    def __contains__(self, item):
+    def __contains__(self, item: str) -> bool:
 
         return item in self.precursors
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Precursor, None, None]:
 
         for precursor_id, precursor in self.precursors.items():
             yield precursor
@@ -131,11 +132,11 @@ class Precursors:
 
         self.precursors[precursor_id].peakgroups.append(peakgroup)
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
 
         return self.precursors.keys()
 
-    def __setitem__(self, key: str, value: Precursor):
+    def __setitem__(self, key: str, value: Precursor) -> None:
 
         self.precursors[key] = value
 
@@ -155,7 +156,7 @@ class Precursors:
 
         return (np.min(rts), np.max(rts))
 
-    def set_chromatograms(self, chromatograms):
+    def set_chromatograms(self, chromatograms: Chromatograms) -> None:
 
         out_of_bounds = 0
 
@@ -194,7 +195,7 @@ class Precursors:
 
     def get_peakgroups_by_list(
         self,
-        precursor_list: np.ndarray,
+        precursor_list: Union[List[str], npt.NDArray[str]],
         rank: int = 0,
         score_key: str = "",
         reverse: bool = True,
@@ -224,7 +225,7 @@ class Precursors:
 
     def get_target_peakgroups_by_rank(
         self, rank: int, score_key: str = "", reverse: bool = True
-    ):
+    ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
 
@@ -277,7 +278,7 @@ class Precursors:
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-        self, filter_field="PROBABILITY", use_second_ranked: bool = False
+        self, filter_field: str="PROBABILITY", use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -329,7 +330,7 @@ class Precursors:
         num_threads: int,
         vote_percentage: float,
         verbose: bool = False,
-        base_estimator=None,
+        base_estimator: Any=None,
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -471,13 +472,13 @@ class Precursors:
         self,
         model_path: str,
         scaler_path: str,
-        encoder_path: str = None,
+        encoder_path: Optional[str] = None,
         threads: int = 10,
         gpus: int = 1,
         chromatogram_only: bool = False,
         use_deep_chrom_score: bool = False,
         weight_scores: bool = False,
-    ):
+    ) -> Precursors:
 
         scoring_model: Union[Scorer]
 
@@ -565,7 +566,7 @@ class Precursors:
 
         return self
 
-    def estimate_pit(self):
+    def estimate_pit(self) -> float:
 
         all_peakgroups = self.filter_target_peakgroups(
             rank=1, filter_key="D_SCORE", value=0.0
@@ -597,11 +598,11 @@ class Precursors:
         self,
         sort_key: str,
         decoy_free: bool = False,
-        count_decoys=True,
+        count_decoys: bool =True,
         num_threads: int = 10,
         pit: float = 1.0,
         debug: bool = False
-    ):
+    ) -> npt.NDArray[np.float64]:
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True

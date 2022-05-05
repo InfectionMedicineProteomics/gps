@@ -143,7 +143,7 @@ class Chromatograms:
 
     chromatogram_records: Dict[str, Dict[str, Chromatogram]]
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.chromatogram_records = dict()
 

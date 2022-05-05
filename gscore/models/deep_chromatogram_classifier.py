@@ -1,21 +1,23 @@
+from typing import Dict, Any, Tuple
+
 import numpy as np
 import numpy.typing as npt
-import pytorch_lightning as pl # type: ignore
-import torch # type: ignore
-from pytorch_lightning import Trainer # type: ignore
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping # type: ignore
-from sklearn.metrics import roc_auc_score # type: ignore
-from torch import nn # type: ignore
-from torch.optim.lr_scheduler import ReduceLROnPlateau # type: ignore
-from torch.nn import functional as F # type: ignore
-from torch.utils.data import TensorDataset, DataLoader # type: ignore
-import torchvision.models as models # type: ignore
+import pytorch_lightning as pl
+import torch
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
+from sklearn.metrics import roc_auc_score
+from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.nn import functional as F
+from torch.utils.data import TensorDataset, DataLoader
+import torchvision.models as models
 
 from gscore.models.base_model import Scorer
 
-from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler  # type: ignore
+from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
 
-from sklearn.pipeline import Pipeline  # type: ignore
+from sklearn.pipeline import Pipeline
 
 
 class DeepChromScorer(Scorer):
@@ -185,10 +187,10 @@ class DeepChromScorer(Scorer):
     def predict_proba(self, data: np.ndarray) -> np.ndarray:
         return self.probability(data)
 
-    def save(self, model_path: str = ""):
+    def save(self, model_path: str = "") -> None:
         self.trainer.save_checkpoint(model_path)
 
-    def load(self, model_path: str):
+    def load(self, model_path: str) -> None:
         self.model = DeepChromModel.load_from_checkpoint(
             checkpoint_path=model_path,
             learning_rate=self.initial_lr,
@@ -200,10 +202,10 @@ class DeepChromScorer(Scorer):
 
         predictions = self.probability(data)
 
-        return roc_auc_score(labels, predictions)
+        return float(roc_auc_score(labels, predictions))
 
 
-class DeepChromModel(pl.LightningModule):
+class DeepChromModel(pl.LightningModule): # type: ignore
     def __init__(self, learning_rate: float = 0.0005, embedding: bool = False):
 
         self.lr = learning_rate
@@ -242,7 +244,7 @@ class DeepChromModel(pl.LightningModule):
 
         self._init_params()
 
-    def _init_params(self):
+    def _init_params(self) -> None:
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
@@ -250,7 +252,7 @@ class DeepChromModel(pl.LightningModule):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.Adam(
             self.parameters(), lr=(self.lr or self.learning_rate)
         )
@@ -263,7 +265,7 @@ class DeepChromModel(pl.LightningModule):
             "monitor": "train_loss",
         }
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
 
         chromatograms, labels = batch
 
@@ -277,7 +279,7 @@ class DeepChromModel(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         chromatograms, labels = batch
 
         y_hat = self(chromatograms)
@@ -286,7 +288,7 @@ class DeepChromModel(pl.LightningModule):
 
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         chromatograms, labels = batch
 
         y_hat = self(chromatograms)
@@ -304,7 +306,7 @@ class DeepChromModel(pl.LightningModule):
             }
         )
 
-    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+    def predict_step(self, batch: Tuple[torch.Tensor,], batch_idx: int, dataloader_idx: int=0) -> torch.Tensor:
 
         (chromatograms,) = batch
 
@@ -322,7 +324,7 @@ class DeepChromModel(pl.LightningModule):
 
         return out
 
-    def forward(self, chromatogram):
+    def forward(self, chromatogram: torch.Tensor) -> torch.Tensor:
 
         out = self.input_conv(chromatogram)
 

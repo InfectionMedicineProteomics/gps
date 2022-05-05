@@ -1,6 +1,6 @@
 from csv import DictWriter
 from collections.abc import MutableMapping
-from typing import Dict, List
+from typing import Dict, List, Union, ItemsView, Generator, Any
 
 import numpy as np
 
@@ -35,19 +35,19 @@ class PrecursorExportRecord:
         self.peptide_q_value = peptide_q_value
         self.samples = dict()
 
-    def __getitem__(self, item: str):
+    def __getitem__(self, item: str) -> PeakGroup:
 
         return self.samples[item]
 
-    def __contains__(self, item):
+    def __contains__(self, item: str) -> bool:
 
         return item in self.samples
 
-    def add_sample(self, sample_key, peakgroup: PeakGroup):
+    def add_sample(self, sample_key: str, peakgroup: PeakGroup) -> None:
 
         self.samples[sample_key] = peakgroup
 
-    def get_sample_intensity(self, sample_key=""):
+    def get_sample_intensity(self, sample_key: str = "") -> Union[np.NaN, float]:
 
         if sample_key in self.samples:
 
@@ -57,28 +57,28 @@ class PrecursorExportRecord:
 
             return np.NaN
 
-    def retention_time(self):
+    def retention_time(self) -> float:
 
         rts = list()
 
         for sample_key, data in self.samples.items():
             rts.append(data.retention_time)
 
-        return np.median(rts)
+        return float(np.median(rts))
 
 
-class PrecursorExport(MutableMapping):
+class PrecursorExport:
 
     _data: Dict[str, PrecursorExportRecord]
     samples: List[str]
     max_q_value: float
 
-    def __init__(self, data=None, max_q_value=0.05):
+    def __init__(self, data: Union[Dict[str, PrecursorExportRecord], None] = None, max_q_value: float = 0.05):
 
         if data is None:
-            data = dict()
-
-        self._data = data
+            self._data = dict()
+        else:
+            self._data = data
         self.samples = []
         self.max_q_value = max_q_value
 
@@ -86,27 +86,27 @@ class PrecursorExport(MutableMapping):
 
         self.samples.append(sample_name)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> PrecursorExportRecord:
 
         return self._data[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: PrecursorExportRecord) -> None:
 
         self._data[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
 
         del self._data[key]
 
-    def __len__(self):
+    def __len__(self) -> int:
 
         return len(self._data)
 
-    def __contains__(self, item):
+    def __contains__(self, item: object) -> bool:
 
         return item in self._data
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Dict[str, Any], None, None]:
 
         for peptide_key, record in self._data.items():
 
@@ -140,11 +140,11 @@ class PrecursorExport(MutableMapping):
 
             yield export_record
 
-    def items(self):
+    def items(self) -> ItemsView[str, PrecursorExportRecord]:
 
         return self._data.items()
 
-    def write(self, path=""):
+    def write(self, path: str = "") -> None:
 
         with open(path, "w") as outfile:
 

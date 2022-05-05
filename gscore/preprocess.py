@@ -1,7 +1,7 @@
 import random
 from typing import List, Tuple, Any
 
-import numpy as np # type: ignore
+import numpy as np
 import numpy.typing as npt
 
 from gscore.peakgroups import PeakGroup
@@ -9,12 +9,12 @@ from gscore.peakgroups import PeakGroup
 
 def get_precursor_id_folds(
     precursor_ids: List[str], num_folds: int
-) -> List[npt.NDArray[np.float64]]:
+) -> List[npt.NDArray[str]]:
 
     random.seed(42)
     random.shuffle(precursor_ids)
 
-    folds: List[npt.NDArray[np.float64]] = np.array_split(precursor_ids, num_folds)
+    folds: List[npt.NDArray[str]] = np.array_split(precursor_ids, num_folds)
 
     return folds
 
@@ -26,7 +26,7 @@ def get_training_data_from_npz(file_path: str) -> Any:
     return npzfile
 
 
-def get_training_data(folds: List[npt.NDArray[np.float64]], fold_num: int) -> List[int]:
+def get_training_data(folds: List[npt.NDArray[str]], fold_num: int) -> List[str]:
 
     training_data = list()
 
@@ -41,7 +41,7 @@ def get_training_data(folds: List[npt.NDArray[np.float64]], fold_num: int) -> Li
     return training_data
 
 
-def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float]]:
+def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[int]]:
 
     scores = list()
     score_labels = list()
@@ -52,7 +52,7 @@ def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray
 
         score_labels.append(peakgroup.target)
 
-    return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=float)
+    return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=int)
 
 
 def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float]]:
@@ -105,7 +105,7 @@ def get_probability_vector(peakgroups: List[PeakGroup]) -> npt.NDArray[np.float6
     return np.array(target_probabilities, dtype=np.float64)
 
 def reformat_chromatogram_data(
-    peakgroups, training=True
+    peakgroups: List[PeakGroup], training: bool=True
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[str], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
 
     labels = list()

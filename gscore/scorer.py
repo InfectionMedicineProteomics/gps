@@ -1,12 +1,12 @@
-from joblib import dump, load  # type: ignore
+from joblib import dump, load
 
-from sklearn.linear_model import SGDClassifier  # type: ignore
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier  # type: ignore
-from sklearn.model_selection import train_test_split  # type: ignore
-from sklearn.metrics import roc_auc_score  # type: ignore
+from sklearn.linear_model import SGDClassifier
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
 
 
-from imblearn.ensemble import BalancedBaggingClassifier, EasyEnsembleClassifier  # type: ignore
+from imblearn.ensemble import BalancedBaggingClassifier, EasyEnsembleClassifier
 from torch.utils.data import Subset, DataLoader
 
 from xgboost import XGBClassifier

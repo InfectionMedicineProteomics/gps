@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
@@ -10,11 +11,11 @@ class Score:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "score"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         print(f"Processing file {args.input}")
 
@@ -128,7 +129,7 @@ class Score:
 
         print("Done!")
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name, help="Commands to score and denoise OSW files"
@@ -263,6 +264,6 @@ class Score:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return f"<Score> {self.name}"

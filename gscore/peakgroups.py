@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Dict, Union, Tuple, Optional
 
 import numpy as np
+import numpy.typing as npt
 
 from sklearn.utils import shuffle, class_weight  # type: ignore
 from sklearn.metrics import precision_score, recall_score  # type: ignore
@@ -32,22 +33,22 @@ class PeakGroup:
 
     def __init__(
         self,
-        ghost_score_id="",
-        idx="",
-        mz=0.0,
-        rt=0.0,
-        intensity=0.0,
-        decoy=0,
-        delta_rt=0.0,
-        start_rt=0.0,
-        end_rt=0.0,
-        probability=0.0,
-        vote_percentage=0.0,
-        d_score=0.0,
-        q_value=0.0,
-        true_target_score=0.0,
-        true_target_probability=0.0,
-        scores=None,
+        ghost_score_id: str = "",
+        idx: str = "",
+        mz: float = 0.0,
+        rt: float = 0.0,
+        intensity: float = 0.0,
+        decoy: int = 0,
+        delta_rt: float = 0.0,
+        start_rt: float = 0.0,
+        end_rt: float = 0.0,
+        probability: float = 0.0,
+        vote_percentage: float = 0.0,
+        d_score: float = 0.0,
+        q_value: float = 0.0,
+        true_target_score: float = 0.0,
+        true_target_probability: float = 0.0,
+        scores: Union[Dict[str, float], None] = None,
     ):
 
         if scores is None:
@@ -100,7 +101,7 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self, num_chromatograms=6):
+    def get_chromatogram_intensity_arrays(self, num_chromatograms: int=6) -> npt.NDArray[np.float64]:
 
         intensities = list()
 
@@ -128,7 +129,7 @@ class PeakGroup:
 
         self.scores[key] = value
 
-    def get_sub_score_column_array(self, include_probability):
+    def get_sub_score_column_array(self, include_probability: bool) -> npt.NDArray[np.double]:
 
         score_values = [score for score in self.scores.values()]
 

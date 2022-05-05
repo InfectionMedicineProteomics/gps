@@ -1,10 +1,12 @@
 import argparse
 from collections import Counter
+from typing import Any, List
 
 import numpy as np
+import numpy.typing as npt
 
-from sklearn.model_selection import train_test_split  # type: ignore
-from sklearn.utils import class_weight  # type: ignore
+from sklearn.model_selection import train_test_split
+from sklearn.utils import class_weight
 
 from gscore import preprocess
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
@@ -17,17 +19,17 @@ class Train:
     name: str
     parser: argparse.ArgumentParser
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.name = "train"
 
-    def __call__(self, args: argparse.Namespace):
+    def __call__(self, args: argparse.Namespace) -> None:
 
         print("Building scoring model...")
 
-        combined_labels = []
-        combined_chromatograms = []
-        combined_scores = []
+        combined_labels_list = []
+        combined_chromatograms_list = []
+        combined_scores_list = []
 
         print("Loading data...")
 
@@ -39,13 +41,13 @@ class Train:
             chromatograms = training_data_npz["chromatograms"]
             scores = training_data_npz["scores"]
 
-            combined_chromatograms.append(chromatograms)
-            combined_labels.append(labels)
-            combined_scores.append(scores)
+            combined_chromatograms_list.append(chromatograms)
+            combined_labels_list.append(labels)
+            combined_scores_list.append(scores)
 
-        combined_chromatograms = np.concatenate(combined_chromatograms)
-        combined_labels = np.concatenate(combined_labels)
-        combined_scores = np.concatenate(combined_scores)
+        combined_chromatograms = np.concatenate(combined_chromatograms_list)
+        combined_labels = np.concatenate(combined_labels_list)
+        combined_scores = np.concatenate(combined_scores_list)
 
         target_label_count = combined_labels[combined_labels == 1.0].size
         decoy_label_count = combined_labels[combined_labels == 0.0].size
@@ -100,11 +102,11 @@ class Train:
 
     def augment_score_columns(
         self,
-        combined_chromatograms,
-        combined_scores,
-        chromatogram_encoder,
-        chromatogram_only=False,
-    ):
+        combined_chromatograms: npt.NDArray[np.float64],
+        combined_scores: npt.NDArray[np.float64],
+        chromatogram_encoder: DeepChromScorer,
+        chromatogram_only: bool = False,
+    ) -> npt.NDArray[np.float64]:
 
         chromatogram_embeddings = chromatogram_encoder.encode(combined_chromatograms)
 
@@ -118,13 +120,13 @@ class Train:
 
     def train_deep_model(
         self,
-        combined_chromatograms,
-        combined_labels,
-        model_output,
-        threads,
-        gpus,
-        epochs,
-    ):
+        combined_chromatograms: npt.NDArray[np.float64],
+        combined_labels: npt.NDArray[np.float64],
+        model_output: str,
+        threads: int,
+        gpus: int,
+        epochs: int,
+    ) -> DeepChromScorer:
 
         training_data, testing_data, training_labels, testing_labels = train_test_split(
             combined_chromatograms, combined_labels, test_size=0.2, shuffle=True
@@ -152,7 +154,11 @@ class Train:
 
         return model
 
-    def train_model(self, combined_data, combined_labels, model_output, scaler_output):
+    def train_model(self,
+                    combined_data: npt.NDArray[np.float64],
+                    combined_labels: npt.NDArray[np.float64],
+                    model_output: str,
+                    scaler_output: str) -> None:
 
         scaler = Scaler()
 
@@ -160,7 +166,7 @@ class Train:
             combined_data, combined_labels, test_size=0.2, shuffle=True
         )
 
-        counter: Counter = Counter(training_labels.ravel())
+        counter: Counter[int] = Counter(training_labels.ravel())
         scale_pos_weight = counter[0] / counter[1]
 
         scorer = XGBoostScorer(scale_pos_weight=scale_pos_weight)
@@ -182,7 +188,7 @@ class Train:
         scorer.save(model_output)
         scaler.save(scaler_output)
 
-    def build_subparser(self, subparser):
+    def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
             self.name, help="Training a scoring model from input data"
@@ -253,6 +259,6 @@ class Train:
 
         self.parser.set_defaults(run=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return f"<Train> {self.name}"

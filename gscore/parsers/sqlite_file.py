@@ -28,7 +28,7 @@ class SQLiteFile:
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
 
         self.conn.close()
 

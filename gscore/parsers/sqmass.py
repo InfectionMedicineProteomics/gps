@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pynumpress import decode_slof, decode_linear, decode_pic  # type: ignore
+from pynumpress import decode_slof, decode_linear, decode_pic
 
 from gscore.chromatograms import Chromatogram, Chromatograms
-import pyopenms # type: ignore
+import pyopenms
 
 # FETCH_PEPTIDE_CHROMATOGRAM = """
 #     select
@@ -68,7 +68,7 @@ class SqMassFile:
 
         self.file_path = file_path
 
-    def parse(self, level: str = "ms2"):
+    def parse(self, level: str = "ms2") -> Chromatograms:
 
         chromatograms = pyopenms.MSExperiment()
         sqmass_file = pyopenms.SqMassFile()

@@ -1,5 +1,3 @@
-import numpy as np
-
 from gscore.parsers.queries import CreateIndex
 
 from gscore.peakgroups import PeakGroup
@@ -13,7 +11,7 @@ from gscore.parsers import queries
 from gscore.parsers.sqlite_file import SQLiteFile
 
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import sqlite3
 
@@ -207,7 +205,7 @@ class OSWFile:
 
         return precursors
 
-    def fetch_all_records(self, query):
+    def fetch_all_records(self, query: str) -> List[Dict[str, Any]]:
 
         with self.sqlite_file as sqlite_file:
 
@@ -243,7 +241,7 @@ class OSWFile:
 
         return records
 
-    def add_score_records(self, precursors):
+    def add_score_records(self, precursors: Precursors) -> None:
 
         records = list()
 
@@ -266,7 +264,7 @@ class OSWFile:
 
             sqlite_file.add_records(table_name="GHOST_SCORE_TABLE", records=records)
 
-    def add_score_and_q_value_records(self, precursors):
+    def add_score_and_q_value_records(self, precursors: Precursors) -> None:
 
         records = list()
 
@@ -290,35 +288,3 @@ class OSWFile:
             sqlite_file.create_table(query=queries.CreateTable.CREATE_GHOSTSCORE_TABLE)
 
             sqlite_file.add_records(table_name="ghost_score_table", records=records)
-
-    def update_q_value_records(self, precursors):
-
-        records = dict()
-
-        for precursor in precursors.precursors.values():
-
-            for peakgroup in precursor.peakgroups:
-
-                records[peakgroup.ghost_score_id] = {
-                    "PROBABILITY": peakgroup.scores["PROBABILITY"],
-                    "VOTE_PERCENTAGE": peakgroup.scores["VOTE_PERCENTAGE"],
-                    "D_SCORE": peakgroup.scores["d_score"],
-                    "Q_VALUE": peakgroup.scores["q_value"],
-                }
-
-        self.update_records(
-            table_name="GHOST_SCORE_TABLE", key_field="GHOST_SCORE_ID", records=records
-        )
-
-
-if __name__ == "__main__":
-
-    osw_file_path = (
-        "/home/aaron/projects/ghost/data/spike_in/openswath/AAS_P2009_167.osw"
-    )
-
-    osw_file = OSWFile(osw_file_path, set_indices=True)
-
-    precursors = osw_file.parse_to_precursors(
-        query=queries.SelectPeakGroups.FETCH_PREC_RECORDS
-    )

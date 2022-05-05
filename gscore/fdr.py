@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
+from numpy import ndarray
 
-from scipy.interpolate import InterpolatedUnivariateSpline  # type: ignore
+from scipy.interpolate import InterpolatedUnivariateSpline
 
-from sklearn.neighbors import KernelDensity  # type: ignore
+from sklearn.neighbors import KernelDensity
 
-from typing import TypeVar, Dict, Union, Tuple
+from typing import TypeVar, Dict, Union, Tuple, Any
 
-from joblib import dump, load  # type: ignore
+from joblib import dump, load
 
 from typing import TYPE_CHECKING
 
-import numba # type: ignore
-from numba import int64, njit, prange # type: ignore
+import numba
+from numba import int64, njit, prange
 
 if TYPE_CHECKING:
     from gscore.peptides import Peptide
@@ -27,7 +29,7 @@ G = TypeVar(
 
 
 @njit(nogil=True)
-def _fast_distribution_q_value(target_values, decoy_values, pit):
+def _fast_distribution_q_value(target_values, decoy_values, pit): # type: ignore
 
     target_area = np.trapz(target_values)
 
@@ -47,7 +49,7 @@ def _fast_distribution_q_value(target_values, decoy_values, pit):
 
 
 @njit(cache=True, parallel=True)
-def _fast_distribution_q_values(scores, target_function, decoy_function, pit):
+def _fast_distribution_q_values(scores, target_function, decoy_function, pit): # type: ignore
 
     q_values = np.ones((len(scores),), dtype=np.float64)
 
@@ -84,7 +86,7 @@ class ScoreDistribution:
 
         self.pit = pit
 
-    def fit(self, X, y):
+    def fit(self, X: npt.NDArray[np.float64], y: npt.NDArray[int]) -> ScoreDistribution:
 
         self.X = X
         self.y = y
@@ -102,21 +104,21 @@ class ScoreDistribution:
 
         return self
 
-    def min(self):
+    def min(self) -> float:
 
-        return np.min(self.X)
+        return float(np.min(self.X))
 
-    def max(self):
+    def max(self) -> float:
 
-        return np.max(self.X)
+        return float(np.max(self.X))
 
-    def _estimate_bin_number(self):
+    def _estimate_bin_number(self) -> None:
 
         hist, bins = np.histogram(self.X, bins="auto")
 
         self.num_bins = (bins[1:] + bins[:-1]) / 2
 
-    def _fit_function(self, scores):
+    def _fit_function(self, scores: npt.NDArray[np.float64]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
 
         hist, bins = np.histogram(scores, bins=self.num_bins)
 
@@ -124,7 +126,7 @@ class ScoreDistribution:
 
         return bin_centers, hist
 
-    def calculate_q_values(self, X):
+    def calculate_q_values(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
 
         return _fast_distribution_q_values(
             X, self.target_spline, self.decoy_spline, self.pit
@@ -134,6 +136,9 @@ class ScoreDistribution:
 class GlobalDistribution:
 
     features: Dict[str, Union[Peptide, Protein]]
+    q_value_map: Dict[str, float]
+    score_map: Dict[str, float]
+    probability_map: Dict[str, float]
     score_distribution: Union[ScoreDistribution, DecoyCounter]
     pit: float
     count_decoys: bool
@@ -148,7 +153,7 @@ class GlobalDistribution:
         self.count_decoys = count_decoys
         self.num_threads = num_threads
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: str) -> bool:
 
         return item in self.features
 
@@ -220,7 +225,7 @@ class GlobalDistribution:
                 idx
             ].item()
 
-    def estimate_pit(self, initial_cutoff: float = 0.01):
+    def estimate_pit(self, initial_cutoff: float = 0.01) -> float:
 
         features = list(self.features.values())
 
@@ -262,15 +267,15 @@ class GlobalDistribution:
 
         return self.pit
 
-    def get_score(self, feature_key: str):
+    def get_score(self, feature_key: str) -> float:
 
         return self.score_map[feature_key]
 
-    def get_q_value(self, feature_key: str):
+    def get_q_value(self, feature_key: str) -> float:
 
         return self.q_value_map[feature_key]
 
-    def get_probability(self, feature_key: str):
+    def get_probability(self, feature_key: str) -> float:
 
         return self.probability_map[feature_key]
 
@@ -279,13 +284,13 @@ class GlobalDistribution:
         dump(self, file_path)
 
     @staticmethod
-    def load(file_path: str) -> GlobalDistribution:
+    def load(file_path: str) -> Any:
 
         return load(file_path)
 
 
 @njit(nogil=True)
-def _calculate_q_value(labels, pit):
+def _calculate_q_value(labels, pit): # type: ignore
 
     target_count = 0
     decoy_count = 0
@@ -313,7 +318,7 @@ def _calculate_q_value(labels, pit):
 
 
 @njit(parallel=True)
-def _calculate_q_values(scores, labels, pit):
+def _calculate_q_values(scores, labels, pit): # type: ignore
 
     sorted_score_indices = np.argsort(scores)[::-1]
 
@@ -345,12 +350,15 @@ def _calculate_q_values(scores, labels, pit):
 
 
 class DecoyCounter:
-    def __init__(self, num_threads: int = 10, pit: float = 1.0):
+
+    pit: float
+
+    def __init__(self, num_threads: int = 10, pit: float = 1.0) -> None:
 
         numba.set_num_threads(num_threads)
 
         self.pit = pit
 
-    def calc_q_values(self, scores, labels):
+    def calc_q_values(self, scores: npt.NDArray[np.float64], labels: npt.NDArray[int]) -> npt.NDArray[np.float64]:
 
         return _calculate_q_values(scores, labels, self.pit)
