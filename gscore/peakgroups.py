@@ -19,7 +19,7 @@ class PeakGroup:
     delta_rt: float
     start_rt: float
     end_rt: float
-    chromatograms: Union[Dict[str, Chromatogram], None]
+    chromatograms: Dict[str, Chromatogram]
     probability: float
     vote_percentage: float
     true_target_score: float
@@ -71,7 +71,7 @@ class PeakGroup:
         self.start_rt = start_rt
         self.end_rt = end_rt
 
-        self.chromatograms = None
+        self.chromatograms = dict()
 
         self.probability = probability
         self.vote_percentage = vote_percentage
@@ -88,7 +88,7 @@ class PeakGroup:
 
         return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.scores=}"
 
-    def get_chromatogram_rt_array(self, interpolated: bool=False, num_rt_steps: int=25) -> npt.NDArray[np.float64]:
+    def get_chromatogram_rt_array(self, interpolated: bool=False, num_rt_steps: int=25) -> np.ndarray:
 
         chromatogram = list(self.chromatograms.values())[0]
 
@@ -98,7 +98,7 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self, num_chromatograms: int=6) -> npt.NDArray[np.float64]:
+    def get_chromatogram_intensity_arrays(self, num_chromatograms: int=6) -> np.ndarray:
 
         intensities = np.array([chromatogram.intensities for chromatogram in self.chromatograms.values()])
 
@@ -120,7 +120,7 @@ class PeakGroup:
 
         self.scores[key] = value
 
-    def get_sub_score_column_array(self, include_probability: bool) -> npt.NDArray[np.double]:
+    def get_sub_score_column_array(self, include_probability: bool) -> np.ndarray:
 
         score_values = [score for score in self.scores.values()]
 

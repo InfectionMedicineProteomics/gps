@@ -24,7 +24,7 @@ MODELS = {"adaboost": AdaBoostClassifier}
 
 
 class Scorer:
-    def fit(self, data: np.ndarray, labels: np.ndarray):
+    def fit(self, data: np.ndarray, labels: np.ndarray) -> None:
 
         self.model.fit(data, labels)
 
@@ -48,11 +48,11 @@ class Scorer:
 
         return self.model.predict_proba(data)[:, 1]
 
-    def save(self, model_path: str):
+    def save(self, model_path: str) -> None:
 
         dump(self.model, model_path)
 
-    def load(self, model_path: str):
+    def load(self, model_path: str) -> None:
 
         self.model = load(model_path)
 
@@ -62,7 +62,7 @@ class Scorer:
 
         probabilities = 1 / (1 + np.exp(-probabilities))
 
-        return roc_auc_score(labels, probabilities)
+        return float(roc_auc_score(labels, probabilities))
 
 
 class SGDScorer(Scorer):
@@ -199,7 +199,7 @@ class GradientBoostingScorer(Scorer):
 
     model: GradientBoostingClassifier
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.model = GradientBoostingClassifier()
 
@@ -233,344 +233,3 @@ class AdaBoostSGDScorer(Scorer):
             algorithm="SAMME.R",
             random_state=42,
         )
-
-
-class ChromatogramModel:
-    def __init__(self, model, criterion, optimizer, device):
-        self.model = model
-        self.criterion = criterion
-        self.optimizer = optimizer
-        self.device = device
-        self.train_losses = []
-        self.val_losses = []
-
-    def train_step(self, chroms, peakgroups, labels):
-
-        self.optimizer.zero_grad()
-
-        yhat = self.model(chroms, peakgroups)
-
-        loss = self.criterion(yhat.reshape(-1), labels.double())
-
-        loss.backward()
-
-        self.optimizer.step()
-
-        return loss.item()
-
-    def train_val_split(self, dataset, val_split=0.10):
-
-        train_idx, val_idx = train_test_split(
-            list(range(len(dataset))), test_size=val_split
-        )
-
-        training_set = Subset(dataset, train_idx)
-        validation_set = Subset(dataset, val_idx)
-
-        return training_set, validation_set
-
-    def validation_step(self, chroms, peakgroups, labels):
-
-        yhat = self.model(chroms, peakgroups)
-
-        val_loss = self.criterion(yhat.reshape(-1), labels)
-
-        return val_loss.item()
-
-    def load(self, saved_model_path):
-
-        self.model.load_state_dict(torch.load(saved_model_path))
-
-    def eval_test_accuracy(self, testing_dataset):
-
-        testing_loader = DataLoader(
-            testing_dataset, batch_size=32, num_workers=5, drop_last=True
-        )
-
-        accuracies = []
-
-        for i, (peakgroups, chroms, labels) in enumerate(testing_loader):
-
-            peakgroups = peakgroups.to(self.device)
-            chroms = chroms.to(self.device)
-            labels = labels.to(self.device)
-
-            with torch.no_grad():
-                predictions = self.model.predict(chroms.double(), peakgroups)
-
-                accuracy = (
-                    (predictions.detach() == labels.reshape((-1, 1)).detach()).sum()
-                    / labels.shape[0]
-                ).item()
-
-                accuracies.append(accuracy)
-
-            accuracies.append(accuracy)
-
-        return np.mean(accuracies)
-
-    def train(self, training_data, val_split=0.10, batch_size=32, n_epochs=50):
-
-        training_split, validation_split = self.train_val_split(
-            training_data, val_split
-        )
-
-        training_loader = DataLoader(
-            training_split, batch_size=batch_size, shuffle=True, num_workers=5
-        )
-
-        validation_loader = DataLoader(
-            validation_split, batch_size=batch_size, shuffle=True, num_workers=5
-        )
-
-        try:
-
-            for epoch in range(1, n_epochs + 1):
-
-                losses = []
-                validation_losses = []
-
-                accuracies = []
-
-                for i, (peakgroups, chroms, labels) in enumerate(training_loader):
-
-                    peakgroups = peakgroups.to(self.device)
-                    chroms = chroms.to(self.device)
-                    labels = labels.to(self.device)
-
-                    self.optimizer.zero_grad()
-
-                    yhat = self.model(chroms, peakgroups)
-
-                    loss = self.criterion(yhat.reshape(-1), labels.double())
-
-                    loss.backward()
-
-                    self.optimizer.step()
-
-                    losses.append(loss.item())
-
-                    percentage = (i / len(training_loader)) * 100.0
-
-                    print("Epoch percentage: ", percentage, end="\r")
-
-                training_loss = np.mean(losses)
-
-                losses.append(training_loss)
-
-                with torch.no_grad():
-
-                    val_losses = []
-
-                    for i, (peakgroups, chroms, labels) in enumerate(validation_loader):
-
-                        peakgroups = peakgroups.to(self.device)
-                        chroms = chroms.to(self.device)
-                        labels = labels.to(self.device)
-
-                        val_loss = self.validation_step(chroms, peakgroups, labels)
-
-                        val_losses.append(val_loss)
-
-                        predictions = self.model.predict(chroms.double(), peakgroups)
-
-                        accuracy = (
-                            (
-                                predictions.detach() == labels.reshape((-1, 1)).detach()
-                            ).sum()
-                            / predictions.shape[0]
-                        ).item()
-
-                        accuracies.append(accuracy)
-
-                    batch_val_loss = np.mean(val_losses)
-
-                    validation_losses.append(val_loss)
-
-                epoch_loss = np.mean(losses)
-                epoch_val_accuracy = np.mean(accuracies)
-                epoch_val_loss = np.mean(validation_losses)
-
-                self.train_losses.append(epoch_loss)
-                self.val_losses.append(epoch_val_loss)
-
-                print(
-                    f"epoch {epoch}, loss {epoch_loss}, val loss {epoch_val_loss}, val accuracy {epoch_val_accuracy}"
-                )
-
-        except Exception as e:
-
-            torch.save(self.model.state_dict(), "./chrom.pth")
-
-            raise e
-
-        torch.save(self.model.state_dict(), "./chrom.pth")
-
-
-class ChromatogramProbabilityModel(nn.Module):
-    def __init__(self, n_features, sequence_length):
-
-        super().__init__()
-
-        self.conv1d = nn.Conv1d(
-            in_channels=n_features,
-            out_channels=7,
-            kernel_size=(3,),
-            stride=(1,),
-            padding="same",
-        )
-
-        self.n_features = n_features
-        self.sequence_length = sequence_length
-
-        self.layer_dim = 2
-        self.hidden_dim = 20
-
-        self.rnn = nn.LSTM(
-            input_size=n_features,
-            hidden_size=self.hidden_dim,
-            num_layers=self.layer_dim,
-            batch_first=True,
-            dropout=0.2,
-            bidirectional=True,
-        )
-
-        self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3, 42)
-        self.linear_2 = nn.Linear(42, 42)
-        self.linear_3 = nn.Linear(42, 42)
-        self.linear_4 = nn.Linear(42, 1)
-
-    def forward(self, chromatogram, peakgroup):
-
-        batch_size, seq_len, _ = chromatogram.size()
-
-        out = self.conv1d(chromatogram.double())
-
-        out = out.permute(0, 2, 1)
-
-        out, _ = self.rnn(out.double())
-
-        out = out.contiguous().view(batch_size, -1)
-
-        out = torch.cat((out, peakgroup), 1)
-
-        out = self.linear(out)
-
-        out = F.relu(out)
-
-        out = self.linear_2(out)
-
-        out = F.relu(out)
-
-        out = self.linear_3(out)
-
-        out = F.relu(out)
-
-        out = self.linear_4(out)
-
-        return out
-
-    def predict(self, data, peakgroup):
-
-        out = self.forward(data, peakgroup)
-
-        probabilities = torch.sigmoid(out)
-
-        return (probabilities > 0.5).double()
-
-
-class DeepChromConvLSTMModel(pl.LightningModule):
-    def __init__(self, n_features, sequence_length):
-
-        super().__init__()
-
-        self.conv1d = nn.Conv1d(
-            in_channels=n_features,
-            out_channels=7,
-            kernel_size=(3,),
-            stride=(1,),
-            padding="same",
-        )
-
-        self.n_features = n_features
-        self.sequence_length = sequence_length
-
-        self.layer_dim = 2
-        self.hidden_dim = 20
-
-        self.rnn = nn.LSTM(
-            input_size=n_features,
-            hidden_size=self.hidden_dim,
-            num_layers=self.layer_dim,
-            batch_first=True,
-            dropout=0.2,
-            bidirectional=True,
-        )
-
-        self.linear = nn.Linear((2 * self.hidden_dim) * sequence_length + 3 + 1, 42)
-        self.linear_2 = nn.Linear(42, 42)
-        self.linear_3 = nn.Linear(42, 1)
-
-    def configure_optimizers(self):
-
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-
-        return optimizer
-
-    def training_step(self, batch, batch_idx):
-
-        chromatograms, peakgroup_boundaries, scores, labels = batch
-
-        y_hat = self(chromatograms, peakgroup_boundaries, scores)
-
-        loss = F.binary_cross_entropy(y_hat, labels)
-
-        self.log(
-            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
-
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-
-        chromatograms, peakgroup_boundaries, scores, labels = batch
-
-        y_hat = self(chromatograms, peakgroup_boundaries, scores)
-
-        loss = F.binary_cross_entropy(y_hat, labels)
-
-        return loss
-
-    def predict_step(self, batch, batch_idx, dataloader_idx=0):
-
-        chromatograms, peakgroup_boundaries, scores = batch
-
-        return self(chromatograms, peakgroup_boundaries, scores)
-
-    def forward(self, chromatogram, peakgroup, score):
-
-        batch_size, seq_len, _ = chromatogram.size()
-
-        out = self.conv1d(chromatogram)
-
-        out = out.permute(0, 2, 1)
-
-        out, _ = self.rnn(out)
-
-        out = out.contiguous().view(batch_size, -1)
-
-        out = torch.cat((out, peakgroup, score), 1)
-
-        out = self.linear(out)
-
-        out = F.relu(out)
-
-        out = self.linear_2(out)
-
-        out = F.relu(out)
-
-        out = self.linear_3(out)
-
-        out = torch.sigmoid(out)
-
-        return out

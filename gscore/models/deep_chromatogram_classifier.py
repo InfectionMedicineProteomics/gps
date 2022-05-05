@@ -81,7 +81,7 @@ class DeepChromScorer(Scorer):
         self.training = training
         self.embedding = embedding
 
-    def fit(self, data: npt.NDArray[float], labels: npt.NDArray[float]) -> None:
+    def fit(self, data: np.ndarray, labels: np.ndarray) -> None:
 
         chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
@@ -110,7 +110,7 @@ class DeepChromScorer(Scorer):
             val_dataloaders=validation_dataloader,
         )
 
-    def score(self, data: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def score(self, data: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:
 
@@ -130,7 +130,7 @@ class DeepChromScorer(Scorer):
 
         predictions = torch.cat(predictions, 0)
 
-        predictions_array: npt.NDArray[np.float64] = predictions.numpy()
+        predictions_array: np.ndarray = predictions.numpy()
 
         return predictions_array
 

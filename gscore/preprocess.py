@@ -9,12 +9,12 @@ from gscore.peakgroups import PeakGroup
 
 def get_precursor_id_folds(
     precursor_ids: List[str], num_folds: int
-) -> List[npt.NDArray[str]]:
+) -> List[np.ndarray]:
 
     random.seed(42)
     random.shuffle(precursor_ids)
 
-    folds: List[npt.NDArray[str]] = np.array_split(precursor_ids, num_folds)
+    folds: List[np.ndarray] = np.array_split(precursor_ids, num_folds)
 
     return folds
 
@@ -26,7 +26,7 @@ def get_training_data_from_npz(file_path: str) -> Any:
     return npzfile
 
 
-def get_training_data(folds: List[npt.NDArray[str]], fold_num: int) -> List[str]:
+def get_training_data(folds: List[np.ndarray], fold_num: int) -> List[str]:
 
     training_data = list()
 
@@ -41,7 +41,7 @@ def get_training_data(folds: List[npt.NDArray[str]], fold_num: int) -> List[str]
     return training_data
 
 
-def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[int]]:
+def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -55,7 +55,7 @@ def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray
     return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=int)
 
 
-def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float]]:
+def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -69,7 +69,7 @@ def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArra
     return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=float)
 
 
-def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[float], npt.NDArray[str]]:
+def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -92,7 +92,7 @@ def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[npt.NDArray[np.float64],
     return array_scores, np.array(score_labels, dtype=float), np.array(score_indices, dtype=str)
 
 
-def get_probability_vector(peakgroups: List[PeakGroup]) -> npt.NDArray[np.float64]:
+def get_probability_vector(peakgroups: List[PeakGroup]) -> np.ndarray:
 
     target_probabilities = []
 
@@ -106,7 +106,7 @@ def get_probability_vector(peakgroups: List[PeakGroup]) -> npt.NDArray[np.float6
 
 def reformat_chromatogram_data(
     peakgroups: List[PeakGroup], training: bool=True
-) -> Tuple[npt.NDArray[np.float64], npt.NDArray[str], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     labels = list()
     indices = list()

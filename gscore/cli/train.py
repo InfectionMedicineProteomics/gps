@@ -1,9 +1,9 @@
 import argparse
 from collections import Counter
-from typing import Any, List
+from typing import Any
 
 import numpy as np
-import numpy.typing as npt
+import typing
 
 from sklearn.model_selection import train_test_split
 from sklearn.utils import class_weight
@@ -102,11 +102,11 @@ class Train:
 
     def augment_score_columns(
         self,
-        combined_chromatograms: npt.NDArray[np.float64],
-        combined_scores: npt.NDArray[np.float64],
+        combined_chromatograms: np.ndarray,
+        combined_scores: np.ndarray,
         chromatogram_encoder: DeepChromScorer,
         chromatogram_only: bool = False,
-    ) -> npt.NDArray[np.float64]:
+    ) -> np.ndarray:
 
         chromatogram_embeddings = chromatogram_encoder.encode(combined_chromatograms)
 
@@ -120,8 +120,8 @@ class Train:
 
     def train_deep_model(
         self,
-        combined_chromatograms: npt.NDArray[np.float64],
-        combined_labels: npt.NDArray[np.float64],
+        combined_chromatograms: np.ndarray,
+        combined_labels: np.ndarray,
         model_output: str,
         threads: int,
         gpus: int,
@@ -155,8 +155,8 @@ class Train:
         return model
 
     def train_model(self,
-                    combined_data: npt.NDArray[np.float64],
-                    combined_labels: npt.NDArray[np.float64],
+                    combined_data: np.ndarray,
+                    combined_labels: np.ndarray,
                     model_output: str,
                     scaler_output: str) -> None:
 
@@ -166,7 +166,7 @@ class Train:
             combined_data, combined_labels, test_size=0.2, shuffle=True
         )
 
-        counter: Counter[int] = Counter(training_labels.ravel())
+        counter: typing.Counter[int] = Counter(training_labels.ravel())
         scale_pos_weight = counter[0] / counter[1]
 
         scorer = XGBoostScorer(scale_pos_weight=scale_pos_weight)

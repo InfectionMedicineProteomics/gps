@@ -86,7 +86,7 @@ class ScoreDistribution:
 
         self.pit = pit
 
-    def fit(self, X: npt.NDArray[np.float64], y: npt.NDArray[int]) -> ScoreDistribution:
+    def fit(self, X: np.ndarray, y: np.ndarray) -> ScoreDistribution:
 
         self.X = X
         self.y = y
@@ -118,7 +118,7 @@ class ScoreDistribution:
 
         self.num_bins = (bins[1:] + bins[:-1]) / 2
 
-    def _fit_function(self, scores: npt.NDArray[np.float64]) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def _fit_function(self, scores: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
         hist, bins = np.histogram(scores, bins=self.num_bins)
 
@@ -126,7 +126,7 @@ class ScoreDistribution:
 
         return bin_centers, hist
 
-    def calculate_q_values(self, X: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def calculate_q_values(self, X: np.ndarray) -> np.ndarray:
 
         return _fast_distribution_q_values(
             X, self.target_spline, self.decoy_spline, self.pit
@@ -359,6 +359,6 @@ class DecoyCounter:
 
         self.pit = pit
 
-    def calc_q_values(self, scores: npt.NDArray[np.float64], labels: npt.NDArray[int]) -> npt.NDArray[np.float64]:
+    def calc_q_values(self, scores: np.ndarray, labels: np.ndarray) -> np.ndarray:
 
         return _calculate_q_values(scores, labels, self.pit)

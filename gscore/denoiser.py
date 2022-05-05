@@ -17,7 +17,7 @@ class BaggedDenoiser(BaggingClassifier): # type: ignore
         max_samples: int=3,
         n_jobs: int=5,
         random_state: int=0,
-        class_weights: npt.NDArray[np.float64] = np.array([1.0, 1.0]),
+        class_weights: np.ndarray = np.array([1.0, 1.0]),
     ):
 
         if not base_estimator:
@@ -46,7 +46,7 @@ class BaggedDenoiser(BaggingClassifier): # type: ignore
             random_state=random_state,
         )
 
-    def vote(self, noisy_data: npt.NDArray[np.float64], threshold: float=0.5) -> npt.NDArray[np.float64]:
+    def vote(self, noisy_data: np.ndarray, threshold: float=0.5) -> np.ndarray:
 
         estimator_probabilities = list()
 

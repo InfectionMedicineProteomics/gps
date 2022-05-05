@@ -1,11 +1,11 @@
 import numpy as np
 import numpy.typing as npt
 
-from sklearn.preprocessing import RobustScaler, MinMaxScaler  # type: ignore
+from sklearn.preprocessing import RobustScaler, MinMaxScaler
 
-from sklearn.pipeline import Pipeline  # type: ignore
+from sklearn.pipeline import Pipeline
 
-from joblib import dump, load  # type: ignore
+from joblib import dump, load
 
 
 class Scaler:
@@ -26,18 +26,18 @@ class Scaler:
 
         self.scaler = load(path)
 
-    def fit(self, data: npt.NDArray[np.float64]) -> None:
+    def fit(self, data: np.ndarray) -> None:
 
         self.scaler.fit(data)
 
-    def fit_transform(self, data: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def fit_transform(self, data: np.ndarray) -> np.ndarray:
 
-        transformed_data: npt.NDArray[np.float64] = self.scaler.fit_transform(data)
+        transformed_data: np.ndarray = self.scaler.fit_transform(data)
 
         return transformed_data
 
-    def transform(self, data: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def transform(self, data: np.ndarray) -> np.ndarray:
 
-        transformed_data: npt.NDArray[np.float64] = self.scaler.transform(data)
+        transformed_data: np.ndarray = self.scaler.transform(data)
 
         return transformed_data

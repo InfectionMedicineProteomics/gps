@@ -1,8 +1,8 @@
-from typing import Dict, ItemsView, Optional, Set
+from typing import Dict, ItemsView, Optional, Set, Tuple
 
 import numpy as np
 
-from scipy.interpolate import interp1d  # type: ignore
+from scipy.interpolate import interp1d
 
 
 class Chromatogram:
@@ -53,7 +53,7 @@ class Chromatogram:
         #         assume_sorted=True
         #     )
 
-    def interpolated_chromatogram(self, rts: np.ndarray):
+    def interpolated_chromatogram(self, rts: np.ndarray) -> np.ndarray:
 
         # TODO: Investigate if the left and right extrapolation should change
 
@@ -67,7 +67,7 @@ class Chromatogram:
 
         return np.std(self.intensities)
 
-    def normalized_intensities(self, add_min_max: tuple = None) -> np.ndarray:
+    def normalized_intensities(self, add_min_max: Optional[Tuple[float, float]] = None) -> np.ndarray:
 
         if not self.intensities.any():
 
@@ -134,7 +134,7 @@ class Chromatogram:
             print(spline(new_rt_steps))
             raise e
 
-    def interpolated_rt(self, num_steps: int):
+    def interpolated_rt(self, num_steps: int) -> np.ndarray:
 
         return np.linspace(self.start_rt, self.end_rt, num_steps)
 
@@ -159,7 +159,7 @@ class Chromatograms:
 
         return self.chromatogram_records[key]
 
-    def __setitem__(self, key: str, value: Dict[str, Chromatogram]):
+    def __setitem__(self, key: str, value: Dict[str, Chromatogram]) -> None:
 
         self.chromatogram_records[key] = value
 

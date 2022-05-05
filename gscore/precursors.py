@@ -70,7 +70,7 @@ class Precursor:
 
         self.chromatograms = chromatograms
 
-    def get_chromatograms(self, min_rt: float, max_rt: float) -> npt.NDArray[np.float64]:
+    def get_chromatograms(self, min_rt: float, max_rt: float) -> np.ndarray:
 
         chrom_list = []
 
@@ -195,7 +195,7 @@ class Precursors:
 
     def get_peakgroups_by_list(
         self,
-        precursor_list: Union[List[str], npt.NDArray[str]],
+        precursor_list: Union[List[str], np.ndarray],
         rank: int = 0,
         score_key: str = "",
         reverse: bool = True,
@@ -602,7 +602,7 @@ class Precursors:
         num_threads: int = 10,
         pit: float = 1.0,
         debug: bool = False
-    ) -> npt.NDArray[np.float64]:
+    ) -> np.ndarray:
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
             rank=1, score_key=sort_key, reverse=True
