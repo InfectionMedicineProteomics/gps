@@ -32,9 +32,7 @@ class DeepChromScorer(Scorer):
         embedding: bool = False,
     ):
 
-        self.model = DeepChromModel(
-            learning_rate=initial_lr, embedding=embedding
-        )
+        self.model = DeepChromModel(learning_rate=initial_lr, embedding=embedding)
 
         ###TODO:
         ### set trainer base dir so that the checkpoints are not everywhere.
@@ -205,7 +203,7 @@ class DeepChromScorer(Scorer):
         return float(roc_auc_score(labels, predictions))
 
 
-class DeepChromModel(pl.LightningModule): # type: ignore
+class DeepChromModel(pl.LightningModule):  # type: ignore
     def __init__(self, learning_rate: float = 0.0005, embedding: bool = False):
 
         self.lr = learning_rate
@@ -265,7 +263,9 @@ class DeepChromModel(pl.LightningModule): # type: ignore
             "monitor": "train_loss",
         }
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
 
         chromatograms, labels = batch
 
@@ -279,7 +279,9 @@ class DeepChromModel(pl.LightningModule): # type: ignore
 
         return loss
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def validation_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         chromatograms, labels = batch
 
         y_hat = self(chromatograms)
@@ -288,7 +290,9 @@ class DeepChromModel(pl.LightningModule): # type: ignore
 
         return loss
 
-    def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def test_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         chromatograms, labels = batch
 
         y_hat = self(chromatograms)
@@ -306,7 +310,14 @@ class DeepChromModel(pl.LightningModule): # type: ignore
             }
         )
 
-    def predict_step(self, batch: Tuple[torch.Tensor,], batch_idx: int, dataloader_idx: int=0) -> torch.Tensor:
+    def predict_step(
+        self,
+        batch: Tuple[
+            torch.Tensor,
+        ],
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> torch.Tensor:
 
         (chromatograms,) = batch
 

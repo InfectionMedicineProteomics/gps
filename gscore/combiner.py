@@ -73,7 +73,11 @@ class PrecursorExport:
     samples: List[str]
     max_q_value: float
 
-    def __init__(self, data: Union[Dict[str, PrecursorExportRecord], None] = None, max_q_value: float = 0.05):
+    def __init__(
+        self,
+        data: Union[Dict[str, PrecursorExportRecord], None] = None,
+        max_q_value: float = 0.05,
+    ):
 
         if data is None:
             self._data = dict()

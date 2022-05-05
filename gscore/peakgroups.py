@@ -88,7 +88,9 @@ class PeakGroup:
 
         return f"{self.mz=} {self.retention_time=} {self.decoy=} {self.scores=}"
 
-    def get_chromatogram_rt_array(self, interpolated: bool=False, num_rt_steps: int=25) -> np.ndarray:
+    def get_chromatogram_rt_array(
+        self, interpolated: bool = False, num_rt_steps: int = 25
+    ) -> np.ndarray:
 
         chromatogram = list(self.chromatograms.values())[0]
 
@@ -98,9 +100,13 @@ class PeakGroup:
 
         return chromatogram.rts
 
-    def get_chromatogram_intensity_arrays(self, num_chromatograms: int=6) -> np.ndarray:
+    def get_chromatogram_intensity_arrays(
+        self, num_chromatograms: int = 6
+    ) -> np.ndarray:
 
-        intensities = np.array([chromatogram.intensities for chromatogram in self.chromatograms.values()])
+        intensities = np.array(
+            [chromatogram.intensities for chromatogram in self.chromatograms.values()]
+        )
 
         if intensities.shape[0] < num_chromatograms:
 

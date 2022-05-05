@@ -4,7 +4,6 @@ from sklearn.metrics import roc_auc_score
 
 
 class Scorer:
-
     def fit(self, data: np.ndarray, labels: np.ndarray) -> None:
 
         self.model.fit(data, labels)

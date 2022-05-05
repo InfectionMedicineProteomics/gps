@@ -17,12 +17,12 @@ class Peptide:
 
     def __init__(
         self,
-        sequence: str="",
+        sequence: str = "",
         modified_sequence: str = "",
         decoy: int = 0,
         q_value: float = 0.0,
         d_score: float = 0.0,
-        probability: float=0.0,
+        probability: float = 0.0,
     ) -> None:
 
         self.sequence = sequence

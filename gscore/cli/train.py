@@ -154,11 +154,13 @@ class Train:
 
         return model
 
-    def train_model(self,
-                    combined_data: np.ndarray,
-                    combined_labels: np.ndarray,
-                    model_output: str,
-                    scaler_output: str) -> None:
+    def train_model(
+        self,
+        combined_data: np.ndarray,
+        combined_labels: np.ndarray,
+        model_output: str,
+        scaler_output: str,
+    ) -> None:
 
         scaler = Scaler()
 

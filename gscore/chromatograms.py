@@ -67,7 +67,9 @@ class Chromatogram:
 
         return np.std(self.intensities)
 
-    def normalized_intensities(self, add_min_max: Optional[Tuple[float, float]] = None) -> np.ndarray:
+    def normalized_intensities(
+        self, add_min_max: Optional[Tuple[float, float]] = None
+    ) -> np.ndarray:
 
         if not self.intensities.any():
 

@@ -12,7 +12,12 @@ class Protein:
     scores: Dict[str, float]
 
     def __init__(
-        self, protein_accession: str = "", decoy: int = 0, q_value: float = 0.0, d_score: float = 0.0, probability: float = 0.0
+        self,
+        protein_accession: str = "",
+        decoy: int = 0,
+        q_value: float = 0.0,
+        d_score: float = 0.0,
+        probability: float = 0.0,
     ):
 
         self.protein_accession = protein_accession

@@ -59,7 +59,6 @@ class Score:
                 vote_percentage=args.vote_percentage,
             )
 
-
         if args.estimate_pit:
 
             print("Estimating PIT.")
@@ -89,7 +88,7 @@ class Score:
             gpus=args.gpus,
             chromatogram_only=args.use_only_chromatogram_features,
             use_deep_chrom_score=args.use_deep_chrom_score,
-            weight_scores=args.weight_scores
+            weight_scores=args.weight_scores,
         )
 
         print("Calculating Q Values")
@@ -108,7 +107,7 @@ class Score:
             count_decoys=args.count_decoys,
             num_threads=args.threads,
             pit=pit,
-            debug=args.debug
+            debug=args.debug,
         )
 
         if args.output:

@@ -29,7 +29,7 @@ G = TypeVar(
 
 
 @njit(nogil=True)
-def _fast_distribution_q_value(target_values, decoy_values, pit): # type: ignore
+def _fast_distribution_q_value(target_values, decoy_values, pit):  # type: ignore
 
     target_area = np.trapz(target_values)
 
@@ -49,7 +49,7 @@ def _fast_distribution_q_value(target_values, decoy_values, pit): # type: ignore
 
 
 @njit(cache=True, parallel=True)
-def _fast_distribution_q_values(scores, target_function, decoy_function, pit): # type: ignore
+def _fast_distribution_q_values(scores, target_function, decoy_function, pit):  # type: ignore
 
     q_values = np.ones((len(scores),), dtype=np.float64)
 
@@ -290,7 +290,7 @@ class GlobalDistribution:
 
 
 @njit(nogil=True)
-def _calculate_q_value(labels, pit): # type: ignore
+def _calculate_q_value(labels, pit):  # type: ignore
 
     target_count = 0
     decoy_count = 0
@@ -318,7 +318,7 @@ def _calculate_q_value(labels, pit): # type: ignore
 
 
 @njit(parallel=True)
-def _calculate_q_values(scores, labels, pit): # type: ignore
+def _calculate_q_values(scores, labels, pit):  # type: ignore
 
     sorted_score_indices = np.argsort(scores)[::-1]
 

@@ -9,14 +9,14 @@ from sklearn.ensemble import BaggingClassifier
 from gscore.preprocess import *
 
 
-class BaggedDenoiser(BaggingClassifier): # type: ignore
+class BaggedDenoiser(BaggingClassifier):  # type: ignore
     def __init__(
         self,
-        base_estimator: Optional[Any]=None,
-        n_estimators: int=250,
-        max_samples: int=3,
-        n_jobs: int=5,
-        random_state: int=0,
+        base_estimator: Optional[Any] = None,
+        n_estimators: int = 250,
+        max_samples: int = 3,
+        n_jobs: int = 5,
+        random_state: int = 0,
         class_weights: np.ndarray = np.array([1.0, 1.0]),
     ):
 
@@ -46,7 +46,7 @@ class BaggedDenoiser(BaggingClassifier): # type: ignore
             random_state=random_state,
         )
 
-    def vote(self, noisy_data: np.ndarray, threshold: float=0.5) -> np.ndarray:
+    def vote(self, noisy_data: np.ndarray, threshold: float = 0.5) -> np.ndarray:
 
         estimator_probabilities = list()
 
@@ -58,8 +58,12 @@ class BaggedDenoiser(BaggingClassifier): # type: ignore
 
             estimator_probabilities.append(probabilities)
 
-        estimator_probability_array = np.array(estimator_probabilities, dtype=np.float64)
+        estimator_probability_array = np.array(
+            estimator_probabilities, dtype=np.float64
+        )
 
-        vote_percentages = estimator_probability_array.sum(axis=0) / len(self.estimators_)
+        vote_percentages = estimator_probability_array.sum(axis=0) / len(
+            self.estimators_
+        )
 
         return vote_percentages

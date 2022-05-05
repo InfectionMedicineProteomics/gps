@@ -41,7 +41,9 @@ def get_training_data(folds: List[np.ndarray], fold_num: int) -> List[str]:
     return training_data
 
 
-def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray]:
+def reformat_distribution_data(
+    peakgroups: List[PeakGroup],
+) -> Tuple[np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -55,7 +57,9 @@ def reformat_distribution_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray,
     return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=int)
 
 
-def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray]:
+def reformat_true_target_scores(
+    peakgroups: List[PeakGroup],
+) -> Tuple[np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -69,7 +73,9 @@ def reformat_true_target_scores(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray
     return np.array(scores, dtype=np.float64), np.array(score_labels, dtype=float)
 
 
-def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def reformat_data(
+    peakgroups: List[PeakGroup],
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     scores = list()
     score_labels = list()
@@ -89,7 +95,11 @@ def reformat_data(peakgroups: List[PeakGroup]) -> Tuple[np.ndarray, np.ndarray, 
     array_scores = array_scores[:, ~np.all(array_scores == 0, axis=0)]
     array_scores = array_scores[:, ~np.all(np.isnan(array_scores), axis=0)]
 
-    return array_scores, np.array(score_labels, dtype=float), np.array(score_indices, dtype=str)
+    return (
+        array_scores,
+        np.array(score_labels, dtype=float),
+        np.array(score_indices, dtype=str),
+    )
 
 
 def get_probability_vector(peakgroups: List[PeakGroup]) -> np.ndarray:
@@ -98,14 +108,13 @@ def get_probability_vector(peakgroups: List[PeakGroup]) -> np.ndarray:
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        target_probabilities.append(
-            peakgroup.true_target_probability
-        )
+        target_probabilities.append(peakgroup.true_target_probability)
 
     return np.array(target_probabilities, dtype=np.float64)
 
+
 def reformat_chromatogram_data(
-    peakgroups: List[PeakGroup], training: bool=True
+    peakgroups: List[PeakGroup], training: bool = True
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     labels = list()

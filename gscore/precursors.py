@@ -43,13 +43,13 @@ class Precursor:
 
     def __init__(
         self,
-        precursor_id: str="",
-        charge: int=0,
-        decoy: int=0,
+        precursor_id: str = "",
+        charge: int = 0,
+        decoy: int = 0,
         q_value: Optional[float] = None,
         modified_sequence: str = "",
-        unmodified_sequence: str= "",
-        protein_accession: str= "",
+        unmodified_sequence: str = "",
+        protein_accession: str = "",
         mz: float = 0.0,
     ) -> None:
 
@@ -278,7 +278,7 @@ class Precursors:
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-        self, filter_field: str="PROBABILITY", use_second_ranked: bool = False
+        self, filter_field: str = "PROBABILITY", use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -330,7 +330,7 @@ class Precursors:
         num_threads: int,
         vote_percentage: float,
         verbose: bool = False,
-        base_estimator: Any=None,
+        base_estimator: Any = None,
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -520,9 +520,7 @@ class Precursors:
 
             all_scores = all_chromatograms
 
-            scoring_model = DeepChromScorer(
-                max_epochs=1, gpus=gpus, threads=threads
-            )
+            scoring_model = DeepChromScorer(max_epochs=1, gpus=gpus, threads=threads)
 
             scoring_model.load(model_path)
 
@@ -598,10 +596,10 @@ class Precursors:
         self,
         sort_key: str,
         decoy_free: bool = False,
-        count_decoys: bool =True,
+        count_decoys: bool = True,
         num_threads: int = 10,
         pit: float = 1.0,
-        debug: bool = False
+        debug: bool = False,
     ) -> np.ndarray:
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
@@ -710,7 +708,7 @@ class Precursors:
             "Probability",
             "Rank",
             "VotePercentage",
-            "TargetProbability"
+            "TargetProbability",
         ]
 
         with open(file_path, "w") as out_file:
@@ -742,7 +740,7 @@ class Precursors:
                         "Probability": peakgroup.probability,
                         "Rank": rank,
                         "VotePercentage": peakgroup.vote_percentage,
-                        "TargetProbability": peakgroup.true_target_probability
+                        "TargetProbability": peakgroup.true_target_probability,
                     }
 
                     csv_writer.writerow(record)

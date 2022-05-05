@@ -46,7 +46,7 @@ class SQLiteFile:
 
                 yield record
 
-    def add_records(self, table_name: str = "" , records: List[Any] = []) -> None:
+    def add_records(self, table_name: str = "", records: List[Any] = []) -> None:
 
         input_records = list()
 
@@ -96,7 +96,9 @@ class SQLiteFile:
 
             input_records = list()
 
-    def update_records(self, table_name: str = "", key_field: str = "", records: Dict[str, Any] = {}) -> None:
+    def update_records(
+        self, table_name: str = "", key_field: str = "", records: Dict[str, Any] = {}
+    ) -> None:
 
         """
         records = dict()
