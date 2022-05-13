@@ -696,6 +696,7 @@ class Precursors:
     def write_tsv(self, file_path: str = "", ranked: int = 1) -> None:
 
         field_names = [
+            "MZ",
             "UnmodifiedSequence",
             "ModifiedSequence",
             "Charge",
@@ -728,6 +729,7 @@ class Precursors:
                     rank = rank_idx + 1
 
                     record = {
+                        "PrecursorMz": precursor.mz,
                         "UnmodifiedSequence": precursor.unmodified_sequence,
                         "ModifiedSequence": precursor.modified_sequence,
                         "Charge": precursor.charge,
