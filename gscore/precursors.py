@@ -468,6 +468,127 @@ class Precursors:
 
         return self
 
+    def export_pin(
+            self,
+            pin_output_file: str,
+            encoder_path: Optional[str] = None,
+            threads: int = 10,
+            gpus: int = 1,
+            use_chromatograms: bool = True
+    ):
+
+        if use_chromatograms:
+
+            chromatogram_encoder = DeepChromScorer(
+                max_epochs=1, gpus=gpus, threads=threads
+            )  # type: DeepChromScorer
+
+            chromatogram_encoder.load(encoder_path)
+
+        flagged_score_columns = self.flag_score_columns()
+
+        print(flagged_score_columns)
+
+        peakgroup_records = list()
+        chromatograms = list()
+        peptide_protein_ids = list()
+
+        for precursor_id, precursor in self.precursors.items():
+
+            for peakgroup in precursor.peakgroups:
+
+                peakgroup_record: Dict[str, Union[str, int, float]] = {
+                    "id": f"{precursor.modified_sequence}_{precursor.charge}_{peakgroup.idx}",
+                    "label": 1 if peakgroup.target else -1,
+                    "scannr": peakgroup.idx,
+                }
+
+                peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
+
+                if use_chromatograms:
+
+                    if peakgroup.chromatograms:
+
+                        peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays().reshape((1, 6, 25))
+
+                        chromatograms.append(peakgroup_chromatograms)
+
+                    else:
+
+                        peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
+
+                        chromatograms.append(peakgroup_chromatograms)
+
+                peptide_protein_ids.append(
+                    {
+                        "peptide": precursor.modified_sequence,
+                        "proteinId1": precursor.protein_accession
+                    }
+                )
+
+
+                peakgroup_records.append(peakgroup_record)
+
+        if use_chromatograms:
+
+            chromatogram_embeddings = chromatogram_encoder.encode(np.array(chromatograms, dtype=np.float64))
+
+        for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
+
+            if use_chromatograms:
+
+                for chrom_feature_idx in range(chromatogram_embeddings.shape[1]):
+
+                    feature_name = f"chrom_feature_{chrom_feature_idx}"
+                    feature_value = chromatogram_embeddings[peakgroup_idx][chrom_feature_idx]
+
+                    peakgroup_record.update(
+                        {feature_name: feature_value}
+                    )
+
+            peakgroup_record.update(peptide_protein_ids[peakgroup_idx])
+
+        field_names = list(peakgroup_records[0].keys())
+
+        with open(pin_output_file, "w") as out_file:
+
+            csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+
+            csv_writer.writeheader()
+
+            for peakgroup_record in peakgroup_records:
+
+                csv_writer.writerow(peakgroup_record)
+
+
+    def flag_score_columns(self) -> List[str]:
+
+        score_names = self.precursors[list(self.precursors.keys())[0]].peakgroups[0].get_sub_score_column_names()
+
+        score_columns = {score_name: list() for score_name in score_names}
+
+        all_peakgroups = self.get_all_peakgroups()
+
+        flagged_columns = list()
+
+        for peakgroup in all_peakgroups:
+
+            scores = peakgroup.scores
+
+            for score_name in score_names:
+
+                score_columns[score_name].append(scores[score_name])
+
+        for score_column, score_values in score_columns.items():
+
+            score_array = np.array(score_values, dtype=np.float64)
+
+            if np.all(score_array == 0) or np.all(np.isnan(score_array)):
+
+                flagged_columns.append(score_column)
+
+        return flagged_columns
+
     def score_run(
         self,
         model_path: str,

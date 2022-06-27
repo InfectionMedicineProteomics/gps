@@ -80,51 +80,75 @@ class Score:
 
         print("Scoring...")
 
-        precursors.score_run(
-            model_path=args.scoring_model,
-            scaler_path=args.scaler,
-            encoder_path=args.chromatogram_encoder,
-            threads=args.threads,
-            gpus=args.gpus,
-            chromatogram_only=args.use_only_chromatogram_features,
-            use_deep_chrom_score=args.use_deep_chrom_score,
-            weight_scores=args.weight_scores,
-        )
+        if args.percolator_output:
 
-        print("Calculating Q Values")
+            print("Writing percolator output...")
 
-        if args.count_decoys:
+            if args.chromatogram_encoder:
 
-            print("Counting decoys.")
-
-        else:
-
-            print("Estimating score distributions.")
-
-        q_values = precursors.calculate_q_values(
-            sort_key="d_score",
-            decoy_free=args.decoy_free,
-            count_decoys=args.count_decoys,
-            num_threads=args.threads,
-            pit=pit,
-            debug=args.debug,
-        )
-
-        if args.output:
-
-            if args.decoy_free:
-
-                precursors.write_tsv(file_path=args.output, ranked=2)
+                precursors.export_pin(
+                    args.output,
+                    encoder_path=args.chromatogram_encoder,
+                    threads=args.threads,
+                    gpus=args.gpus,
+                    use_chromatograms=True
+                )
 
             else:
 
-                precursors.write_tsv(file_path=args.output, ranked=1)
+                precursors.export_pin(
+                    args.output,
+                    use_chromatograms=False
+                )
+
 
         else:
 
-            print("Updating Q Values in file")
+            precursors.score_run(
+                model_path=args.scoring_model,
+                scaler_path=args.scaler,
+                encoder_path=args.chromatogram_encoder,
+                threads=args.threads,
+                gpus=args.gpus,
+                chromatogram_only=args.use_only_chromatogram_features,
+                use_deep_chrom_score=args.use_deep_chrom_score,
+                weight_scores=args.weight_scores,
+            )
 
-            osw_file.add_score_and_q_value_records(precursors)
+            print("Calculating Q Values")
+
+            if args.count_decoys:
+
+                print("Counting decoys.")
+
+            else:
+
+                print("Estimating score distributions.")
+
+            q_values = precursors.calculate_q_values(
+                sort_key="d_score",
+                decoy_free=args.decoy_free,
+                count_decoys=args.count_decoys,
+                num_threads=args.threads,
+                pit=pit,
+                debug=args.debug,
+            )
+
+            if args.output:
+
+                if args.decoy_free:
+
+                    precursors.write_tsv(file_path=args.output, ranked=2)
+
+                else:
+
+                    precursors.write_tsv(file_path=args.output, ranked=1)
+
+            else:
+
+                print("Updating Q Values in file")
+
+                osw_file.add_score_and_q_value_records(precursors)
 
         print("Done!")
 
@@ -139,6 +163,13 @@ class Score:
         self.parser.add_argument("-o", "--output", help="Output TSV file.", type=str)
 
         self.parser.add_argument(
+            "--percolator-output",
+            dest="percolator_output",
+            help="Export data in PIN format.",
+            action="store_true",
+        )
+
+        self.parser.add_argument(
             "-c",
             "--chromatogram-file",
             dest="chromatogram_file",
@@ -151,8 +182,7 @@ class Score:
             "--scoring-model",
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
-            type=str,
-            required=True,
+            type=str
         )
 
         self.parser.add_argument(

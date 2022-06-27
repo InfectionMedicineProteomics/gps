@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 import numpy as np
 import numpy.typing as npt
@@ -126,6 +126,12 @@ class PeakGroup:
 
         self.scores[key] = value
 
+    def get_score_columns(self, flagged_columns: List[str]) -> Dict[str, float]:
+
+        scores = {score_name: score_value for score_name, score_value in self.scores.items() if score_name not in flagged_columns}
+
+        return scores
+
     def get_sub_score_column_array(self, include_probability: bool) -> np.ndarray:
 
         score_values = [score for score in self.scores.values()]
@@ -135,3 +141,7 @@ class PeakGroup:
             score_values.append(self.probability)
 
         return np.asarray(score_values, dtype=np.double)
+
+    def get_sub_score_column_names(self) -> List[str]:
+
+        return [col_name for col_name in self.scores.keys()]
