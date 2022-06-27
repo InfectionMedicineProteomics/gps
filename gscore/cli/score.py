@@ -91,7 +91,8 @@ class Score:
                     encoder_path=args.chromatogram_encoder,
                     threads=args.threads,
                     gpus=args.gpus,
-                    use_chromatograms=True
+                    use_chromatograms=True,
+                    use_singular_score=args.use_singular_score
                 )
 
             else:
@@ -166,6 +167,13 @@ class Score:
             "--percolator-output",
             dest="percolator_output",
             help="Export data in PIN format.",
+            action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--use-singular-score",
+            dest="use_singular_score",
+            help="Use last chromatogram score.",
             action="store_true",
         )
 

@@ -474,7 +474,8 @@ class Precursors:
             encoder_path: Optional[str] = None,
             threads: int = 10,
             gpus: int = 1,
-            use_chromatograms: bool = True
+            use_chromatograms: bool = True,
+            use_singular_score: bool = False
     ):
 
         if use_chromatograms:
@@ -531,7 +532,13 @@ class Precursors:
 
         if use_chromatograms:
 
-            chromatogram_embeddings = chromatogram_encoder.encode(np.array(chromatograms, dtype=np.float64))
+            if use_singular_score:
+
+                chromatogram_embeddings = chromatogram_encoder.score(np.array(chromatograms, dtype=np.float64))
+
+            else:
+
+                chromatogram_embeddings = chromatogram_encoder.encode(np.array(chromatograms, dtype=np.float64))
 
         for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
 
