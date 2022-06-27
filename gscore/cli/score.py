@@ -78,7 +78,7 @@ class Score:
 
             pit = 1.0
 
-        print("Scoring...")
+        print("Scoring. . .")
 
         if args.percolator_output:
 
