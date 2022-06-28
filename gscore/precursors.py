@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 
 
 class Precursor:
-
     id: str
     charge: int
     decoy: int
@@ -42,15 +41,15 @@ class Precursor:
     probability: float
 
     def __init__(
-        self,
-        precursor_id: str = "",
-        charge: int = 0,
-        decoy: int = 0,
-        q_value: Optional[float] = None,
-        modified_sequence: str = "",
-        unmodified_sequence: str = "",
-        protein_accession: str = "",
-        mz: float = 0.0,
+            self,
+            precursor_id: str = "",
+            charge: int = 0,
+            decoy: int = 0,
+            q_value: Optional[float] = None,
+            modified_sequence: str = "",
+            unmodified_sequence: str = "",
+            protein_accession: str = "",
+            mz: float = 0.0,
     ) -> None:
 
         self.id = precursor_id
@@ -79,7 +78,6 @@ class Precursor:
             for idx, chromatogram in enumerate(self.chromatograms.values()):
 
                 if idx == 0:
-
                     chrom_list.append(
                         chromatogram.scaled_rts(min_val=min_rt, max_val=max_rt)
                     )
@@ -93,7 +91,6 @@ class Precursor:
     def get_peakgroup(self, rank: int, key: str, reverse: bool = False) -> PeakGroup:
 
         if key == "Q_VALUE":
-
             self.peakgroups.sort(key=lambda x: x.q_value, reverse=reverse)
 
         if key == "D_SCORE":
@@ -110,7 +107,6 @@ class Precursor:
 
 
 class Precursors:
-
     precursors: Dict[str, Precursor]
     pit: float
 
@@ -178,7 +174,6 @@ class Precursors:
                     new_rt_steps = np.linspace(start_rt, end_rt, 25)
 
                     for key, chrom in precursor_chromatograms.items():
-
                         peakgroup_chromatogram = Chromatogram(
                             type="peakgroup",
                             chrom_id=key,
@@ -194,12 +189,12 @@ class Precursors:
                         peakgroup.chromatograms = peakgroup_chromatograms
 
     def get_peakgroups_by_list(
-        self,
-        precursor_list: Union[List[str], np.ndarray],
-        rank: int = 0,
-        score_key: str = "",
-        reverse: bool = True,
-        return_all: bool = False,
+            self,
+            precursor_list: Union[List[str], np.ndarray],
+            rank: int = 0,
+            score_key: str = "",
+            reverse: bool = True,
+            return_all: bool = False,
     ) -> List[PeakGroup]:
 
         peakgroups = list()
@@ -224,7 +219,7 @@ class Precursors:
         return peakgroups
 
     def get_target_peakgroups_by_rank(
-        self, rank: int, score_key: str = "", reverse: bool = True
+            self, rank: int, score_key: str = "", reverse: bool = True
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -238,13 +233,12 @@ class Precursors:
                 peakgroup = precursor.peakgroups[rank - 1]
 
                 if peakgroup.target == 1:
-
                     filtered_peakgroups.append(peakgroup)
 
         return filtered_peakgroups
 
     def filter_target_peakgroups(
-        self, rank: int, filter_key: str = "PROBABILITY", value: float = 0.0
+            self, rank: int, filter_key: str = "PROBABILITY", value: float = 0.0
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -272,13 +266,12 @@ class Precursors:
                 peakgroup = precursor.peakgroups[rank]
 
                 if peakgroup.target == 1 and peakgroup.vote_percentage >= value:
-
                     filtered_peakgroups.append(peakgroup)
 
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-        self, filter_field: str = "PROBABILITY", use_second_ranked: bool = False
+            self, filter_field: str = "PROBABILITY", use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -324,13 +317,13 @@ class Precursors:
         return all_peakgroups
 
     def denoise(
-        self,
-        num_folds: int,
-        num_classifiers: int,
-        num_threads: int,
-        vote_percentage: float,
-        verbose: bool = False,
-        base_estimator: Any = None,
+            self,
+            num_folds: int,
+            num_classifiers: int,
+            num_threads: int,
+            vote_percentage: float,
+            verbose: bool = False,
+            base_estimator: Any = None,
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -426,7 +419,6 @@ class Precursors:
                 )
 
             for idx, peakgroup in enumerate(peakgroups_to_score):
-
                 peakgroup.true_target_score = true_target_scores[idx]
 
                 peakgroup.true_target_probability = probabilities[idx]
@@ -475,11 +467,13 @@ class Precursors:
             threads: int = 10,
             gpus: int = 1,
             use_chromatograms: bool = True,
-            use_singular_score: bool = False
+            use_singular_score: bool = False,
+            export_initial_pin: bool = False,
+            use_sub_scores: bool = True,
+            rank: int = 1
     ):
 
         if use_chromatograms:
-
             chromatogram_encoder = DeepChromScorer(
                 max_epochs=1, gpus=gpus, threads=threads
             )  # type: DeepChromScorer
@@ -494,9 +488,19 @@ class Precursors:
         chromatograms = list()
         peptide_protein_ids = list()
 
-        for precursor_id, precursor in self.precursors.items():
+        for precursor in self:
 
-            for peakgroup in precursor.peakgroups:
+            precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+            if export_initial_pin:
+
+                peakgroups = precursor.peakgroups
+
+            else:
+
+                peakgroups = precursor.peakgroups[:rank]
+
+            for peakgroup in peakgroups:
 
                 peakgroup_record: Dict[str, Union[str, int, float]] = {
                     "id": f"{precursor.modified_sequence}_{precursor.charge}_{peakgroup.idx}",
@@ -504,7 +508,9 @@ class Precursors:
                     "scannr": peakgroup.idx,
                 }
 
-                peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
+                if use_sub_scores:
+
+                    peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
 
                 if use_chromatograms:
 
@@ -527,7 +533,6 @@ class Precursors:
                     }
                 )
 
-
                 peakgroup_records.append(peakgroup_record)
 
         if use_chromatograms:
@@ -545,7 +550,6 @@ class Precursors:
             if use_chromatograms:
 
                 for chrom_feature_idx in range(chromatogram_embeddings.shape[1]):
-
                     feature_name = f"chrom_feature_{chrom_feature_idx}"
                     feature_value = chromatogram_embeddings[peakgroup_idx][chrom_feature_idx]
 
@@ -564,9 +568,7 @@ class Precursors:
             csv_writer.writeheader()
 
             for peakgroup_record in peakgroup_records:
-
                 csv_writer.writerow(peakgroup_record)
-
 
     def flag_score_columns(self) -> List[str]:
 
@@ -583,7 +585,6 @@ class Precursors:
             scores = peakgroup.scores
 
             for score_name in score_names:
-
                 score_columns[score_name].append(scores[score_name])
 
         for score_column, score_values in score_columns.items():
@@ -591,21 +592,20 @@ class Precursors:
             score_array = np.array(score_values, dtype=np.float64)
 
             if np.all(score_array == 0) or np.all(np.isnan(score_array)):
-
                 flagged_columns.append(score_column)
 
         return flagged_columns
 
     def score_run(
-        self,
-        model_path: str,
-        scaler_path: str,
-        encoder_path: Optional[str] = None,
-        threads: int = 10,
-        gpus: int = 1,
-        chromatogram_only: bool = False,
-        use_deep_chrom_score: bool = False,
-        weight_scores: bool = False,
+            self,
+            model_path: str,
+            scaler_path: str,
+            encoder_path: Optional[str] = None,
+            threads: int = 10,
+            gpus: int = 1,
+            chromatogram_only: bool = False,
+            use_deep_chrom_score: bool = False,
+            weight_scores: bool = False,
     ) -> Precursors:
 
         scoring_model: Union[Scorer]
@@ -659,7 +659,6 @@ class Precursors:
             scoring_model.load(model_path)
 
         if scaler_path:
-
             pipeline = Scaler()
 
             pipeline.load(scaler_path)
@@ -669,7 +668,6 @@ class Precursors:
         model_scores = scoring_model.score(all_scores)
 
         if weight_scores:
-
             target_probabilities = preprocess.get_probability_vector(all_peakgroups)
 
             model_scores = np.exp(target_probabilities) * model_scores
@@ -685,7 +683,6 @@ class Precursors:
             model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
-
             peakgroup.d_score = model_scores[idx].item()
 
             peakgroup.probability = model_probabilities[idx].item()
@@ -721,13 +718,13 @@ class Precursors:
         return self.pit
 
     def calculate_q_values(
-        self,
-        sort_key: str,
-        decoy_free: bool = False,
-        count_decoys: bool = True,
-        num_threads: int = 10,
-        pit: float = 1.0,
-        debug: bool = False,
+            self,
+            sort_key: str,
+            decoy_free: bool = False,
+            count_decoys: bool = True,
+            num_threads: int = 10,
+            pit: float = 1.0,
+            debug: bool = False,
     ) -> np.ndarray:
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
@@ -751,11 +748,9 @@ class Precursors:
             for decoy in all_decoy_peakgroups:
 
                 if decoy.vote_percentage < 1.0:
-
                     decoy_peakgroups.append(decoy)
 
             for peakgroup in decoy_peakgroups:
-
                 peakgroup.target = 0
                 peakgroup.decoy = 1
 
@@ -795,7 +790,7 @@ class Precursors:
         return q_values
 
     def dump_training_data(
-        self, file_path: str, filter_field: str, filter_value: float
+            self, file_path: str, filter_field: str, filter_value: float
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -853,7 +848,6 @@ class Precursors:
                 peakgroups = precursor.peakgroups[:ranked]
 
                 for rank_idx, peakgroup in enumerate(peakgroups):
-
                     rank = rank_idx + 1
 
                     record = {

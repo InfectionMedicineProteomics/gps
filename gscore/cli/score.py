@@ -1,13 +1,154 @@
 import argparse
-from typing import Any
+from pathlib import Path
+from subprocess import Popen, PIPE, STDOUT
+from typing import Any, List, Dict, Union
+from csv import DictReader, DictWriter
+
+import numpy as np
 
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
 from gscore.parsers.sqmass import SqMassFile
+from gscore.precursors import Precursors
+
+MatchScoreType = Dict[str, Dict[str, Dict[str, Any]]]
+
+
+def score_with_percolator(args: argparse.Namespace) -> MatchScoreType:
+    pin_path = Path(args.output)
+
+    target_results = f"{pin_path.parent}/{pin_path.name}_results_psms.tsv"
+    decoy_results = f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv"
+
+    with Popen(
+            [
+                args.percolator_exe,
+                args.output,
+                "--results-psms", target_results,
+                "--decoy-results-psms", decoy_results,
+                "--protein-decoy-pattern", "DECOY_",
+                "--num-threads", str(args.threads),
+                "--only-psms"
+            ],
+            stdout=PIPE,
+            stderr=STDOUT,
+    ) as process:
+
+        for line in iter(process.stdout.readline, b''):
+            print(line.rstrip().decode('utf-8'))
+
+    target_records = []
+
+    with open(target_results) as target_results_h:
+
+        reader = DictReader(target_results_h, delimiter="\t")
+
+        for row in reader:
+            row["Decoy"] = 0
+
+            target_records.append(row)
+
+    decoy_records = []
+
+    with open(decoy_results) as decoy_results:
+
+        reader = DictReader(decoy_results, delimiter="\t")
+
+        for row in reader:
+            row["Decoy"] = 1
+
+            decoy_records.append(row)
+
+    records = target_records + decoy_records
+
+    grouped_records = dict()
+
+    for record in records:
+
+        sequence, charge, peakgroup_id = record['PSMId'].split("_")
+
+        precursor_id = f"{sequence}_{charge}"
+
+        if precursor_id not in grouped_records:
+
+            grouped_records[precursor_id] = dict()
+
+        grouped_records[precursor_id][peakgroup_id] = record
+
+    return grouped_records
+
+
+def update_precusors(precursors: Precursors, grouped_records: MatchScoreType) -> None:
+    for precursor in precursors.precursors.values():
+
+        precursor_id = f"{precursor.modified_sequence}_{precursor.charge}"
+
+        scored_peakgroups = grouped_records[precursor_id]
+
+        for peakgroup in precursor.peakgroups:
+
+            peakgroup_id = str(peakgroup.idx)
+
+            if peakgroup_id in scored_peakgroups:
+
+                scored_peakgroup = scored_peakgroups[peakgroup_id]
+
+                peakgroup.d_score = float(scored_peakgroup["score"])
+                peakgroup.q_value = float(scored_peakgroup["q-value"])
+                peakgroup.probability = float(scored_peakgroup["posterior_error_prob"])
+
+
+def export_initial_pin(
+        precursors: Precursors,
+        pin_output_file: str,
+):
+    flagged_score_columns = precursors.flag_score_columns()
+
+    print(flagged_score_columns)
+
+    peakgroup_records = list()
+    peptide_protein_ids = list()
+
+    for precursor in precursors:
+
+        precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+        peakgroups = precursor.peakgroups
+
+        for peakgroup in peakgroups:
+            peakgroup_record: Dict[str, Union[str, int, float]] = {
+                "id": f"{precursor.modified_sequence}_{precursor.charge}_{peakgroup.idx}",
+                "label": 1 if peakgroup.target else -1,
+                "scannr": peakgroup.idx,
+            }
+
+            peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
+
+            peptide_protein_ids.append(
+                {
+                    "peptide": precursor.modified_sequence,
+                    "proteinId1": precursor.protein_accession
+                }
+            )
+
+            peakgroup_records.append(peakgroup_record)
+
+    for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
+        peakgroup_record.update(peptide_protein_ids[peakgroup_idx])
+
+    field_names = list(peakgroup_records[0].keys())
+
+    with open(pin_output_file, "w") as out_file:
+
+        csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+
+        csv_writer.writeheader()
+
+        for peakgroup_record in peakgroup_records:
+            csv_writer.writerow(peakgroup_record)
 
 
 class Score:
-
     name: str
     parser: argparse.ArgumentParser
 
@@ -26,7 +167,6 @@ class Score:
         )
 
         if args.chromatogram_file:
-
             print("Parsing Chromatograms...")
 
             chromatogram_file = SqMassFile(args.chromatogram_file)
@@ -38,7 +178,6 @@ class Score:
             precursors.set_chromatograms(chromatograms)
 
         if args.decoy_free:
-
             print("Denoising.")
 
             precursors.denoise(
@@ -49,7 +188,6 @@ class Score:
             )
 
         if args.weight_scores:
-
             print("Denoising.")
 
             precursors.denoise(
@@ -92,16 +230,47 @@ class Score:
                     threads=args.threads,
                     gpus=args.gpus,
                     use_chromatograms=True,
-                    use_singular_score=args.use_singular_score
+                    use_singular_score=args.use_singular_score,
+                    export_initial_pin=True
                 )
+
+                print("Rescoring with percolator to find best candidates...")
+
+                scored_peakgroups = score_with_percolator(args)
+
+                update_precusors(precursors, scored_peakgroups)
+
+                precursors.export_pin(
+                    args.output,
+                    encoder_path=args.chromatogram_encoder,
+                    threads=args.threads,
+                    gpus=args.gpus,
+                    use_chromatograms=True,
+                    use_singular_score=args.use_singular_score,
+                )
+
+            elif args.use_only_chromatogram_features:
+
+                pass
 
             else:
 
                 precursors.export_pin(
                     args.output,
-                    use_chromatograms=False
+                    use_chromatograms=False,
+                    export_initial_pin=True
                 )
 
+                print("Rescoring with percolator to find best candidates...")
+
+                scored_peakgroups = score_with_percolator(args)
+
+                update_precusors(precursors, scored_peakgroups)
+
+                precursors.export_pin(
+                    args.output,
+                    use_chromatograms=False
+                )
 
         else:
 
@@ -168,6 +337,12 @@ class Score:
             dest="percolator_output",
             help="Export data in PIN format.",
             action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--percolator-exe",
+            dest="percolator_exe",
+            help="Percolator exe file path"
         )
 
         self.parser.add_argument(
