@@ -1,6 +1,12 @@
 import argparse
 from collections import Counter
-from typing import Any
+from typing import Any, List, Dict
+from csv import DictReader, DictWriter
+from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import itertools
+
+from pathlib import Path
 
 import numpy as np
 import typing
@@ -14,6 +20,22 @@ from gscore.scaler import Scaler
 from gscore.scorer import XGBoostScorer
 
 
+def read_percolator_files(pin_file: str) -> List[Dict[str, Any]]:
+    percolator_records = []
+
+    print(f"Processing {pin_file}")
+
+    with open(pin_file) as pin_file_h:
+        reader = DictReader(pin_file_h, delimiter="\t")
+
+        for row in reader:
+            row["id"] = f"{Path(pin_file).name}_{row['id']}"
+
+            percolator_records.append(row)
+
+    return percolator_records
+
+
 class Train:
 
     name: str
@@ -23,7 +45,7 @@ class Train:
 
         self.name = "train"
 
-    def __call__(self, args: argparse.Namespace) -> None:
+    def train_gps_model(self, args: argparse.Namespace) -> None:
 
         print("Building scoring model...")
 
@@ -34,7 +56,6 @@ class Train:
         print("Loading data...")
 
         for input_file in args.input_files:
-
             training_data_npz = preprocess.get_training_data_from_npz(input_file)
 
             labels = training_data_npz["labels"]
@@ -99,6 +120,42 @@ class Train:
                 model_output=args.model_output,
                 scaler_output=args.scaler_output,
             )
+
+    def train_percolator_model(self, args: argparse.Namespace) -> None:
+
+        with ProcessPoolExecutor(max_workers=args.threads) as pool:
+
+            percolator_records = pool.map(read_percolator_files, args.input_files)
+
+        percolator_records = list(itertools.chain.from_iterable(percolator_records))
+
+        print(len(percolator_records))
+
+        field_names = list(percolator_records[0].keys())
+
+        print(f"Writing {args.percolator_output}")
+
+        with open(args.percolator_output, "w") as perc_output_h:
+
+            writer = DictWriter(perc_output_h, fieldnames=field_names, delimiter="\t")
+
+            writer.writeheader()
+
+            for row in percolator_records:
+
+                writer.writerow(row)
+
+
+    def __call__(self, args: argparse.Namespace) -> None:
+
+        if args.train_percolator_model:
+
+            self.train_percolator_model(args)
+
+        else:
+
+            self.train_gps_model(args)
+
 
     def augment_score_columns(
         self,
@@ -219,6 +276,19 @@ class Train:
             "--scaler-output",
             dest="scaler_output",
             help="Output path for scoring scaler.",
+        )
+
+        self.parser.add_argument(
+            "--percolator-output",
+            dest="percolator_output",
+            help="Output path for percolator training data.",
+        )
+
+        self.parser.add_argument(
+            "--train-percolator-model",
+            dest="train_percolator_model",
+            help="flag to indicate Percolator should be used to train the model",
+            action="store_true"
         )
 
         self.parser.add_argument(
