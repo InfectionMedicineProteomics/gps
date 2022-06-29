@@ -391,6 +391,10 @@ class Score:
                     debug=args.debug,
                 )
 
+                num_below_threshold = q_values[q_values <= 0.01].shape[0]
+
+                print(num_below_threshold)
+
                 if args.output:
 
                     if args.decoy_free:
