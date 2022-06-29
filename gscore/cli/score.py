@@ -15,6 +15,7 @@ MatchScoreType = Dict[str, Dict[str, Dict[str, Any]]]
 
 
 def score_with_percolator(args: argparse.Namespace) -> MatchScoreType:
+
     pin_path = Path(args.output)
 
     target_results = f"{pin_path.parent}/{pin_path.name}_results_psms.tsv"
@@ -77,6 +78,71 @@ def score_with_percolator(args: argparse.Namespace) -> MatchScoreType:
 
     return grouped_records
 
+
+def apply_percolator_weights(args: argparse.Namespace) -> MatchScoreType:
+
+    pin_path = Path(args.pin)
+
+    target_results = f"{pin_path.parent}/{pin_path.name}_results_psms.tsv"
+    decoy_results = f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv"
+
+    with Popen(
+            [
+                args.percolator_exe,
+                args.pin,
+                "--results-psms", target_results,
+                "--decoy-results-psms", decoy_results,
+                "--protein-decoy-pattern", "DECOY_",
+                "--num-threads", str(args.threads),
+                "--only-psms",
+                "--init-weights", args.percolator_weights,
+                "--static"
+            ],
+            stdout=PIPE,
+            stderr=STDOUT,
+    ) as process:
+
+        for line in iter(process.stdout.readline, b''):
+            print(line.rstrip().decode('utf-8'))
+
+    target_records = []
+
+    with open(target_results) as target_results_h:
+
+        reader = DictReader(target_results_h, delimiter="\t")
+
+        for row in reader:
+            row["Decoy"] = 0
+
+            target_records.append(row)
+
+    decoy_records = []
+
+    with open(decoy_results) as decoy_results:
+
+        reader = DictReader(decoy_results, delimiter="\t")
+
+        for row in reader:
+            row["Decoy"] = 1
+
+            decoy_records.append(row)
+
+    records = target_records + decoy_records
+
+    grouped_records = dict()
+
+    for record in records:
+
+        sequence, charge, peakgroup_id = record['PSMId'].split("_")
+
+        precursor_id = f"{sequence}_{charge}"
+
+        if precursor_id not in grouped_records:
+            grouped_records[precursor_id] = dict()
+
+        grouped_records[precursor_id][peakgroup_id] = record
+
+    return grouped_records
 
 def update_precusors(precursors: Precursors, grouped_records: MatchScoreType) -> None:
     for precursor in precursors.precursors.values():
@@ -166,159 +232,180 @@ class Score:
             query=SelectPeakGroups.FETCH_FEATURES_REDUCED
         )
 
-        if args.chromatogram_file:
-            print("Parsing Chromatograms...")
+        if args.percolator_weights:
 
-            chromatogram_file = SqMassFile(args.chromatogram_file)
+            print("Exporting PIN.")
 
-            chromatograms = chromatogram_file.parse()
-
-            print("Matching chromatograms with precursors...")
-
-            precursors.set_chromatograms(chromatograms)
-
-        if args.decoy_free:
-            print("Denoising.")
-
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_percentage=args.vote_percentage,
-            )
-
-        if args.weight_scores:
-            print("Denoising.")
-
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_percentage=args.vote_percentage,
-            )
-
-        if args.estimate_pit:
-
-            print("Estimating PIT.")
-
-            precursors.denoise(
-                num_folds=args.num_folds,
-                num_classifiers=args.num_classifiers,
-                num_threads=args.threads,
-                vote_percentage=args.vote_percentage,
-            )
-
-            pit = precursors.estimate_pit()
-
-            print(f"PIT estimate to be: {pit}")
-
-        else:
-
-            pit = 1.0
-
-        print("Scoring. . .")
-
-        if args.percolator_output:
-
-            print("Writing percolator output...")
-
-            if args.chromatogram_encoder:
-
-                precursors.export_pin(
-                    args.output,
-                    encoder_path=args.chromatogram_encoder,
-                    threads=args.threads,
-                    gpus=args.gpus,
-                    use_chromatograms=True,
-                    use_singular_score=args.use_singular_score,
-                    export_initial_pin=True
-                )
-
-                print("Rescoring with percolator to find best candidates...")
-
-                scored_peakgroups = score_with_percolator(args)
-
-                update_precusors(precursors, scored_peakgroups)
-
-                precursors.export_pin(
-                    args.output,
-                    encoder_path=args.chromatogram_encoder,
-                    threads=args.threads,
-                    gpus=args.gpus,
-                    use_chromatograms=True,
-                    use_singular_score=args.use_singular_score,
-                )
-
-            elif args.use_only_chromatogram_features:
-
-                pass
-
-            else:
-
-                precursors.export_pin(
-                    args.output,
-                    use_chromatograms=False,
-                    export_initial_pin=True
-                )
-
-                print("Rescoring with percolator to find best candidates...")
-
-                scored_peakgroups = score_with_percolator(args)
-
-                update_precusors(precursors, scored_peakgroups)
-
-                precursors.export_pin(
-                    args.output,
-                    use_chromatograms=False
-                )
-
-        else:
-
-            precursors.score_run(
-                model_path=args.scoring_model,
-                scaler_path=args.scaler,
+            precursors.export_pin(
+                args.pin,
                 encoder_path=args.chromatogram_encoder,
                 threads=args.threads,
                 gpus=args.gpus,
-                chromatogram_only=args.use_only_chromatogram_features,
-                use_deep_chrom_score=args.use_deep_chrom_score,
-                weight_scores=args.weight_scores,
+                use_singular_score=args.use_singular_score,
+                export_initial_pin=False
             )
 
-            print("Calculating Q Values")
+            scored_peakgroups = apply_percolator_weights(args)
 
-            if args.count_decoys:
+            update_precusors(precursors, scored_peakgroups)
 
-                print("Counting decoys.")
+            precursors.write_tsv(file_path=args.output, ranked=1)
+
+        else:
+
+            if args.chromatogram_file:
+                print("Parsing Chromatograms...")
+
+                chromatogram_file = SqMassFile(args.chromatogram_file)
+
+                chromatograms = chromatogram_file.parse()
+
+                print("Matching chromatograms with precursors...")
+
+                precursors.set_chromatograms(chromatograms)
+
+            if args.decoy_free:
+                print("Denoising.")
+
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_percentage=args.vote_percentage,
+                )
+
+            if args.weight_scores:
+                print("Denoising.")
+
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_percentage=args.vote_percentage,
+                )
+
+            if args.estimate_pit:
+
+                print("Estimating PIT.")
+
+                precursors.denoise(
+                    num_folds=args.num_folds,
+                    num_classifiers=args.num_classifiers,
+                    num_threads=args.threads,
+                    vote_percentage=args.vote_percentage,
+                )
+
+                pit = precursors.estimate_pit()
+
+                print(f"PIT estimate to be: {pit}")
 
             else:
 
-                print("Estimating score distributions.")
+                pit = 1.0
 
-            q_values = precursors.calculate_q_values(
-                sort_key="d_score",
-                decoy_free=args.decoy_free,
-                count_decoys=args.count_decoys,
-                num_threads=args.threads,
-                pit=pit,
-                debug=args.debug,
-            )
+            print("Scoring. . .")
 
-            if args.output:
+            if args.percolator_output:
 
-                if args.decoy_free:
+                print("Writing percolator output...")
 
-                    precursors.write_tsv(file_path=args.output, ranked=2)
+                if args.chromatogram_encoder:
+
+                    precursors.export_pin(
+                        args.output,
+                        encoder_path=args.chromatogram_encoder,
+                        threads=args.threads,
+                        gpus=args.gpus,
+                        use_chromatograms=True,
+                        use_singular_score=args.use_singular_score,
+                        export_initial_pin=True
+                    )
+
+                    print("Rescoring with percolator to find best candidates...")
+
+                    scored_peakgroups = score_with_percolator(args)
+
+                    update_precusors(precursors, scored_peakgroups)
+
+                    precursors.export_pin(
+                        args.output,
+                        encoder_path=args.chromatogram_encoder,
+                        threads=args.threads,
+                        gpus=args.gpus,
+                        use_chromatograms=True,
+                        use_singular_score=args.use_singular_score,
+                    )
+
+                elif args.use_only_chromatogram_features:
+
+                    pass
 
                 else:
 
-                    precursors.write_tsv(file_path=args.output, ranked=1)
+                    precursors.export_pin(
+                        args.output,
+                        use_chromatograms=False,
+                        export_initial_pin=True
+                    )
+
+                    print("Rescoring with percolator to find best candidates...")
+
+                    scored_peakgroups = score_with_percolator(args)
+
+                    update_precusors(precursors, scored_peakgroups)
+
+                    precursors.export_pin(
+                        args.output,
+                        use_chromatograms=False
+                    )
 
             else:
 
-                print("Updating Q Values in file")
+                precursors.score_run(
+                    model_path=args.scoring_model,
+                    scaler_path=args.scaler,
+                    encoder_path=args.chromatogram_encoder,
+                    threads=args.threads,
+                    gpus=args.gpus,
+                    chromatogram_only=args.use_only_chromatogram_features,
+                    use_deep_chrom_score=args.use_deep_chrom_score,
+                    weight_scores=args.weight_scores,
+                )
 
-                osw_file.add_score_and_q_value_records(precursors)
+                print("Calculating Q Values")
+
+                if args.count_decoys:
+
+                    print("Counting decoys.")
+
+                else:
+
+                    print("Estimating score distributions.")
+
+                q_values = precursors.calculate_q_values(
+                    sort_key="d_score",
+                    decoy_free=args.decoy_free,
+                    count_decoys=args.count_decoys,
+                    num_threads=args.threads,
+                    pit=pit,
+                    debug=args.debug,
+                )
+
+                if args.output:
+
+                    if args.decoy_free:
+
+                        precursors.write_tsv(file_path=args.output, ranked=2)
+
+                    else:
+
+                        precursors.write_tsv(file_path=args.output, ranked=1)
+
+                else:
+
+                    print("Updating Q Values in file")
+
+                    osw_file.add_score_and_q_value_records(precursors)
 
         print("Done!")
 
@@ -337,6 +424,20 @@ class Score:
             dest="percolator_output",
             help="Export data in PIN format.",
             action="store_true",
+        )
+
+        self.parser.add_argument(
+            "--percolator-weights",
+            dest="percolator_weights",
+            help="Use percolator weights to score files with path to weights.",
+            default=""
+        )
+
+        self.parser.add_argument(
+            "--pin",
+            dest="pin",
+            help="PIN input file.",
+            default=""
         )
 
         self.parser.add_argument(

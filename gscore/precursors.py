@@ -473,7 +473,8 @@ class Precursors:
             rank: int = 1
     ):
 
-        if use_chromatograms:
+        if encoder_path:
+
             chromatogram_encoder = DeepChromScorer(
                 max_epochs=1, gpus=gpus, threads=threads
             )  # type: DeepChromScorer
@@ -512,7 +513,7 @@ class Precursors:
 
                     peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
 
-                if use_chromatograms:
+                if encoder_path:
 
                     if peakgroup.chromatograms:
 
@@ -535,7 +536,7 @@ class Precursors:
 
                 peakgroup_records.append(peakgroup_record)
 
-        if use_chromatograms:
+        if encoder_path:
 
             if use_singular_score:
 
@@ -547,7 +548,7 @@ class Precursors:
 
         for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
 
-            if use_chromatograms:
+            if encoder_path:
 
                 for chrom_feature_idx in range(chromatogram_embeddings.shape[1]):
                     feature_name = f"chrom_feature_{chrom_feature_idx}"
