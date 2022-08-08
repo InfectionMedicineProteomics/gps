@@ -20,6 +20,9 @@ build/*
 
 
 notebooks/lightning_logs/
+notebooks/
+notebooks/*
+
 lightning_logs/
 debug/
 debug/*

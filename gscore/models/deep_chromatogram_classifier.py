@@ -132,6 +132,36 @@ class DeepChromScorer(Scorer):
 
         return predictions_array
 
+    def predict(self, data: np.ndarray) -> np.ndarray:
+
+        if self.gpus > 0:
+
+            trainer = Trainer(gpus=self.gpus, auto_select_gpus=True)
+
+        else:
+
+            trainer = Trainer(gpus=self.gpus)
+
+        chromatograms = torch.from_numpy(data).type(torch.FloatTensor)
+
+        prediction_dataloader = DataLoader(
+            TensorDataset(chromatograms), num_workers=self.threads, batch_size=10000
+        )
+
+        predictions = trainer.predict(self.model, dataloaders=prediction_dataloader)
+
+        probabilities = torch.cat(predictions, 0)
+
+        probabilities = torch.sigmoid(probabilities)
+
+        classes = torch.where(
+            probabilities > 0.5,
+            1.0,
+            0.0
+        )
+
+        return classes.numpy()
+
     def encode(self, data: np.ndarray) -> np.ndarray:
 
         if self.gpus > 0:

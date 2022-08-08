@@ -261,12 +261,56 @@ class Precursors:
                     key=lambda x: x.true_target_score, reverse=True
                 )
 
+            elif filter_key == "CHROMATOGRAM_SCORE":
+
+                precursor.peakgroups.sort(
+                    key=lambda x: x.chromatogram_score, reverse=True
+                )
+
             if rank + 1 <= len(precursor.peakgroups):
 
                 peakgroup = precursor.peakgroups[rank]
 
                 if peakgroup.target == 1 and peakgroup.vote_percentage >= value:
                     filtered_peakgroups.append(peakgroup)
+
+        return filtered_peakgroups
+
+    def filter_peakgroups(
+            self, rank: int, filter_key: str = "PROBABILITY",
+    ) -> List[PeakGroup]:
+
+        filtered_peakgroups = []
+
+        rank = rank - 1
+
+        for precursor in self.precursors.values():
+
+            if filter_key == "PROBABILITY":
+
+                precursor.peakgroups.sort(key=lambda x: x.probability, reverse=True)
+
+            elif filter_key == "D_SCORE":
+
+                precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+            elif filter_key == "TRUE_TARGET_SCORE":
+
+                precursor.peakgroups.sort(
+                    key=lambda x: x.true_target_score, reverse=True
+                )
+
+            elif filter_key == "CHROMATOGRAM_SCORE":
+
+                precursor.peakgroups.sort(
+                    key=lambda x: x.chromatogram_score, reverse=True
+                )
+
+            if rank + 1 <= len(precursor.peakgroups):
+
+                peakgroup = precursor.peakgroups[rank]
+
+                filtered_peakgroups.append(peakgroup)
 
         return filtered_peakgroups
 
@@ -689,6 +733,40 @@ class Precursors:
             peakgroup.probability = model_probabilities[idx].item()
 
         return self
+
+    def predict_chromatograms(
+            self,
+            model_path: str = "",
+            threads: int = 10,
+            gpus: int = 1) -> Precursors:
+
+        all_peakgroups = self.get_all_peakgroups()
+
+        (
+            all_data_labels,
+            all_data_indices,
+            all_chromatograms,
+            all_scores,
+        ) = preprocess.reformat_chromatogram_data(
+            all_peakgroups,
+            training=False,
+        )
+
+        scoring_model = DeepChromScorer(max_epochs=1, gpus=gpus, threads=threads)
+
+        scoring_model.load(model_path)
+
+        model_scores = scoring_model.score(all_chromatograms)
+
+        model_predictions = 1.0 / (1.0 + np.exp(-model_scores))
+
+        for idx, peakgroup in enumerate(all_peakgroups):
+
+            peakgroup.chromatogram_prediction = model_predictions[idx].item()
+            peakgroup.chromatogram_score = model_scores[idx].item()
+
+        return self
+
 
     def estimate_pit(self) -> float:
 

@@ -43,3 +43,7 @@ class Scorer:
         probabilities = 1 / (1 + np.exp(-probabilities))
 
         return float(roc_auc_score(labels, probabilities))
+
+    def predict(self, data: np.ndarray) -> np.ndarray:
+
+        pass
