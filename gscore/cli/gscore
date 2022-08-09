@@ -9,6 +9,7 @@ from gscore.cli.export import Export
 from gscore.cli.build import Build
 from gscore.cli.combine import Combine
 from gscore.cli.predict import Predict
+from gscore.cli.createlib import CreateLib
 
 if __name__ == '__main__':
 
@@ -22,7 +23,8 @@ if __name__ == '__main__':
             Train(),
             Build(),
             Combine(),
-            Predict()
+            Predict(),
+            CreateLib()
         ]
     )
 
