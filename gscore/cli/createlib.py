@@ -167,6 +167,10 @@ def create_new_library(new_library_path, library_annotated_transitions, used_pre
     new_library.add_records("PRECURSOR_PEPTIDE_MAPPING", precursor_peptide_mapping)
     new_library.add_records("TRANSITION_PRECURSOR_MAPPING", transition_precursor_mapping)
 
+    print(len(precursor_records))
+    print(len(peptide_records))
+    print(len(protein_records))
+
 
 class CreateLib:
     name: str
