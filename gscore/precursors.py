@@ -939,55 +939,101 @@ class Precursors:
                 scores=all_scores,
             )
 
-    def write_tsv(self, file_path: str = "", ranked: int = 1) -> None:
+    def write_tsv(self, file_path: str = "", ranked: int = 1, write_predicted: bool = False) -> None:
 
-        field_names = [
-            "PrecursorMz",
-            "UnmodifiedSequence",
-            "ModifiedSequence",
-            "Charge",
-            "Protein",
-            "Decoy",
-            "RT",
-            "Intensity",
-            "QValue",
-            "DScore",
-            "Probability",
-            "Rank",
-            "VotePercentage",
-            "TargetProbability",
-        ]
+        if write_predicted:
 
-        with open(file_path, "w") as out_file:
+            field_names = [
+                "PrecursorMz",
+                "UnmodifiedSequence",
+                "ModifiedSequence",
+                "Charge",
+                "Protein",
+                "Decoy",
+                "RT",
+                "Intensity",
+                "PeakgroupPrediction",
+                "PeakgroupScore"
+            ]
 
-            csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+            with open(file_path, "w") as out_file:
 
-            csv_writer.writeheader()
+                csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
 
-            for precursor in self:
+                csv_writer.writeheader()
 
-                precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+                for precursor in self:
 
-                peakgroups = precursor.peakgroups[:ranked]
+                    precursor.peakgroups.sort(key=lambda x: x.peakgroup_score, reverse=True)
 
-                for rank_idx, peakgroup in enumerate(peakgroups):
-                    rank = rank_idx + 1
+                    peakgroups = precursor.peakgroups[:ranked]
 
-                    record = {
-                        "PrecursorMz": precursor.mz,
-                        "UnmodifiedSequence": precursor.unmodified_sequence,
-                        "ModifiedSequence": precursor.modified_sequence,
-                        "Charge": precursor.charge,
-                        "Protein": precursor.protein_accession,
-                        "Decoy": precursor.decoy,
-                        "RT": peakgroup.retention_time,
-                        "Intensity": peakgroup.intensity,
-                        "QValue": peakgroup.q_value,
-                        "DScore": peakgroup.d_score,
-                        "Probability": peakgroup.probability,
-                        "Rank": rank,
-                        "VotePercentage": peakgroup.vote_percentage,
-                        "TargetProbability": peakgroup.true_target_probability,
-                    }
+                    for peakgroup in peakgroups:
 
-                    csv_writer.writerow(record)
+                        record = {
+                            "PrecursorMz": precursor.mz,
+                            "UnmodifiedSequence": precursor.unmodified_sequence,
+                            "ModifiedSequence": precursor.modified_sequence,
+                            "Charge": precursor.charge,
+                            "Protein": precursor.protein_accession,
+                            "Decoy": precursor.decoy,
+                            "RT": peakgroup.retention_time,
+                            "Intensity": peakgroup.intensity,
+                            "PeakgroupPrediction": peakgroup.peakgroup_prediction,
+                            "PeakgroupScore": peakgroup.peakgroup_score
+                        }
+
+                        csv_writer.writerow(record)
+
+        else:
+
+            field_names = [
+                "PrecursorMz",
+                "UnmodifiedSequence",
+                "ModifiedSequence",
+                "Charge",
+                "Protein",
+                "Decoy",
+                "RT",
+                "Intensity",
+                "QValue",
+                "DScore",
+                "Probability",
+                "Rank",
+                "VotePercentage",
+                "TargetProbability",
+            ]
+
+            with open(file_path, "w") as out_file:
+
+                csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+
+                csv_writer.writeheader()
+
+                for precursor in self:
+
+                    precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+                    peakgroups = precursor.peakgroups[:ranked]
+
+                    for rank_idx, peakgroup in enumerate(peakgroups):
+                        rank = rank_idx + 1
+
+                        record = {
+                            "PrecursorMz": precursor.mz,
+                            "UnmodifiedSequence": precursor.unmodified_sequence,
+                            "ModifiedSequence": precursor.modified_sequence,
+                            "Charge": precursor.charge,
+                            "Protein": precursor.protein_accession,
+                            "Decoy": precursor.decoy,
+                            "RT": peakgroup.retention_time,
+                            "Intensity": peakgroup.intensity,
+                            "QValue": peakgroup.q_value,
+                            "DScore": peakgroup.d_score,
+                            "Probability": peakgroup.probability,
+                            "Rank": rank,
+                            "VotePercentage": peakgroup.vote_percentage,
+                            "TargetProbability": peakgroup.true_target_probability,
+                        }
+
+                        csv_writer.writerow(record)

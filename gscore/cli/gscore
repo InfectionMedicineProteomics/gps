@@ -8,6 +8,7 @@ from gscore.cli.train import Train
 from gscore.cli.export import Export
 from gscore.cli.build import Build
 from gscore.cli.combine import Combine
+from gscore.cli.predict import Predict
 
 if __name__ == '__main__':
 
@@ -20,7 +21,8 @@ if __name__ == '__main__':
             Score(),
             Train(),
             Build(),
-            Combine()
+            Combine(),
+            Predict()
         ]
     )
 
