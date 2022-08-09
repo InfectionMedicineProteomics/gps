@@ -29,6 +29,8 @@ class PeakGroup:
     scores: Dict[str, float]
     chromatogram_prediction: float
     chromatogram_score: float
+    peakgroup_prediction: float
+    peakgroup_score: float
 
     def __init__(
         self,
@@ -49,7 +51,9 @@ class PeakGroup:
         true_target_probability: float = 0.0,
         scores: Union[Dict[str, float], None] = None,
         chromatogram_prediction: float = 0,
-        chromatogram_score: float = 0.0
+        chromatogram_score: float = 0.0,
+        peakgroup_prediction: float = 0,
+        peakgroup_score: float = 0.0
     ):
 
         if scores is None:
@@ -90,6 +94,8 @@ class PeakGroup:
 
         self.chromatogram_prediction = chromatogram_prediction
         self.chromatogram_score = chromatogram_score
+        self.peakgroup_prediction = peakgroup_prediction
+        self.peakgroup_score = peakgroup_score
 
     def __repr__(self) -> str:
 

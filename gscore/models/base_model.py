@@ -46,4 +46,4 @@ class Scorer:
 
     def predict(self, data: np.ndarray) -> np.ndarray:
 
-        pass
+        return self.model.predict(data)

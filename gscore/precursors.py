@@ -306,6 +306,12 @@ class Precursors:
                     key=lambda x: x.chromatogram_score, reverse=True
                 )
 
+            elif filter_key == "PEAKGROUP_SCORE":
+
+                precursor.peakgroups.sort(
+                    key=lambda x: x.peakgroup_score, reverse=True
+                )
+
             if rank + 1 <= len(precursor.peakgroups):
 
                 peakgroup = precursor.peakgroups[rank]
@@ -764,6 +770,44 @@ class Precursors:
 
             peakgroup.chromatogram_prediction = model_predictions[idx].item()
             peakgroup.chromatogram_score = model_scores[idx].item()
+
+        return self
+
+    def predict_peakgroups(
+            self,
+            model_path: str = "",
+            scaler_path: str = "",
+            threads: int = 10,
+            gpus: int = 1) -> Precursors:
+
+        all_peakgroups = self.get_all_peakgroups()
+
+        (
+            all_scores,
+            all_data_labels,
+            all_data_indices
+        ) = preprocess.reformat_data(
+            all_peakgroups
+        )
+
+        scoring_model = Scorer()
+
+        scoring_model.load(model_path)
+
+        pipeline = Scaler()
+
+        pipeline.load(scaler_path)
+
+        all_scores = pipeline.transform(all_scores)
+
+        model_scores = scoring_model.score(all_scores)
+
+        model_predictions = scoring_model.predict(all_scores)
+
+        for idx, peakgroup in enumerate(all_peakgroups):
+
+            peakgroup.peakgroup_prediction = model_predictions[idx].item()
+            peakgroup.peakgroup_score = model_scores[idx].item()
 
         return self
 
