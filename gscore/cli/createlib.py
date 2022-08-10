@@ -37,140 +37,49 @@ def combine_predicted_peakgroups(predicted_peakgroup_files):
 
 
 def create_new_library(new_library_path, library_annotated_transitions, used_precursors):
-    protein_records = dict()
-    peptide_protein_mapping = dict()
-    peptide_records = dict()
-    precursor_peptide_mapping = dict()
-    precursor_records = dict()
-    transition_precursor_mapping = dict()
-    transition_records = dict()
+
+    library_transitions = []
 
     for transition in library_annotated_transitions:
 
-        precursor_id = f"{transition['MODIFIED_SEQUENCE']}_{transition['CHARGE']}"
+        precursor_id = f"{transition['MODIFIED_SEQUENCE']}_{transition['PRECURSOR_CHARGE']}"
 
         if precursor_id in used_precursors:
 
-            if transition["PROTEIN_ACCESSION"] not in protein_records:
-                protein_records[transition["PROTEIN_ACCESSION"]] = {
-                    "ID": transition["PROTEIN_ID"],
-                    "PROTEIN_ACCESSION": transition["PROTEIN_ACCESSION"],
-                    "DECOY": transition["DECOY"]
-                }
-
-            peptide_protein_id = f"{transition['PEPTIDE_ID']}_{transition['PROTEIN_ID']}"
-
-            if peptide_protein_id not in peptide_protein_mapping:
-                peptide_protein_mapping[peptide_protein_id] = {
-                    "PEPTIDE_ID": transition["PEPTIDE_ID"],
-                    "PROTEIN_ID": transition["PROTEIN_ID"]
-                }
-
-            if transition["MODIFIED_SEQUENCE"] not in peptide_records:
-                peptide_records[transition["MODIFIED_SEQUENCE"]] = {
-                    "ID": transition["PEPTIDE_ID"],
-                    "UNMODIFIED_SEQUENCE": transition["UNMODIFIED_SEQUENCE"],
-                    "MODIFIED_SEQUENCE": transition["MODIFIED_SEQUENCE"],
-                    "DECOY": transition["DECOY"]
-                }
-
-            precursor_peptide_id = f"{transition['PRECURSOR_ID']}_{transition['PEPTIDE_ID']}"
-
-            if precursor_peptide_id not in precursor_peptide_mapping:
-                precursor_peptide_mapping[precursor_peptide_id] = {
-                    "PRECURSOR_ID": transition["PRECURSOR_ID"],
-                    "PEPTIDE_ID": transition["PEPTIDE_ID"]
-                }
-
-            if precursor_id not in precursor_records:
-                precursor_records[precursor_id] = {
-                    "ID": transition["PRECURSOR_ID"],
-                    "TRAML_ID": transition["PRECURSOR_TRAML_ID"],
-                    "PRECURSOR_MZ": transition["PRECURSOR_MZ"],
-                    "CHARGE": transition["PRECURSOR_CHARGE"],
-                    "LIBRARY_RT": transition["LIBRARY_RT"],
-                    "DECOY": transition["DECOY"]
-                }
-
-            transition_precursor_id = f"{transition['TRANSITION_ID']}_{transition['PRECURSOR_ID']}"
-
-            if transition_precursor_id not in transition_precursor_mapping:
-                transition_precursor_mapping[transition_precursor_id] = {
-                    "TRANSITION_ID": transition["TRANSITION_ID"],
-                    "PRECURSOR_ID": transition["PRECURSOR_ID"]
-                }
-
-            if transition["TRANSITION_ID"] not in transition_records:
-                transition_records[transition["TRANSITION_ID"]] = {
-                    "ID": transition["TRANSITION_ID"],
-                    "TRAML_ID": transition["TRANSITION_TRAML_ID"],
-                    "PRODUCT_MZ": transition["PRODUCT_MZ"],
-                    "CHARGE": transition["TRANSITION_CHARGE"],
-                    "TYPE": transition["TYPE"],
-                    "ANNOTATION": transition["ANNOTATION"],
-                    "ORDINAL": transition["ORDINAL"],
-                    "DETECTING": transition["DETECTING"],
-                    "IDENTIFYING": transition["IDENTIFYING"],
-                    "QUANTIFYING": transition["QUANTIFYING"],
-                    "LIBRARY_INTENSITY": transition["LIBRARY_INTENSITY"],
-                    "DECOY": transition["DECOY"]
-                }
-
-    protein_records = protein_records.values()
-    peptide_protein_mapping = peptide_protein_mapping.values()
-    peptide_records = peptide_records.values()
-    precursor_peptide_mapping = precursor_peptide_mapping.values()
-    precursor_records = precursor_records.values()
-    transition_precursor_mapping = transition_precursor_mapping.values()
-    transition_records = transition_records.values()
-
-    new_library = PQPFile(new_library_path)
-    new_library.create_tables()
-
-    gene_records = [
-        {
-            "gene_name": "NA",
-            "decoy": 0
-        }
-    ]
-
-    version_record = [
-        {
-            "id": 3
-        }
-    ]
-
-    new_library.add_records("VERSION", version_record)
-    new_library.add_records("GENE", gene_records)
-
-    peptide_gene_map_ids = []
-
-    added_genes = new_library.get_genes()
-
-    gene_id = added_genes[0]["ID"]
-
-    for peptide_protein_mapping_record in peptide_protein_mapping:
-        peptide_gene_map_ids.append(
-            {
-                "peptide_id": peptide_protein_mapping_record["PEPTIDE_ID"],
-                "gene_id": gene_id
+            transition_record = {
+                "PrecursorMz": transition["PRECURSOR_MZ"],
+                "ProductMz": transition["PRODUCT_MZ"],
+                "LibraryIntensity": transition["LIBRARY_INTENSITY"],
+                "RetentionTime": transition["LIBRARY_RT"],
+                "ProteinId": transition["PROTEIN_ACCESSION"],
+                "PeptideSequence": transition["UNMODIFIED_SEQUENCE"],
+                "ModifiedPeptideSequence": transition["MODIFIED_SEQUENCE"],
+                "PrecursorCharge": transition["PRECURSOR_CHARGE"],
+                "ProductCharge": transition["PRODUCT_CHARGE"],
+                "FragmentType": transition["TYPE"],
+                "FragmentSeriesNumber": transition["ORDINAL"],
+                "Annotation": transition["ANNOTATION"]
             }
+
+            library_transitions.append(transition_record)
+
+    return library_transitions
+
+def write_csv_library(file_path, library_transitions):
+
+    with open(file_path, "w") as library_h:
+
+        writer = csv.DictWriter(
+            library_h,
+            fieldnames=list(library_transitions[0].keys()),
+            delimiter="\t"
         )
 
-    new_library.add_records("PEPTIDE_GENE_MAPPING", peptide_gene_map_ids)
+        writer.writeheader()
 
-    new_library.add_records("PROTEIN", protein_records)
-    new_library.add_records("PEPTIDE", peptide_records)
-    new_library.add_records("PRECURSOR", precursor_records)
-    new_library.add_records("TRANSITION", transition_records)
-    new_library.add_records("PEPTIDE_PROTEIN_MAPPING", peptide_protein_mapping)
-    new_library.add_records("PRECURSOR_PEPTIDE_MAPPING", precursor_peptide_mapping)
-    new_library.add_records("TRANSITION_PRECURSOR_MAPPING", transition_precursor_mapping)
+        for library_transition in library_transitions:
 
-    print(len(precursor_records))
-    print(len(peptide_records))
-    print(len(protein_records))
-
+            writer.writerow(library_transition)
 
 class CreateLib:
     name: str
@@ -194,10 +103,19 @@ class CreateLib:
             [f"{row['ModifiedSequence']}_{row['Charge']}" for row in predicted_peakgroups]
         )
 
-        create_new_library(
+        print("Subsetting library")
+
+        library_transitions = create_new_library(
             args.output,
             library_annotated_transitions,
             used_precursors
+        )
+
+        print("Writing new library")
+
+        write_csv_library(
+            args.output,
+            library_transitions
         )
 
     def build_subparser(self, subparser: Any) -> None:
