@@ -374,6 +374,7 @@ class Precursors:
             vote_percentage: float,
             verbose: bool = False,
             base_estimator: Any = None,
+            use_only_spectra_scores: bool = False
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -404,7 +405,9 @@ class Precursors:
                 peakgroup_scores,
                 peakgroup_labels,
                 peakgroup_indices,
-            ) = preprocess.reformat_data(peakgroups=training_data_targets)
+            ) = preprocess.reformat_data(
+                peakgroups=training_data_targets,
+                                      use_only_spectra_scores=use_only_spectra_scores)
 
             train_data, train_labels = shuffle(
                 peakgroup_scores, peakgroup_labels, random_state=42
@@ -450,7 +453,8 @@ class Precursors:
             )
 
             testing_scores, testing_labels, testing_keys = preprocess.reformat_data(
-                peakgroups=peakgroups_to_score
+                peakgroups=peakgroups_to_score,
+                use_only_spectra_scores=use_only_spectra_scores
             )
 
             testing_scores = scaler.transform(testing_scores)
@@ -483,7 +487,8 @@ class Precursors:
             )
 
             val_scores, val_labels, _ = preprocess.reformat_data(
-                peakgroups=validation_data
+                peakgroups=validation_data,
+                use_only_spectra_scores=use_only_spectra_scores
             )
 
             val_scores = scaler.transform(val_scores)
@@ -777,40 +782,58 @@ class Precursors:
             self,
             model_path: str = "",
             scaler_path: str = "",
+            method: str = "",
             threads: int = 10,
             gpus: int = 1) -> Precursors:
 
+
         all_peakgroups = self.get_all_peakgroups()
 
-        (
-            all_scores,
-            all_data_labels,
-            all_data_indices
-        ) = preprocess.reformat_data(
-            all_peakgroups
-        )
+        if method == "standard":
 
-        scoring_model = Scorer()
+            (
+                all_scores,
+                all_data_labels,
+                all_data_indices
+            ) = preprocess.reformat_data(
+                all_peakgroups
+            )
 
-        scoring_model.load(model_path)
+            scoring_model = Scorer()
 
-        pipeline = Scaler()
+            scoring_model.load(model_path)
 
-        pipeline.load(scaler_path)
+            pipeline = Scaler()
 
-        all_scores = pipeline.transform(all_scores)
+            pipeline.load(scaler_path)
 
-        model_scores = scoring_model.score(all_scores)
+            all_scores = pipeline.transform(all_scores)
 
-        model_predictions = scoring_model.predict(all_scores)
+            model_scores = scoring_model.score(all_scores)
 
-        for idx, peakgroup in enumerate(all_peakgroups):
+            model_predictions = scoring_model.predict(all_scores)
 
-            peakgroup.peakgroup_prediction = model_predictions[idx].item()
-            peakgroup.peakgroup_score = model_scores[idx].item()
+            for idx, peakgroup in enumerate(all_peakgroups):
+                peakgroup.peakgroup_prediction = model_predictions[idx].item()
+                peakgroup.peakgroup_score = model_scores[idx].item()
+
+        elif method == "denoise":
+
+            self.denoise(
+                num_folds=10,
+                num_classifiers=10,
+                num_threads=threads,
+                vote_percentage=0.8,
+                verbose=True,
+                use_only_spectra_scores=True
+            )
+
+            for idx, peakgroup in enumerate(all_peakgroups):
+
+                peakgroup.peakgroup_prediction = peakgroup.vote_percentage
+                peakgroup.peakgroup_score = peakgroup.true_target_score
 
         return self
-
 
     def estimate_pit(self) -> float:
 

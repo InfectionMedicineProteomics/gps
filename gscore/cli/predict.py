@@ -31,7 +31,9 @@ class Predict:
 
         precursors.predict_peakgroups(
             model_path=args.scoring_model,
-            scaler_path=args.scaler
+            scaler_path=args.scaler,
+            threads=args.threads,
+            method=args.method
         )
 
         labels = []
@@ -93,6 +95,13 @@ class Predict:
             type=int,
             help="Number of GPUs to use to train model.",
             default=1,
+        )
+
+        self.parser.add_argument(
+            "--method",
+            dest="method",
+            default="standard",
+            type=str
         )
 
         self.parser.add_argument(

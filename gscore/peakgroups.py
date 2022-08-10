@@ -145,9 +145,20 @@ class PeakGroup:
 
         return scores
 
-    def get_sub_score_column_array(self, include_probability: bool) -> np.ndarray:
+    def get_sub_score_column_array(self, include_probability: bool, use_only_spectra_scores: bool = True) -> np.ndarray:
 
-        score_values = [score for score in self.scores.values()]
+        if use_only_spectra_scores:
+
+            columns = {"var_library_dotprod", "var_library_sangle", "var_library_manhattan",
+                       "var_library_rootmeansquare", "var_library_rmsd", "var_yseries_score", "var_bseries_score",
+                       "var_massdev_score_weighted", "var_isotope_overlap_score", "var_library_corr",
+                       "var_isotope_correlation_score", "var_massdev_score"}
+
+            score_values = [score for column, score in self.scores.items() if column.lower() in columns]
+
+        else:
+
+            score_values = [score for score in self.scores.values()]
 
         if include_probability:
 

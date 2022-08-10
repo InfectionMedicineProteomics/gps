@@ -75,6 +75,7 @@ def reformat_true_target_scores(
 
 def reformat_data(
     peakgroups: List[PeakGroup],
+    use_only_spectra_scores: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     scores = list()
@@ -83,7 +84,8 @@ def reformat_data(
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = peakgroup.get_sub_score_column_array(include_probability=False)
+        score_array = peakgroup.get_sub_score_column_array(include_probability=False,
+                                                           use_only_spectra_scores=use_only_spectra_scores)
 
         scores.append(score_array)
 
