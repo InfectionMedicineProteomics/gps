@@ -823,7 +823,7 @@ class Precursors:
                 num_folds=10,
                 num_classifiers=10,
                 num_threads=threads,
-                vote_percentage=0.8,
+                vote_percentage=0.5,
                 verbose=True,
                 use_only_spectra_scores=True
             )

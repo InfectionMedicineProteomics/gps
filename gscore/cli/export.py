@@ -86,6 +86,12 @@ class Export:
         )
 
         self.parser.add_argument(
+            "--output-format",
+            dest="output_format",
+
+        )
+
+        self.parser.add_argument(
             "--filter-field",
             dest="filter_field",
             choices=["PROBABILITY", "VOTE_PERCENTAGE"],
