@@ -22,54 +22,66 @@ class Export:
 
         osw_file = OSWFile(args.input)
 
-        precursors = osw_file.parse_to_precursors(
-            query=queries.SelectPeakGroups.FETCH_TRAINING_RECORDS
-        )
+        if args.output_format == "standard":
 
-        use_chromatograms: bool = False
-
-        if args.chromatogram_file:
-
-            print("Parsing Chromatograms...")
-
-            chromatogram_file = SqMassFile(args.chromatogram_file)
-
-            chromatograms = chromatogram_file.parse()
-
-            print("Matching chromatograms with precursors...")
-
-            precursors.set_chromatograms(chromatograms)
-
-            use_chromatograms = True
-
-        print("Denoising...")
-
-        precursors.denoise(
-            num_folds=args.num_folds,
-            num_classifiers=args.num_classifiers,
-            num_threads=args.threads,
-            vote_percentage=args.vote_percentage,
-        )
-
-        print("Writing scores to OSW file...")
-
-        osw_file.add_score_records(precursors)
-
-        print(f"Filtering and writing output.")
-
-        if args.no_filter:
-
-            precursors.dump_training_data(
-                args.output, filter_field="PROBABILITY", filter_value=0.0
+            precursors = osw_file.parse_to_precursors(
+                query=queries.SelectPeakGroups.FETCH_TRAINING_RECORDS
             )
 
-        else:
+            if args.chromatogram_file:
 
-            precursors.dump_training_data(
-                args.output,
-                filter_field=args.filter_field,
-                filter_value=args.filter_value,
+                print("Parsing Chromatograms...")
+
+                chromatogram_file = SqMassFile(args.chromatogram_file)
+
+                chromatograms = chromatogram_file.parse()
+
+                print("Matching chromatograms with precursors...")
+
+                precursors.set_chromatograms(chromatograms)
+
+            print("Denoising...")
+
+            precursors.denoise(
+                num_folds=args.num_folds,
+                num_classifiers=args.num_classifiers,
+                num_threads=args.threads,
+                vote_percentage=args.vote_percentage,
             )
+
+            print("Writing scores to OSW file...")
+
+            osw_file.add_score_records(precursors)
+
+            print(f"Filtering and writing output.")
+
+            if args.no_filter:
+
+                precursors.dump_training_data(
+                    args.output, filter_field="PROBABILITY", filter_value=0.0
+                )
+
+            else:
+
+                precursors.dump_training_data(
+                    args.output,
+                    filter_field=args.filter_field,
+                    filter_value=args.filter_value,
+                )
+
+        elif args.output_format == "pyprophet":
+
+            precursors = osw_file.parse_to_precursors(
+                query=queries.SelectPeakGroups.FETCH_SCORED_PYPROPHET_RECORDS,
+                pyprophet_scored=True
+            )
+
+            precursors.write_tsv(
+                file_path=args.output,
+                ranked=1
+            )
+
+
 
     def build_subparser(self, subparser: Any) -> None:
 
@@ -88,7 +100,8 @@ class Export:
         self.parser.add_argument(
             "--output-format",
             dest="output_format",
-
+            type=str,
+            default="standard"
         )
 
         self.parser.add_argument(

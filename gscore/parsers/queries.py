@@ -75,6 +75,55 @@ class CreateIndex:
 
 class SelectPeakGroups:
 
+    FETCH_SCORED_PYPROPHET_RECORDS = """
+                SELECT
+                    *
+                FROM FEATURE_MS2
+                INNER JOIN(
+                    SELECT
+                        ID FEATURE_ID,
+                        PRECURSOR_ID PRECURSOR_ID,
+                        EXP_RT RT_APEX,
+                        LEFT_WIDTH RT_START,
+                        RIGHT_WIDTH RT_END
+                    from FEATURE
+                ) FEATURE ON FEATURE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+                INNER JOIN (
+                    SELECT
+                        ID,
+                        CHARGE,
+                        PRECURSOR_MZ MZ,
+                        DECOY
+                    FROM PRECURSOR
+                ) PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID
+                INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID = PRECURSOR.ID
+                INNER JOIN (
+                    SELECT
+                        ID,
+                        MODIFIED_SEQUENCE,
+                        UNMODIFIED_SEQUENCE
+                    FROM PEPTIDE
+                ) PEPTIDE ON PEPTIDE.ID = PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID
+                INNER JOIN PEPTIDE_PROTEIN_MAPPING ON PEPTIDE_PROTEIN_MAPPING.PEPTIDE_ID = PEPTIDE.ID
+                INNER JOIN (
+                    SELECT
+                        ID,
+                        PROTEIN_ACCESSION
+                    FROM PROTEIN
+                ) PROTEIN ON PROTEIN.ID = PEPTIDE_PROTEIN_MAPPING.PROTEIN_ID
+                LEFT JOIN (
+                    SELECT
+                        FEATURE_ID,
+                        SCORE,
+                        PEP,
+                        PVALUE,
+                        QVALUE
+                    FROM SCORE_MS2
+                ) SCORE_MS2 ON SCORE_MS2.FEATURE_ID = FEATURE.FEATURE_ID
+                ORDER BY PRECURSOR.ID ASC,
+                         FEATURE.RT_APEX ASC
+                """
+
     FETCH_TRAINING_RECORDS = """
                 SELECT
                     *
