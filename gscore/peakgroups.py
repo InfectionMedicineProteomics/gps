@@ -9,6 +9,7 @@ from gscore.chromatograms import Chromatogram
 
 
 class PeakGroup:
+
     ghost_score_id: str
     idx: str
     mz: float
@@ -31,6 +32,7 @@ class PeakGroup:
     chromatogram_score: float
     peakgroup_prediction: float
     peakgroup_score: float
+    top_scoring: Union[bool, None]
 
     def __init__(
         self,
@@ -96,6 +98,8 @@ class PeakGroup:
         self.chromatogram_score = chromatogram_score
         self.peakgroup_prediction = peakgroup_prediction
         self.peakgroup_score = peakgroup_score
+
+        self.top_scoring = None
 
     def __repr__(self) -> str:
 

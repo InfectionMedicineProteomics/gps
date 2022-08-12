@@ -962,7 +962,7 @@ class Precursors:
                 scores=all_scores,
             )
 
-    def write_tsv(self, file_path: str = "", ranked: int = 1, write_predicted: bool = False) -> None:
+    def write_tsv(self, file_path: str = "", ranked: int = 1, write_predicted: bool = False, write_percolator: bool = False) -> None:
 
         if write_predicted:
 
@@ -1035,9 +1035,21 @@ class Precursors:
 
                 for precursor in self:
 
-                    precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+                    peakgroups = []
 
-                    peakgroups = precursor.peakgroups[:ranked]
+                    if write_percolator:
+
+                        for peakgroup in precursor.peakgroups:
+
+                            if peakgroup.top_scoring:
+
+                                peakgroups.append(peakgroup)
+
+                    else:
+
+                        precursor.peakgroups.sort(key=lambda x: x.d_score, reverse=True)
+
+                        peakgroups = precursor.peakgroups[:ranked]
 
                     for rank_idx, peakgroup in enumerate(peakgroups):
                         rank = rank_idx + 1

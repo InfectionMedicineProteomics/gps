@@ -162,6 +162,7 @@ def update_precusors(precursors: Precursors, grouped_records: MatchScoreType) ->
                 peakgroup.d_score = float(scored_peakgroup["score"])
                 peakgroup.q_value = float(scored_peakgroup["q-value"])
                 peakgroup.probability = float(scored_peakgroup["posterior_error_prob"])
+                peakgroup.top_scoring = True
 
 
 def export_initial_pin(
@@ -249,7 +250,7 @@ class Score:
 
             update_precusors(precursors, scored_peakgroups)
 
-            precursors.write_tsv(file_path=args.output, ranked=1)
+            precursors.write_tsv(file_path=args.output, ranked=1, write_percolator=True)
 
         else:
 
