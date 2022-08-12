@@ -149,7 +149,7 @@ class PeakGroup:
 
         return scores
 
-    def get_sub_score_column_array(self, include_probability: bool, use_only_spectra_scores: bool = True) -> np.ndarray:
+    def get_sub_score_column_array(self, include_probability: bool, use_only_spectra_scores: bool = False) -> np.ndarray:
 
         if use_only_spectra_scores:
 
