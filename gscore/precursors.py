@@ -656,12 +656,9 @@ class Precursors:
             self,
             model_path: str,
             scaler_path: str,
-            encoder_path: Optional[str] = None,
             threads: int = 10,
-            gpus: int = 1,
-            chromatogram_only: bool = False,
-            use_deep_chrom_score: bool = False,
             weight_scores: bool = False,
+            use_only_spectra_scores: bool = False
     ) -> Precursors:
 
         scoring_model: Union[Scorer]
@@ -669,76 +666,36 @@ class Precursors:
         all_peakgroups = self.get_all_peakgroups()
 
         (
+            all_scores,
             all_data_labels,
             all_data_indices,
-            all_chromatograms,
-            all_scores,
-        ) = preprocess.reformat_chromatogram_data(
+        ) = preprocess.reformat_data(
             all_peakgroups,
-            training=False,
+            use_only_spectra_scores=use_only_spectra_scores
         )
 
-        if encoder_path:
+        scoring_model = Scorer()
 
-            chromatogram_encoder = DeepChromScorer(
-                max_epochs=1, gpus=gpus, threads=threads
-            )  # type: DeepChromScorer
+        scoring_model.load(model_path)
 
-            chromatogram_encoder.load(encoder_path)
+        pipeline = Scaler()
 
-            chromatogram_embeddings = chromatogram_encoder.encode(all_chromatograms)
+        pipeline.load(scaler_path)
 
-            if chromatogram_only:
-
-                print("Only using chromatograms.")
-
-                all_scores = chromatogram_embeddings
-
-            else:
-
-                all_scores = np.concatenate(
-                    (all_scores, chromatogram_embeddings), axis=1
-                )
-
-        if use_deep_chrom_score:
-
-            all_scores = all_chromatograms
-
-            scoring_model = DeepChromScorer(max_epochs=1, gpus=gpus, threads=threads)
-
-            scoring_model.load(model_path)
-
-        else:
-
-            scoring_model = Scorer()
-
-            scoring_model.load(model_path)
-
-        if scaler_path:
-            pipeline = Scaler()
-
-            pipeline.load(scaler_path)
-
-            all_scores = pipeline.transform(all_scores)
+        all_scores = pipeline.transform(all_scores)
 
         model_scores = scoring_model.score(all_scores)
 
         if weight_scores:
+
             target_probabilities = preprocess.get_probability_vector(all_peakgroups)
 
             model_scores = np.exp(target_probabilities) * model_scores
 
-        if use_deep_chrom_score:
-
-            model_probabilities = torch.sigmoid(
-                torch.from_numpy(model_scores).type(torch.FloatTensor)
-            ).numpy()
-
-        else:
-
-            model_probabilities = scoring_model.probability(all_scores)
+        model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
+
             peakgroup.d_score = model_scores[idx].item()
 
             peakgroup.probability = model_probabilities[idx].item()

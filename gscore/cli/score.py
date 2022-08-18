@@ -254,17 +254,6 @@ class Score:
 
         else:
 
-            if args.chromatogram_file:
-                print("Parsing Chromatograms...")
-
-                chromatogram_file = SqMassFile(args.chromatogram_file)
-
-                chromatograms = chromatogram_file.parse()
-
-                print("Matching chromatograms with precursors...")
-
-                precursors.set_chromatograms(chromatograms)
-
             if args.decoy_free:
                 print("Denoising.")
 
@@ -310,66 +299,29 @@ class Score:
 
                 print("Writing percolator output...")
 
-                if args.chromatogram_encoder:
+                precursors.export_pin(
+                    args.output,
+                    use_chromatograms=False,
+                    export_initial_pin=True
+                )
 
-                    precursors.export_pin(
-                        args.output,
-                        encoder_path=args.chromatogram_encoder,
-                        threads=args.threads,
-                        gpus=args.gpus,
-                        use_chromatograms=True,
-                        use_singular_score=args.use_singular_score,
-                        export_initial_pin=True
-                    )
+                print("Rescoring with percolator to find best candidates...")
 
-                    print("Rescoring with percolator to find best candidates...")
+                scored_peakgroups = score_with_percolator(args)
 
-                    scored_peakgroups = score_with_percolator(args)
+                update_precusors(precursors, scored_peakgroups)
 
-                    update_precusors(precursors, scored_peakgroups)
-
-                    precursors.export_pin(
-                        args.output,
-                        encoder_path=args.chromatogram_encoder,
-                        threads=args.threads,
-                        gpus=args.gpus,
-                        use_chromatograms=True,
-                        use_singular_score=args.use_singular_score,
-                    )
-
-                elif args.use_only_chromatogram_features:
-
-                    pass
-
-                else:
-
-                    precursors.export_pin(
-                        args.output,
-                        use_chromatograms=False,
-                        export_initial_pin=True
-                    )
-
-                    print("Rescoring with percolator to find best candidates...")
-
-                    scored_peakgroups = score_with_percolator(args)
-
-                    update_precusors(precursors, scored_peakgroups)
-
-                    precursors.export_pin(
-                        args.output,
-                        use_chromatograms=False
-                    )
+                precursors.export_pin(
+                    args.output,
+                    use_chromatograms=False
+                )
 
             else:
 
                 precursors.score_run(
                     model_path=args.scoring_model,
                     scaler_path=args.scaler,
-                    encoder_path=args.chromatogram_encoder,
                     threads=args.threads,
-                    gpus=args.gpus,
-                    chromatogram_only=args.use_only_chromatogram_features,
-                    use_deep_chrom_score=args.use_deep_chrom_score,
                     weight_scores=args.weight_scores,
                 )
 
@@ -452,22 +404,6 @@ class Score:
         )
 
         self.parser.add_argument(
-            "--use-singular-score",
-            dest="use_singular_score",
-            help="Use last chromatogram score.",
-            action="store_true",
-        )
-
-        self.parser.add_argument(
-            "-c",
-            "--chromatogram-file",
-            dest="chromatogram_file",
-            help="File containing chromatograms associated with the peakgroups.",
-            type=str,
-            default="",
-        )
-
-        self.parser.add_argument(
             "--scoring-model",
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
@@ -478,14 +414,6 @@ class Score:
             "--scaler",
             dest="scaler",
             help="Path to scaler to transform data.",
-            type=str,
-            default="",
-        )
-
-        self.parser.add_argument(
-            "--chromatogram-encoder",
-            dest="chromatogram_encoder",
-            help="Path to trained encoder model.",
             type=str,
             default="",
         )
@@ -520,20 +448,6 @@ class Score:
             help="Use an ensemble denoising process to estimate the percentage of incorrect targets",
             action="store_true",
             default=False,
-        )
-
-        self.parser.add_argument(
-            "--use-deep-chrom-score",
-            dest="use_deep_chrom_score",
-            help="Use deep chromatogram score to calculate peakgroup quality.",
-            action="store_true",
-        )
-
-        self.parser.add_argument(
-            "--use-only-chromatogram-features",
-            dest="use_only_chromatogram_features",
-            action="store_true",
-            help="Use only features from the deepchrom model",
         )
 
         self.parser.add_argument(
