@@ -148,13 +148,21 @@ def train_model(
         combined_labels: np.ndarray,
         model_output: str,
         scaler_output: str,
+        no_split: bool = False,
 ) -> None:
 
     scaler = Scaler()
 
-    training_data, testing_data, training_labels, testing_labels = train_test_split(
-        combined_data, combined_labels, test_size=0.2, shuffle=True
-    )
+    if no_split:
+
+        training_data = combined_data
+        training_labels = combined_labels
+
+    else:
+
+        training_data, testing_data, training_labels, testing_labels = train_test_split(
+            combined_data, combined_labels, test_size=0.2, shuffle=True
+        )
 
     counter: typing.Counter[int] = Counter(training_labels.ravel())
     scale_pos_weight = counter[0] / counter[1]
@@ -167,13 +175,15 @@ def train_model(
 
     scorer.fit(training_data, training_labels.ravel())
 
-    testing_data = scaler.transform(testing_data)
+    if not no_split:
 
-    print("Evaluating model...")
+        testing_data = scaler.transform(testing_data)
 
-    roc = scorer.evaluate(testing_data, testing_labels)
+        print("Evaluating model...")
 
-    print(f"Model ROC-AUC: {roc}")
+        roc = scorer.evaluate(testing_data, testing_labels)
+
+        print(f"Model ROC-AUC: {roc}")
 
     scorer.save(model_output)
     scaler.save(scaler_output)
@@ -214,6 +224,7 @@ def train_gps_model(args: argparse.Namespace) -> None:
         combined_labels=combined_labels,
         model_output=args.model_output,
         scaler_output=args.scaler_output,
+        no_split=args.nosplit
     )
 
 
@@ -284,6 +295,13 @@ class Train:
             type=int,
             help="Number of threads/workers to use to train model.",
             default=1,
+        )
+
+        self.parser.add_argument(
+            "--nosplit",
+            dest="nosplit",
+            help="Do not split out test set and evaluate the model",
+            action="store_true"
         )
 
         self.parser.set_defaults(run=self)
