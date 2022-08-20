@@ -28,18 +28,6 @@ class Export:
                 query=queries.SelectPeakGroups.FETCH_TRAINING_RECORDS
             )
 
-            if args.chromatogram_file:
-
-                print("Parsing Chromatograms...")
-
-                chromatogram_file = SqMassFile(args.chromatogram_file)
-
-                chromatograms = chromatogram_file.parse()
-
-                print("Matching chromatograms with precursors...")
-
-                precursors.set_chromatograms(chromatograms)
-
             print("Denoising...")
 
             precursors.denoise(
@@ -48,10 +36,6 @@ class Export:
                 num_threads=args.threads,
                 vote_percentage=args.vote_percentage,
             )
-
-            print("Writing scores to OSW file...")
-
-            osw_file.add_score_records(precursors)
 
             print(f"Filtering and writing output.")
 
@@ -68,6 +52,17 @@ class Export:
                     filter_field=args.filter_field,
                     filter_value=args.filter_value,
                 )
+
+        elif args.output_format == "nofilter":
+
+            precursors = osw_file.parse_to_precursors(
+                query=queries.SelectPeakGroups.FETCH_TRAINING_RECORDS
+            )
+
+            precursors.dump_training_data(
+                args.output, filter_field="PROBABILITY", filter_value=0.0
+            )
+
 
         elif args.output_format == "pyprophet":
 
@@ -121,14 +116,6 @@ class Export:
         )
 
         self.parser.add_argument("-o", "--output", dest="output", help="Output file ")
-
-        self.parser.add_argument(
-            "-c",
-            "--chromatogram-file",
-            dest="chromatogram_file",
-            help="File containing chromatograms associated with the peakgroups.",
-            default="",
-        )
 
         self.parser.add_argument(
             "--num-classifiers",

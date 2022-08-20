@@ -905,17 +905,15 @@ class Precursors:
         combined = positive_labels + negative_labels
 
         (
-            all_data_labels,
-            all_data_indices,
-            all_chromatograms,
             all_scores,
-        ) = preprocess.reformat_chromatogram_data(combined)
+            all_data_labels,
+            all_data_indices
+        ) = preprocess.reformat_data(combined)
 
         with open(file_path, "wb") as npfh:
             np.savez(
                 npfh,
                 labels=all_data_labels,
-                chromatograms=all_chromatograms,
                 scores=all_scores,
             )
 

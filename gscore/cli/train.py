@@ -184,7 +184,6 @@ def train_gps_model(args: argparse.Namespace) -> None:
     print("Building scoring model...")
 
     combined_labels_list = []
-    combined_chromatograms_list = []
     combined_scores_list = []
 
     print("Loading data...")
@@ -193,14 +192,11 @@ def train_gps_model(args: argparse.Namespace) -> None:
         training_data_npz = preprocess.get_training_data_from_npz(input_file)
 
         labels = training_data_npz["labels"]
-        chromatograms = training_data_npz["chromatograms"]
         scores = training_data_npz["scores"]
 
-        combined_chromatograms_list.append(chromatograms)
         combined_labels_list.append(labels)
         combined_scores_list.append(scores)
 
-    combined_chromatograms = np.concatenate(combined_chromatograms_list)
     combined_labels = np.concatenate(combined_labels_list)
     combined_scores = np.concatenate(combined_scores_list)
 
@@ -211,49 +207,14 @@ def train_gps_model(args: argparse.Namespace) -> None:
         f"Target Peakgroups: {target_label_count}, Decoy Peakgroups: {decoy_label_count}"
     )
 
-    if args.train_deep_chromatogram_model:
+    print("Training scoring model.")
 
-        print("Fitting chromatogram encoder.")
-
-        train_deep_model(
-            combined_chromatograms,
-            combined_labels,
-            args.model_output,
-            args.threads,
-            args.gpus,
-            args.epochs,
-        )
-
-    else:
-
-        if args.chromatogram_encoder_input:
-
-            print("Using pretrained encoder model.")
-
-            chromatogram_encoder = DeepChromScorer(
-                max_epochs=1, gpus=args.gpus, threads=args.threads
-            )  # type: DeepChromScorer
-
-            chromatogram_encoder.load(args.chromatogram_encoder_input)
-
-            if args.use_only_chromatogram_features:
-                print("Using only chromatogram features.")
-
-            combined_scores = augment_score_columns(
-                combined_chromatograms,
-                combined_scores,
-                chromatogram_encoder,
-                args.use_only_chromatogram_features,
-            )
-
-        print("Training scoring model.")
-
-        train_model(
-            combined_data=combined_scores,
-            combined_labels=combined_labels,
-            model_output=args.model_output,
-            scaler_output=args.scaler_output,
-        )
+    train_model(
+        combined_data=combined_scores,
+        combined_labels=combined_labels,
+        model_output=args.model_output,
+        scaler_output=args.scaler_output,
+    )
 
 
 class Train:
@@ -293,13 +254,6 @@ class Train:
         )
 
         self.parser.add_argument(
-            "--chromatogram-encoder-input",
-            dest="chromatogram_encoder_input",
-            help="Input path for chromatogram encoder model.",
-            default="",
-        )
-
-        self.parser.add_argument(
             "--scaler-output",
             dest="scaler_output",
             help="Output path for scoring scaler.",
@@ -325,40 +279,10 @@ class Train:
         )
 
         self.parser.add_argument(
-            "--train-deep-chromatogram-model",
-            dest="train_deep_chromatogram_model",
-            action="store_true",
-            help="Flag to indicate that a deep learning model should be trained on raw chromatograms.",
-        )
-
-        self.parser.add_argument(
-            "--use-only-chromatogram-features",
-            dest="use_only_chromatogram_features",
-            action="store_true",
-            help="Use only features from the deepchrom model",
-        )
-
-        self.parser.add_argument(
             "--threads",
             dest="threads",
             type=int,
             help="Number of threads/workers to use to train model.",
-            default=1,
-        )
-
-        self.parser.add_argument(
-            "--gpus",
-            dest="gpus",
-            type=int,
-            help="Number of GPUs to use to train model.",
-            default=1,
-        )
-
-        self.parser.add_argument(
-            "--epochs",
-            dest="epochs",
-            type=int,
-            help="Number of Epochs to use to train deep chrom model.",
             default=1,
         )
 
