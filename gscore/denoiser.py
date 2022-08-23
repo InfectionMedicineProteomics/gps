@@ -25,7 +25,7 @@ class BaggedDenoiser(BaggingClassifier):  # type: ignore
             base_estimator = SGDClassifier(
                 alpha=1e-05,
                 average=True,
-                loss="log",
+                loss="log_loss",
                 max_iter=500,
                 penalty="l2",
                 shuffle=True,
