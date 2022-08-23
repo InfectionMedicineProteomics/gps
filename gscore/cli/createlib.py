@@ -120,23 +120,25 @@ def select_rt_precursors(rt_bins, scored_precursors, num_peptides_per_bin):
 
         rt_bin_peptides = [scored_precursors[i] for i in rt_bin_indices.ravel()]
 
-        if "DScore" in rt_bin_peptides[0]:
+        if rt_bin_peptides:
 
-            rt_bin_peptides.sort(
-                key=operator.itemgetter("DScore"),
-                reverse=True
-            )
+            if "DScore" in rt_bin_peptides[0]:
 
-        elif "PeakgroupScore" in rt_bin_peptides[0]:
+                rt_bin_peptides.sort(
+                    key=operator.itemgetter("DScore"),
+                    reverse=True
+                )
 
-            rt_bin_peptides.sort(
-                key=operator.itemgetter("PeakgroupScore"),
-                reverse=True
-            )
+            elif "PeakgroupScore" in rt_bin_peptides[0]:
 
-        selected_precursors_for_bin = rt_bin_peptides[:num_peptides_per_bin]
+                rt_bin_peptides.sort(
+                    key=operator.itemgetter("PeakgroupScore"),
+                    reverse=True
+                )
 
-        selected_rt_peptides.extend(selected_precursors_for_bin)
+            selected_precursors_for_bin = rt_bin_peptides[:num_peptides_per_bin]
+
+            selected_rt_peptides.extend(selected_precursors_for_bin)
 
     return selected_rt_peptides
 
