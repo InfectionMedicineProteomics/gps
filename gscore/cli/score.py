@@ -303,7 +303,6 @@ class Score:
 
                 precursors.export_pin(
                     args.output,
-                    use_chromatograms=False,
                     export_initial_pin=True
                 )
 
