@@ -287,7 +287,16 @@ class Score:
 
                 pit = precursors.estimate_pit()
 
-                print(f"PIT estimate to be: {pit}")
+                if pit > 1.0:
+
+                    print(f"PIT estimate to be: {pit}, but set to 1.0")
+
+                    pit = 1.0
+
+                else:
+
+                    print(f"PIT estimate to be: {pit}")
+
 
             else:
 
