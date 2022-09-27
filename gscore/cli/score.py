@@ -236,7 +236,6 @@ class Score:
 
             precursors.export_pin(
                 args.pin,
-                use_singular_score=args.use_singular_score,
                 export_initial_pin=False
             )
 
