@@ -313,8 +313,7 @@ class Score:
                 update_precusors(precursors, scored_peakgroups)
 
                 precursors.export_pin(
-                    args.output,
-                    use_chromatograms=False
+                    args.output
                 )
 
             else:
