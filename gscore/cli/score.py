@@ -236,9 +236,6 @@ class Score:
 
             precursors.export_pin(
                 args.pin,
-                encoder_path=args.chromatogram_encoder,
-                threads=args.threads,
-                gpus=args.gpus,
                 use_singular_score=args.use_singular_score,
                 export_initial_pin=False
             )
