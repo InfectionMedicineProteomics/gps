@@ -516,23 +516,10 @@ class Precursors:
     def export_pin(
             self,
             pin_output_file: str,
-            encoder_path: Optional[str] = None,
-            threads: int = 10,
-            gpus: int = 1,
-            use_chromatograms: bool = True,
-            use_singular_score: bool = False,
             export_initial_pin: bool = False,
             use_sub_scores: bool = True,
             rank: int = 1
     ):
-
-        if encoder_path:
-
-            chromatogram_encoder = DeepChromScorer(
-                max_epochs=1, gpus=gpus, threads=threads
-            )  # type: DeepChromScorer
-
-            chromatogram_encoder.load(encoder_path)
 
         flagged_score_columns = self.flag_score_columns()
 
@@ -566,19 +553,6 @@ class Precursors:
 
                     peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
 
-                if encoder_path:
-
-                    if peakgroup.chromatograms:
-
-                        peakgroup_chromatograms = peakgroup.get_chromatogram_intensity_arrays().reshape((1, 6, 25))
-
-                        chromatograms.append(peakgroup_chromatograms)
-
-                    else:
-
-                        peakgroup_chromatograms = np.zeros((1, 6, 25), dtype=float)
-
-                        chromatograms.append(peakgroup_chromatograms)
 
                 peptide_protein_ids.append(
                     {
@@ -589,27 +563,8 @@ class Precursors:
 
                 peakgroup_records.append(peakgroup_record)
 
-        if encoder_path:
-
-            if use_singular_score:
-
-                chromatogram_embeddings = chromatogram_encoder.score(np.array(chromatograms, dtype=np.float64))
-
-            else:
-
-                chromatogram_embeddings = chromatogram_encoder.encode(np.array(chromatograms, dtype=np.float64))
 
         for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
-
-            if encoder_path:
-
-                for chrom_feature_idx in range(chromatogram_embeddings.shape[1]):
-                    feature_name = f"chrom_feature_{chrom_feature_idx}"
-                    feature_value = chromatogram_embeddings[peakgroup_idx][chrom_feature_idx]
-
-                    peakgroup_record.update(
-                        {feature_name: feature_value}
-                    )
 
             peakgroup_record.update(peptide_protein_ids[peakgroup_idx])
 
