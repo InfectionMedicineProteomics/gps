@@ -2,8 +2,8 @@ import argparse
 from collections import Counter
 from typing import Any, List, Dict
 from csv import DictReader, DictWriter
-from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
+from concurrent.futures import ProcessPoolExecutor
 import itertools
 from subprocess import Popen, PIPE, STDOUT
 
@@ -13,7 +13,6 @@ import numpy as np
 import typing
 
 from sklearn.model_selection import train_test_split
-from sklearn.utils import class_weight
 
 from gscore import preprocess
 from gscore.models.deep_chromatogram_classifier import DeepChromScorer
@@ -42,12 +41,6 @@ def train_percolator_model(args: argparse.Namespace) -> None:
     with ProcessPoolExecutor(max_workers=args.threads) as pool:
 
         percolator_records = pool.map(read_percolator_files, args.input_files)
-
-    # percolator_records = []
-    #
-    # for input_file in args.input_files:
-    #
-    #     percolator_records.append(read_percolator_files(input_file))
 
     percolator_records = list(itertools.chain.from_iterable(percolator_records))
 

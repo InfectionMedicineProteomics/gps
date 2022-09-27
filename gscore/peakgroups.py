@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Union, List
 
 import numpy as np
-import numpy.typing as npt
+
 
 from gscore.chromatograms import Chromatogram
 

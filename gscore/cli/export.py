@@ -1,11 +1,8 @@
 import argparse
-from typing import Union, Any
+from typing import Any
 
-from gscore.chromatograms import Chromatograms
 from gscore.parsers import queries
 from gscore.parsers.osw import OSWFile
-from gscore.parsers.sqmass import SqMassFile
-
 
 class Export:
 

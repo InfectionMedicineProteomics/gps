@@ -1,5 +1,5 @@
 from csv import DictWriter
-from collections.abc import MutableMapping
+
 from typing import Dict, List, Union, ItemsView, Generator, Any
 
 import numpy as np

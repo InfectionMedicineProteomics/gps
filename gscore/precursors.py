@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from collections import Counter
+
 from csv import DictWriter
 from typing import List, Dict, Union, Tuple, Optional, Generator, KeysView, Any
 
 import numpy as np
-import numpy.typing as npt
+
 from sklearn.metrics import precision_score, recall_score
 from sklearn.utils import shuffle, class_weight
-
-import torch
 
 from gscore import preprocess
 from gscore.chromatograms import Chromatogram, Chromatograms

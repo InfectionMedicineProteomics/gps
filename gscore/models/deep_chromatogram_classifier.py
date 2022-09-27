@@ -1,7 +1,6 @@
 from typing import Dict, Any, Tuple
 
 import numpy as np
-import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning import Trainer
@@ -14,10 +13,6 @@ from torch.utils.data import TensorDataset, DataLoader
 import torchvision.models as models
 
 from gscore.models.base_model import Scorer
-
-from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
-
-from sklearn.pipeline import Pipeline
 
 
 class DeepChromScorer(Scorer):

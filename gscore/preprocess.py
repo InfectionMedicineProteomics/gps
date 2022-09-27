@@ -2,7 +2,6 @@ import random
 from typing import List, Tuple, Any
 
 import numpy as np
-import numpy.typing as npt
 
 from gscore.peakgroups import PeakGroup
 

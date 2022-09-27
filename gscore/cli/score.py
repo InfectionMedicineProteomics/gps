@@ -1,14 +1,11 @@
 import argparse
 from pathlib import Path
 from subprocess import Popen, PIPE, STDOUT
-from typing import Any, List, Dict, Union
+from typing import Any, Dict, Union
 from csv import DictReader, DictWriter
-
-import numpy as np
 
 from gscore.parsers.osw import OSWFile
 from gscore.parsers.queries import SelectPeakGroups
-from gscore.parsers.sqmass import SqMassFile
 from gscore.precursors import Precursors
 
 MatchScoreType = Dict[str, Dict[str, Dict[str, Any]]]

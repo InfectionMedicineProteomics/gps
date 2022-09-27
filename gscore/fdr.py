@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import numpy as np
-import numpy.typing as npt
-from numpy import ndarray
 
-from scipy.interpolate import InterpolatedUnivariateSpline
 
-from sklearn.neighbors import KernelDensity
-
-from typing import TypeVar, Dict, Union, Tuple, Any
+from typing import Dict, Union, Tuple, Any
 
 from joblib import dump, load
 
 from typing import TYPE_CHECKING
 
 import numba
-from numba import int64, njit, prange, jit
 
 if TYPE_CHECKING:
     from gscore.peptides import Peptide

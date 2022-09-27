@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from typing import Union, Iterable, Any, Optional
+from typing import Optional
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
