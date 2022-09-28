@@ -149,11 +149,7 @@ class DeepChromScorer(Scorer):
 
         probabilities = torch.sigmoid(probabilities)
 
-        classes = torch.where(
-            probabilities > 0.5,
-            1.0,
-            0.0
-        )
+        classes = torch.where(probabilities > 0.5, 1.0, 0.0)
 
         return classes.numpy()
 

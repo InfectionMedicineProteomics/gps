@@ -159,7 +159,9 @@ class OSWFile:
 
         return peptides
 
-    def parse_to_precursors(self, query: str, pyprophet_scored: bool = False) -> Precursors:
+    def parse_to_precursors(
+        self, query: str, pyprophet_scored: bool = False
+    ) -> Precursors:
 
         with self.sqlite_file as sqlite_file:
 
@@ -192,8 +194,12 @@ class OSWFile:
                     intensity=record.get("AREA_INTENSITY", 0.0),
                     probability=record.get("PROBABILITY", 0.0),
                     vote_percentage=record.get("VOTE_PERCENTAGE", 0.0),
-                    q_value=record.get("QVALUE", 0.0) if pyprophet_scored else record.get("Q_VALUE", 0.0),
-                    d_score=record.get("SCORE", 0.0) if pyprophet_scored else record.get("D_SCORE", 0.0),
+                    q_value=record.get("QVALUE", 0.0)
+                    if pyprophet_scored
+                    else record.get("Q_VALUE", 0.0),
+                    d_score=record.get("SCORE", 0.0)
+                    if pyprophet_scored
+                    else record.get("D_SCORE", 0.0),
                     scores={
                         score_col: score_value
                         for score_col, score_value in record.items()

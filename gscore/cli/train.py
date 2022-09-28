@@ -64,29 +64,34 @@ def train_percolator_model(args: argparse.Namespace) -> None:
     pin_path = Path(args.percolator_output)
 
     with Popen(
-            [
-                args.percolator_exe,
-                args.percolator_output,
-                "--results-psms", f"{pin_path.parent}/{pin_path.name}_results_psms.tsv",
-                "--decoy-results-psms", f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv",
-                "--protein-decoy-pattern", "DECOY_",
-                "--num-threads", str(args.threads),
-                "--only-psms",
-                "--weights", args.model_output
-            ],
-            stdout=PIPE,
-            stderr=STDOUT,
+        [
+            args.percolator_exe,
+            args.percolator_output,
+            "--results-psms",
+            f"{pin_path.parent}/{pin_path.name}_results_psms.tsv",
+            "--decoy-results-psms",
+            f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv",
+            "--protein-decoy-pattern",
+            "DECOY_",
+            "--num-threads",
+            str(args.threads),
+            "--only-psms",
+            "--weights",
+            args.model_output,
+        ],
+        stdout=PIPE,
+        stderr=STDOUT,
     ) as process:
 
-        for line in iter(process.stdout.readline, b''):
-            print(line.rstrip().decode('utf-8'))
+        for line in iter(process.stdout.readline, b""):
+            print(line.rstrip().decode("utf-8"))
 
 
 def augment_score_columns(
-        combined_chromatograms: np.ndarray,
-        combined_scores: np.ndarray,
-        chromatogram_encoder: DeepChromScorer,
-        chromatogram_only: bool = False,
+    combined_chromatograms: np.ndarray,
+    combined_scores: np.ndarray,
+    chromatogram_encoder: DeepChromScorer,
+    chromatogram_only: bool = False,
 ) -> np.ndarray:
 
     chromatogram_embeddings = chromatogram_encoder.encode(combined_chromatograms)
@@ -101,12 +106,12 @@ def augment_score_columns(
 
 
 def train_deep_model(
-        combined_chromatograms: np.ndarray,
-        combined_labels: np.ndarray,
-        model_output: str,
-        threads: int,
-        gpus: int,
-        epochs: int,
+    combined_chromatograms: np.ndarray,
+    combined_labels: np.ndarray,
+    model_output: str,
+    threads: int,
+    gpus: int,
+    epochs: int,
 ) -> DeepChromScorer:
 
     training_data, testing_data, training_labels, testing_labels = train_test_split(
@@ -137,11 +142,11 @@ def train_deep_model(
 
 
 def train_model(
-        combined_data: np.ndarray,
-        combined_labels: np.ndarray,
-        model_output: str,
-        scaler_output: str,
-        no_split: bool = False,
+    combined_data: np.ndarray,
+    combined_labels: np.ndarray,
+    model_output: str,
+    scaler_output: str,
+    no_split: bool = False,
 ) -> None:
 
     scaler = Scaler()
@@ -217,7 +222,7 @@ def train_gps_model(args: argparse.Namespace) -> None:
         combined_labels=combined_labels,
         model_output=args.model_output,
         scaler_output=args.scaler_output,
-        no_split=args.nosplit
+        no_split=args.nosplit,
     )
 
 
@@ -273,13 +278,11 @@ class Train:
             "--train-percolator-model",
             dest="train_percolator_model",
             help="flag to indicate Percolator should be used to train the model",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.add_argument(
-            "--percolator-exe",
-            dest="percolator_exe",
-            help="Percolator exe file path"
+            "--percolator-exe", dest="percolator_exe", help="Percolator exe file path"
         )
 
         self.parser.add_argument(
@@ -294,7 +297,7 @@ class Train:
             "--nosplit",
             dest="nosplit",
             help="Do not split out test set and evaluate the model",
-            action="store_true"
+            action="store_true",
         )
 
         self.parser.set_defaults(run=self)

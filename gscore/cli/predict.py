@@ -33,12 +33,14 @@ class Predict:
             model_path=args.scoring_model,
             scaler_path=args.scaler,
             threads=args.threads,
-            method=args.method
+            method=args.method,
         )
 
         labels = []
 
-        for peakgroup in precursors.filter_peakgroups(rank=1, filter_key="PEAKGROUP_SCORE"):
+        for peakgroup in precursors.filter_peakgroups(
+            rank=1, filter_key="PEAKGROUP_SCORE"
+        ):
 
             if peakgroup.peakgroup_prediction == 1.0:
 
@@ -53,7 +55,6 @@ class Predict:
 
         precursors.write_tsv(file_path=args.output, write_predicted=True)
 
-
     def build_subparser(self, subparser: Any) -> None:
 
         self.parser = subparser.add_parser(
@@ -64,12 +65,11 @@ class Predict:
 
         self.parser.add_argument("-o", "--output", help="Output TSV file.", type=str)
 
-
         self.parser.add_argument(
             "--scoring-model",
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
-            type=str
+            type=str,
         )
 
         self.parser.add_argument(
@@ -79,7 +79,6 @@ class Predict:
             type=str,
             default="",
         )
-
 
         self.parser.add_argument(
             "--threads",
@@ -98,10 +97,7 @@ class Predict:
         )
 
         self.parser.add_argument(
-            "--method",
-            dest="method",
-            default="standard",
-            type=str
+            "--method", dest="method", default="standard", type=str
         )
 
         self.parser.add_argument(

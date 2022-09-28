@@ -4,6 +4,7 @@ from typing import Any
 from gscore.parsers import queries
 from gscore.parsers.osw import OSWFile
 
+
 class Export:
 
     name: str
@@ -60,20 +61,14 @@ class Export:
                 args.output, filter_field="PROBABILITY", filter_value=0.0
             )
 
-
         elif args.output_format == "pyprophet":
 
             precursors = osw_file.parse_to_precursors(
                 query=queries.SelectPeakGroups.FETCH_SCORED_PYPROPHET_RECORDS,
-                pyprophet_scored=True
+                pyprophet_scored=True,
             )
 
-            precursors.write_tsv(
-                file_path=args.output,
-                ranked=1
-            )
-
-
+            precursors.write_tsv(file_path=args.output, ranked=1)
 
     def build_subparser(self, subparser: Any) -> None:
 
@@ -90,10 +85,7 @@ class Export:
         )
 
         self.parser.add_argument(
-            "--output-format",
-            dest="output_format",
-            type=str,
-            default="standard"
+            "--output-format", dest="output_format", type=str, default="standard"
         )
 
         self.parser.add_argument(

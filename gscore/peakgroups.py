@@ -55,7 +55,7 @@ class PeakGroup:
         chromatogram_prediction: float = 0,
         chromatogram_score: float = 0.0,
         peakgroup_prediction: float = 0,
-        peakgroup_score: float = 0.0
+        peakgroup_score: float = 0.0,
     ):
 
         if scores is None:
@@ -145,20 +145,40 @@ class PeakGroup:
 
     def get_score_columns(self, flagged_columns: List[str]) -> Dict[str, float]:
 
-        scores = {score_name: score_value for score_name, score_value in self.scores.items() if score_name not in flagged_columns}
+        scores = {
+            score_name: score_value
+            for score_name, score_value in self.scores.items()
+            if score_name not in flagged_columns
+        }
 
         return scores
 
-    def get_sub_score_column_array(self, include_probability: bool, use_only_spectra_scores: bool = False) -> np.ndarray:
+    def get_sub_score_column_array(
+        self, include_probability: bool, use_only_spectra_scores: bool = False
+    ) -> np.ndarray:
 
         if use_only_spectra_scores:
 
-            columns = {"var_library_dotprod", "var_library_sangle", "var_library_manhattan",
-                       "var_library_rootmeansquare", "var_library_rmsd", "var_yseries_score", "var_bseries_score",
-                       "var_massdev_score_weighted", "var_isotope_overlap_score", "var_library_corr",
-                       "var_isotope_correlation_score", "var_massdev_score"}
+            columns = {
+                "var_library_dotprod",
+                "var_library_sangle",
+                "var_library_manhattan",
+                "var_library_rootmeansquare",
+                "var_library_rmsd",
+                "var_yseries_score",
+                "var_bseries_score",
+                "var_massdev_score_weighted",
+                "var_isotope_overlap_score",
+                "var_library_corr",
+                "var_isotope_correlation_score",
+                "var_massdev_score",
+            }
 
-            score_values = [score for column, score in self.scores.items() if column.lower() in columns]
+            score_values = [
+                score
+                for column, score in self.scores.items()
+                if column.lower() in columns
+            ]
 
         else:
 

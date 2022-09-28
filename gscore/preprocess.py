@@ -83,8 +83,9 @@ def reformat_data(
 
     for idx, peakgroup in enumerate(peakgroups):
 
-        score_array = peakgroup.get_sub_score_column_array(include_probability=False,
-                                                           use_only_spectra_scores=use_only_spectra_scores)
+        score_array = peakgroup.get_sub_score_column_array(
+            include_probability=False, use_only_spectra_scores=use_only_spectra_scores
+        )
 
         scores.append(score_array)
 

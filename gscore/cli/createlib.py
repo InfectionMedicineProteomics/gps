@@ -28,7 +28,7 @@ def combine_predicted_peakgroups(predicted_peakgroup_files):
                         "Charge": int(row["Charge"]),
                         "Protein": row["Protein"],
                         "Decoy": int(row["Decoy"]),
-                        "RT": float(row["RT"])
+                        "RT": float(row["RT"]),
                     }
 
                     precursor_id = f"{row['ModifiedSequence']}_{row['Charge']}"
@@ -63,7 +63,7 @@ def get_scored_precursors(scored_precursors_file):
                         "Intensity": float(row["Intensity"]),
                         "QValue": float(row["QValue"]),
                         "DScore": float(row["DScore"]),
-                        "Probability": float(row["Probability"])
+                        "Probability": float(row["Probability"]),
                     }
 
                 elif "PeakgroupPrediction" in row:
@@ -76,7 +76,7 @@ def get_scored_precursors(scored_precursors_file):
                         "Decoy": int(row["Decoy"]),
                         "RT": float(row["RT"]),
                         "PeakgroupPrediction": float(row["PeakgroupPrediction"]),
-                        "PeakgroupScore": float(row["PeakgroupScore"])
+                        "PeakgroupScore": float(row["PeakgroupScore"]),
                     }
 
                 scored_precursors.append(record)
@@ -88,20 +88,26 @@ def calculate_rt_bins(scored_precursors, num_rt_bins):
 
     if "QValue" in scored_precursors[0]:
 
-        retention_times = np.array([row["RT"] for row in scored_precursors if row["QValue"] <= 0.15])
+        retention_times = np.array(
+            [row["RT"] for row in scored_precursors if row["QValue"] <= 0.15]
+        )
 
     elif "PeakgroupPrediction" in scored_precursors[0]:
 
-        retention_times = np.array([row["RT"] for row in scored_precursors if row["PeakgroupPrediction"] == 1.0])
+        retention_times = np.array(
+            [
+                row["RT"]
+                for row in scored_precursors
+                if row["PeakgroupPrediction"] == 1.0
+            ]
+        )
 
     retention_times.sort()
 
-    hist_values, rt_edges = np.histogram(
-        retention_times,
-        bins=num_rt_bins
-    )
+    hist_values, rt_edges = np.histogram(retention_times, bins=num_rt_bins)
 
     return rt_edges
+
 
 def select_rt_precursors(rt_bins, scored_precursors, num_peptides_per_bin):
 
@@ -124,16 +130,12 @@ def select_rt_precursors(rt_bins, scored_precursors, num_peptides_per_bin):
 
             if "DScore" in rt_bin_peptides[0]:
 
-                rt_bin_peptides.sort(
-                    key=operator.itemgetter("DScore"),
-                    reverse=True
-                )
+                rt_bin_peptides.sort(key=operator.itemgetter("DScore"), reverse=True)
 
             elif "PeakgroupScore" in rt_bin_peptides[0]:
 
                 rt_bin_peptides.sort(
-                    key=operator.itemgetter("PeakgroupScore"),
-                    reverse=True
+                    key=operator.itemgetter("PeakgroupScore"), reverse=True
                 )
 
             selected_precursors_for_bin = rt_bin_peptides[:num_peptides_per_bin]
@@ -143,12 +145,16 @@ def select_rt_precursors(rt_bins, scored_precursors, num_peptides_per_bin):
     return selected_rt_peptides
 
 
-def create_new_library(new_library_path, library_annotated_transitions, used_precursors):
+def create_new_library(
+    new_library_path, library_annotated_transitions, used_precursors
+):
     library_transitions = []
 
     for transition in library_annotated_transitions:
 
-        precursor_id = f"{transition['MODIFIED_SEQUENCE']}_{transition['PRECURSOR_CHARGE']}"
+        precursor_id = (
+            f"{transition['MODIFIED_SEQUENCE']}_{transition['PRECURSOR_CHARGE']}"
+        )
 
         if precursor_id in used_precursors:
             transition_record = {
@@ -163,7 +169,7 @@ def create_new_library(new_library_path, library_annotated_transitions, used_pre
                 "ProductCharge": transition["PRODUCT_CHARGE"],
                 "FragmentType": transition["TYPE"],
                 "FragmentSeriesNumber": transition["ORDINAL"],
-                "Annotation": transition["ANNOTATION"]
+                "Annotation": transition["ANNOTATION"],
             }
 
             library_transitions.append(transition_record)
@@ -174,9 +180,7 @@ def create_new_library(new_library_path, library_annotated_transitions, used_pre
 def write_csv_library(file_path, library_transitions):
     with open(file_path, "w") as library_h:
         writer = csv.DictWriter(
-            library_h,
-            fieldnames=list(library_transitions[0].keys()),
-            delimiter="\t"
+            library_h, fieldnames=list(library_transitions[0].keys()), delimiter="\t"
         )
 
         writer.writeheader()
@@ -207,7 +211,10 @@ class CreateLib:
             predicted_peakgroups = combine_predicted_peakgroups(args.input)
 
             used_precursors = set(
-                [f"{row['ModifiedSequence']}_{row['Charge']}" for row in predicted_peakgroups]
+                [
+                    f"{row['ModifiedSequence']}_{row['Charge']}"
+                    for row in predicted_peakgroups
+                ]
             )
 
         elif args.library_type == "rt":
@@ -219,29 +226,25 @@ class CreateLib:
             rt_edges = calculate_rt_bins(scored_precursors, args.num_rt_bins)
 
             selected_rt_precursors = select_rt_precursors(
-                rt_edges,
-                scored_precursors,
-                args.num_peptides_per_bin
+                rt_edges, scored_precursors, args.num_peptides_per_bin
             )
 
             used_precursors = set(
-                [f"{row['ModifiedSequence']}_{row['Charge']}" for row in selected_rt_precursors]
+                [
+                    f"{row['ModifiedSequence']}_{row['Charge']}"
+                    for row in selected_rt_precursors
+                ]
             )
 
         print("Subsetting library")
 
         library_transitions = create_new_library(
-            args.output,
-            library_annotated_transitions,
-            used_precursors
+            args.output, library_annotated_transitions, used_precursors
         )
 
         print("Writing new library")
 
-        write_csv_library(
-            args.output,
-            library_transitions
-        )
+        write_csv_library(args.output, library_transitions)
 
     def build_subparser(self, subparser: Any) -> None:
         self.parser = subparser.add_parser(
@@ -256,33 +259,24 @@ class CreateLib:
             help="List of files to compile",
         )
 
-        self.parser.add_argument("-o", "--output", dest="output", help="Output file spectral library")
-
         self.parser.add_argument(
-            "--pqp",
-            dest="pqp",
-            help="Base spectral library to extract fragments from"
+            "-o", "--output", dest="output", help="Output file spectral library"
         )
 
         self.parser.add_argument(
-            "--library-type",
-            dest="library_type",
-            default="standard",
-            type=str
+            "--pqp", dest="pqp", help="Base spectral library to extract fragments from"
         )
 
         self.parser.add_argument(
-            "--num-rt-bins",
-            dest="num_rt_bins",
-            type=int,
-            default=25
+            "--library-type", dest="library_type", default="standard", type=str
         )
 
         self.parser.add_argument(
-            "--num-peptides-per-bin",
-            dest="num_peptides_per_bin",
-            type=int,
-            default=5
+            "--num-rt-bins", dest="num_rt_bins", type=int, default=25
+        )
+
+        self.parser.add_argument(
+            "--num-peptides-per-bin", dest="num_peptides_per_bin", type=int, default=5
         )
 
         self.parser.set_defaults(run=self)

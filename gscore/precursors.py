@@ -39,15 +39,15 @@ class Precursor:
     probability: float
 
     def __init__(
-            self,
-            precursor_id: str = "",
-            charge: int = 0,
-            decoy: int = 0,
-            q_value: Optional[float] = None,
-            modified_sequence: str = "",
-            unmodified_sequence: str = "",
-            protein_accession: str = "",
-            mz: float = 0.0,
+        self,
+        precursor_id: str = "",
+        charge: int = 0,
+        decoy: int = 0,
+        q_value: Optional[float] = None,
+        modified_sequence: str = "",
+        unmodified_sequence: str = "",
+        protein_accession: str = "",
+        mz: float = 0.0,
     ) -> None:
 
         self.id = precursor_id
@@ -187,12 +187,12 @@ class Precursors:
                         peakgroup.chromatograms = peakgroup_chromatograms
 
     def get_peakgroups_by_list(
-            self,
-            precursor_list: Union[List[str], np.ndarray],
-            rank: int = 0,
-            score_key: str = "",
-            reverse: bool = True,
-            return_all: bool = False,
+        self,
+        precursor_list: Union[List[str], np.ndarray],
+        rank: int = 0,
+        score_key: str = "",
+        reverse: bool = True,
+        return_all: bool = False,
     ) -> List[PeakGroup]:
 
         peakgroups = list()
@@ -217,7 +217,7 @@ class Precursors:
         return peakgroups
 
     def get_target_peakgroups_by_rank(
-            self, rank: int, score_key: str = "", reverse: bool = True
+        self, rank: int, score_key: str = "", reverse: bool = True
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -236,7 +236,7 @@ class Precursors:
         return filtered_peakgroups
 
     def filter_target_peakgroups(
-            self, rank: int, filter_key: str = "PROBABILITY", value: float = 0.0
+        self, rank: int, filter_key: str = "PROBABILITY", value: float = 0.0
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -275,7 +275,9 @@ class Precursors:
         return filtered_peakgroups
 
     def filter_peakgroups(
-            self, rank: int, filter_key: str = "PROBABILITY",
+        self,
+        rank: int,
+        filter_key: str = "PROBABILITY",
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -306,9 +308,7 @@ class Precursors:
 
             elif filter_key == "PEAKGROUP_SCORE":
 
-                precursor.peakgroups.sort(
-                    key=lambda x: x.peakgroup_score, reverse=True
-                )
+                precursor.peakgroups.sort(key=lambda x: x.peakgroup_score, reverse=True)
 
             if rank + 1 <= len(precursor.peakgroups):
 
@@ -319,7 +319,7 @@ class Precursors:
         return filtered_peakgroups
 
     def get_decoy_peakgroups(
-            self, filter_field: str = "PROBABILITY", use_second_ranked: bool = False
+        self, filter_field: str = "PROBABILITY", use_second_ranked: bool = False
     ) -> List[PeakGroup]:
 
         filtered_peakgroups = []
@@ -365,14 +365,14 @@ class Precursors:
         return all_peakgroups
 
     def denoise(
-            self,
-            num_folds: int,
-            num_classifiers: int,
-            num_threads: int,
-            vote_percentage: float,
-            verbose: bool = False,
-            base_estimator: Any = None,
-            use_only_spectra_scores: bool = False
+        self,
+        num_folds: int,
+        num_classifiers: int,
+        num_threads: int,
+        vote_percentage: float,
+        verbose: bool = False,
+        base_estimator: Any = None,
+        use_only_spectra_scores: bool = False,
     ) -> Precursors:
 
         precursor_folds = preprocess.get_precursor_id_folds(
@@ -405,7 +405,8 @@ class Precursors:
                 peakgroup_indices,
             ) = preprocess.reformat_data(
                 peakgroups=training_data_targets,
-                                      use_only_spectra_scores=use_only_spectra_scores)
+                use_only_spectra_scores=use_only_spectra_scores,
+            )
 
             train_data, train_labels = shuffle(
                 peakgroup_scores, peakgroup_labels, random_state=42
@@ -452,7 +453,7 @@ class Precursors:
 
             testing_scores, testing_labels, testing_keys = preprocess.reformat_data(
                 peakgroups=peakgroups_to_score,
-                use_only_spectra_scores=use_only_spectra_scores
+                use_only_spectra_scores=use_only_spectra_scores,
             )
 
             testing_scores = scaler.transform(testing_scores)
@@ -486,7 +487,7 @@ class Precursors:
 
             val_scores, val_labels, _ = preprocess.reformat_data(
                 peakgroups=validation_data,
-                use_only_spectra_scores=use_only_spectra_scores
+                use_only_spectra_scores=use_only_spectra_scores,
             )
 
             val_scores = scaler.transform(val_scores)
@@ -514,11 +515,11 @@ class Precursors:
         return self
 
     def export_pin(
-            self,
-            pin_output_file: str,
-            export_initial_pin: bool = False,
-            use_sub_scores: bool = True,
-            rank: int = 1
+        self,
+        pin_output_file: str,
+        export_initial_pin: bool = False,
+        use_sub_scores: bool = True,
+        rank: int = 1,
     ):
 
         flagged_score_columns = self.flag_score_columns()
@@ -551,18 +552,18 @@ class Precursors:
 
                 if use_sub_scores:
 
-                    peakgroup_record.update(peakgroup.get_score_columns(flagged_score_columns))
-
+                    peakgroup_record.update(
+                        peakgroup.get_score_columns(flagged_score_columns)
+                    )
 
                 peptide_protein_ids.append(
                     {
                         "peptide": precursor.modified_sequence,
-                        "proteinId1": precursor.protein_accession
+                        "proteinId1": precursor.protein_accession,
                     }
                 )
 
                 peakgroup_records.append(peakgroup_record)
-
 
         for peakgroup_idx, peakgroup_record in enumerate(peakgroup_records):
 
@@ -581,7 +582,11 @@ class Precursors:
 
     def flag_score_columns(self) -> List[str]:
 
-        score_names = self.precursors[list(self.precursors.keys())[0]].peakgroups[0].get_sub_score_column_names()
+        score_names = (
+            self.precursors[list(self.precursors.keys())[0]]
+            .peakgroups[0]
+            .get_sub_score_column_names()
+        )
 
         score_columns = {score_name: list() for score_name in score_names}
 
@@ -606,25 +611,20 @@ class Precursors:
         return flagged_columns
 
     def score_run(
-            self,
-            model_path: str,
-            scaler_path: str,
-            threads: int = 10,
-            weight_scores: bool = False,
-            use_only_spectra_scores: bool = False
+        self,
+        model_path: str,
+        scaler_path: str,
+        threads: int = 10,
+        weight_scores: bool = False,
+        use_only_spectra_scores: bool = False,
     ) -> Precursors:
 
         scoring_model: Union[Scorer]
 
         all_peakgroups = self.get_all_peakgroups()
 
-        (
-            all_scores,
-            all_data_labels,
-            all_data_indices,
-        ) = preprocess.reformat_data(
-            all_peakgroups,
-            use_only_spectra_scores=use_only_spectra_scores
+        (all_scores, all_data_labels, all_data_indices,) = preprocess.reformat_data(
+            all_peakgroups, use_only_spectra_scores=use_only_spectra_scores
         )
 
         scoring_model = Scorer()
@@ -656,10 +656,8 @@ class Precursors:
         return self
 
     def predict_chromatograms(
-            self,
-            model_path: str = "",
-            threads: int = 10,
-            gpus: int = 1) -> Precursors:
+        self, model_path: str = "", threads: int = 10, gpus: int = 1
+    ) -> Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
@@ -689,23 +687,19 @@ class Precursors:
         return self
 
     def predict_peakgroups(
-            self,
-            model_path: str = "",
-            scaler_path: str = "",
-            method: str = "",
-            threads: int = 10,
-            gpus: int = 1) -> Precursors:
-
+        self,
+        model_path: str = "",
+        scaler_path: str = "",
+        method: str = "",
+        threads: int = 10,
+        gpus: int = 1,
+    ) -> Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
 
         if method == "standard":
 
-            (
-                all_scores,
-                all_data_labels,
-                all_data_indices
-            ) = preprocess.reformat_data(
+            (all_scores, all_data_labels, all_data_indices) = preprocess.reformat_data(
                 all_peakgroups
             )
 
@@ -735,7 +729,7 @@ class Precursors:
                 num_threads=threads,
                 vote_percentage=0.5,
                 verbose=True,
-                use_only_spectra_scores=True
+                use_only_spectra_scores=True,
             )
 
             for idx, peakgroup in enumerate(all_peakgroups):
@@ -774,13 +768,13 @@ class Precursors:
         return self.pit
 
     def calculate_q_values(
-            self,
-            sort_key: str,
-            decoy_free: bool = False,
-            count_decoys: bool = True,
-            num_threads: int = 10,
-            pit: float = 1.0,
-            debug: bool = False,
+        self,
+        sort_key: str,
+        decoy_free: bool = False,
+        count_decoys: bool = True,
+        num_threads: int = 10,
+        pit: float = 1.0,
+        debug: bool = False,
     ) -> np.ndarray:
 
         target_peakgroups = self.get_target_peakgroups_by_rank(
@@ -846,7 +840,7 @@ class Precursors:
         return q_values
 
     def dump_training_data(
-            self, file_path: str, filter_field: str, filter_value: float
+        self, file_path: str, filter_field: str, filter_value: float
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -857,11 +851,9 @@ class Precursors:
 
         combined = positive_labels + negative_labels
 
-        (
-            all_scores,
-            all_data_labels,
-            all_data_indices
-        ) = preprocess.reformat_data(combined)
+        (all_scores, all_data_labels, all_data_indices) = preprocess.reformat_data(
+            combined
+        )
 
         with open(file_path, "wb") as npfh:
             np.savez(
@@ -870,7 +862,13 @@ class Precursors:
                 scores=all_scores,
             )
 
-    def write_tsv(self, file_path: str = "", ranked: int = 1, write_predicted: bool = False, write_percolator: bool = False) -> None:
+    def write_tsv(
+        self,
+        file_path: str = "",
+        ranked: int = 1,
+        write_predicted: bool = False,
+        write_percolator: bool = False,
+    ) -> None:
 
         if write_predicted:
 
@@ -884,18 +882,22 @@ class Precursors:
                 "RT",
                 "Intensity",
                 "PeakgroupPrediction",
-                "PeakgroupScore"
+                "PeakgroupScore",
             ]
 
             with open(file_path, "w") as out_file:
 
-                csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+                csv_writer = DictWriter(
+                    out_file, delimiter="\t", fieldnames=field_names
+                )
 
                 csv_writer.writeheader()
 
                 for precursor in self:
 
-                    precursor.peakgroups.sort(key=lambda x: x.peakgroup_score, reverse=True)
+                    precursor.peakgroups.sort(
+                        key=lambda x: x.peakgroup_score, reverse=True
+                    )
 
                     peakgroups = precursor.peakgroups[:ranked]
 
@@ -911,7 +913,7 @@ class Precursors:
                             "RT": peakgroup.retention_time,
                             "Intensity": peakgroup.intensity,
                             "PeakgroupPrediction": peakgroup.peakgroup_prediction,
-                            "PeakgroupScore": peakgroup.peakgroup_score
+                            "PeakgroupScore": peakgroup.peakgroup_score,
                         }
 
                         csv_writer.writerow(record)
@@ -937,7 +939,9 @@ class Precursors:
 
             with open(file_path, "w") as out_file:
 
-                csv_writer = DictWriter(out_file, delimiter="\t", fieldnames=field_names)
+                csv_writer = DictWriter(
+                    out_file, delimiter="\t", fieldnames=field_names
+                )
 
                 csv_writer.writeheader()
 

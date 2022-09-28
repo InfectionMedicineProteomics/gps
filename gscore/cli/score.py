@@ -19,21 +19,25 @@ def score_with_percolator(args: argparse.Namespace) -> MatchScoreType:
     decoy_results = f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv"
 
     with Popen(
-            [
-                args.percolator_exe,
-                args.output,
-                "--results-psms", target_results,
-                "--decoy-results-psms", decoy_results,
-                "--protein-decoy-pattern", "DECOY_",
-                "--num-threads", str(args.threads),
-                "--only-psms"
-            ],
-            stdout=PIPE,
-            stderr=STDOUT,
+        [
+            args.percolator_exe,
+            args.output,
+            "--results-psms",
+            target_results,
+            "--decoy-results-psms",
+            decoy_results,
+            "--protein-decoy-pattern",
+            "DECOY_",
+            "--num-threads",
+            str(args.threads),
+            "--only-psms",
+        ],
+        stdout=PIPE,
+        stderr=STDOUT,
     ) as process:
 
-        for line in iter(process.stdout.readline, b''):
-            print(line.rstrip().decode('utf-8'))
+        for line in iter(process.stdout.readline, b""):
+            print(line.rstrip().decode("utf-8"))
 
     target_records = []
 
@@ -63,7 +67,7 @@ def score_with_percolator(args: argparse.Namespace) -> MatchScoreType:
 
     for record in records:
 
-        sequence, charge, peakgroup_id = record['PSMId'].split("_")
+        sequence, charge, peakgroup_id = record["PSMId"].split("_")
 
         precursor_id = f"{sequence}_{charge}"
 
@@ -84,23 +88,28 @@ def apply_percolator_weights(args: argparse.Namespace) -> MatchScoreType:
     decoy_results = f"{pin_path.parent}/{pin_path.name}_decoy_results_psms.tsv"
 
     with Popen(
-            [
-                args.percolator_exe,
-                args.pin,
-                "--results-psms", target_results,
-                "--decoy-results-psms", decoy_results,
-                "--protein-decoy-pattern", "DECOY_",
-                "--num-threads", str(args.threads),
-                "--only-psms",
-                "--init-weights", args.percolator_weights,
-                "--static"
-            ],
-            stdout=PIPE,
-            stderr=STDOUT,
+        [
+            args.percolator_exe,
+            args.pin,
+            "--results-psms",
+            target_results,
+            "--decoy-results-psms",
+            decoy_results,
+            "--protein-decoy-pattern",
+            "DECOY_",
+            "--num-threads",
+            str(args.threads),
+            "--only-psms",
+            "--init-weights",
+            args.percolator_weights,
+            "--static",
+        ],
+        stdout=PIPE,
+        stderr=STDOUT,
     ) as process:
 
-        for line in iter(process.stdout.readline, b''):
-            print(line.rstrip().decode('utf-8'))
+        for line in iter(process.stdout.readline, b""):
+            print(line.rstrip().decode("utf-8"))
 
     target_records = []
 
@@ -130,7 +139,7 @@ def apply_percolator_weights(args: argparse.Namespace) -> MatchScoreType:
 
     for record in records:
 
-        sequence, charge, peakgroup_id = record['PSMId'].split("_")
+        sequence, charge, peakgroup_id = record["PSMId"].split("_")
 
         precursor_id = f"{sequence}_{charge}"
 
@@ -140,6 +149,7 @@ def apply_percolator_weights(args: argparse.Namespace) -> MatchScoreType:
         grouped_records[precursor_id][peakgroup_id] = record
 
     return grouped_records
+
 
 def update_precusors(precursors: Precursors, grouped_records: MatchScoreType) -> None:
     for precursor in precursors.precursors.values():
@@ -163,8 +173,8 @@ def update_precusors(precursors: Precursors, grouped_records: MatchScoreType) ->
 
 
 def export_initial_pin(
-        precursors: Precursors,
-        pin_output_file: str,
+    precursors: Precursors,
+    pin_output_file: str,
 ):
     flagged_score_columns = precursors.flag_score_columns()
 
@@ -191,7 +201,7 @@ def export_initial_pin(
             peptide_protein_ids.append(
                 {
                     "peptide": precursor.modified_sequence,
-                    "proteinId1": precursor.protein_accession
+                    "proteinId1": precursor.protein_accession,
                 }
             )
 
@@ -234,10 +244,7 @@ class Score:
 
             print("Exporting PIN.")
 
-            precursors.export_pin(
-                args.pin,
-                export_initial_pin=False
-            )
+            precursors.export_pin(args.pin, export_initial_pin=False)
 
             scored_peakgroups = apply_percolator_weights(args)
 
@@ -290,7 +297,6 @@ class Score:
 
                     print(f"PIT estimate to be: {pit}")
 
-
             else:
 
                 pit = 1.0
@@ -301,10 +307,7 @@ class Score:
 
                 print("Writing percolator output...")
 
-                precursors.export_pin(
-                    args.output,
-                    export_initial_pin=True
-                )
+                precursors.export_pin(args.output, export_initial_pin=True)
 
                 print("Rescoring with percolator to find best candidates...")
 
@@ -312,9 +315,7 @@ class Score:
 
                 update_precusors(precursors, scored_peakgroups)
 
-                precursors.export_pin(
-                    args.output
-                )
+                precursors.export_pin(args.output)
 
             else:
 
@@ -387,27 +388,22 @@ class Score:
             "--percolator-weights",
             dest="percolator_weights",
             help="Use percolator weights to score files with path to weights.",
-            default=""
+            default="",
         )
 
         self.parser.add_argument(
-            "--pin",
-            dest="pin",
-            help="PIN input file.",
-            default=""
+            "--pin", dest="pin", help="PIN input file.", default=""
         )
 
         self.parser.add_argument(
-            "--percolator-exe",
-            dest="percolator_exe",
-            help="Percolator exe file path"
+            "--percolator-exe", dest="percolator_exe", help="Percolator exe file path"
         )
 
         self.parser.add_argument(
             "--scoring-model",
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
-            type=str
+            type=str,
         )
 
         self.parser.add_argument(

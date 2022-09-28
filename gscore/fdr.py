@@ -34,6 +34,7 @@ def _fast_distribution_q_value(target_values, decoy_values, pit):  # type: ignor
 
     return q_value
 
+
 def _fast_distribution_q_values(scores, target_function, decoy_function, pit):  # type: ignore
 
     q_values = np.ones((len(scores),), dtype=np.float64)
