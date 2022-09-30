@@ -3,7 +3,7 @@ from setuptools import (  # type: ignore
     find_packages,  # type: ignore
 )
 
-version = "0.0.01"
+version = "0.0.1"
 
 scripts = ["gps/cli/gps"]
 
