@@ -14,7 +14,7 @@ conda activate gpsenv
 With your environment activated, you can then install via pip
 
 ```commandline
-pip install gps
+pip install gps-ms
 ```
 
 GPS is now installed and ready to use!
