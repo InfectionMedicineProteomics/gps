@@ -1,9 +1,0 @@
-base_file_paths:
-  osw: '/path/to/training/data'
-  results: '/path/to/base/results'
-
-gscore:
-  model_name: 'xgb.model'
-  scaler_name: 'xgb.scaler'
-  denoise:
-    threads: 10
