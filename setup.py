@@ -5,19 +5,21 @@ from setuptools import (  # type: ignore
 
 version = "0.0.01"
 
-scripts = ["gscore/cli/gscore"]
+scripts = ["gps/cli/gps"]
 
 install_requires = [
     "sklearn",
     "numpy",
-    #'tensorflow',
-    "matplotlib",
-    "seaborn",
-    "pomegranate==0.14.0",
+    "numba",
+    "torch",
+    "pytorch_lightning",
+    "torchvision",
+    "imblearn",
+    "xgboost"
 ]
 
 setup(
-    name="gscore",
+    name="gps",
     packages=find_packages(),
     install_requires=install_requires,
     version=version,
