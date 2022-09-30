@@ -15,13 +15,14 @@ install_requires = [
     "pytorch_lightning",
     "torchvision",
     "imblearn",
-    "xgboost"
+    "xgboost==1.5.0"
 ]
 
 setup(
     name="gps",
     packages=find_packages(),
     install_requires=install_requires,
+    include_package_data=True,
     version=version,
     scripts=scripts,
     license="",

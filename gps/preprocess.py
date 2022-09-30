@@ -3,7 +3,7 @@ from typing import List, Tuple, Any
 
 import numpy as np
 
-from gscore.peakgroups import PeakGroup
+from gps.peakgroups import PeakGroup
 
 
 def get_precursor_id_folds(

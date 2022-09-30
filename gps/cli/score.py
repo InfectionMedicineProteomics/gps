@@ -4,9 +4,9 @@ from subprocess import Popen, PIPE, STDOUT
 from typing import Any, Dict, Union
 from csv import DictReader, DictWriter
 
-from gscore.parsers.osw import OSWFile
-from gscore.parsers.queries import SelectPeakGroups
-from gscore.precursors import Precursors
+from gps.parsers.osw import OSWFile
+from gps.parsers.queries import SelectPeakGroups
+from gps.precursors import Precursors
 
 MatchScoreType = Dict[str, Dict[str, Dict[str, Any]]]
 
@@ -404,6 +404,7 @@ class Score:
             dest="scoring_model",
             help="Path to scoring model to apply to data.",
             type=str,
+            default=""
         )
 
         self.parser.add_argument(

@@ -4,7 +4,7 @@ from typing import Dict, List, Union, ItemsView, Generator, Any
 
 import numpy as np
 
-from gscore.peakgroups import PeakGroup
+from gps.peakgroups import PeakGroup
 
 
 class PrecursorExportRecord:

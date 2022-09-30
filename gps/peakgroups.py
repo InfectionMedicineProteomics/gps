@@ -5,7 +5,7 @@ from typing import Dict, Union, List
 import numpy as np
 
 
-from gscore.chromatograms import Chromatogram
+from gps.chromatograms import Chromatogram
 
 
 class PeakGroup:

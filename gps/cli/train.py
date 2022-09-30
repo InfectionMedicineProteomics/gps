@@ -14,10 +14,10 @@ import typing
 
 from sklearn.model_selection import train_test_split
 
-from gscore import preprocess
-from gscore.models.deep_chromatogram_classifier import DeepChromScorer
-from gscore.scaler import Scaler
-from gscore.scorer import XGBoostScorer
+from gps import preprocess
+from gps.models.deep_chromatogram_classifier import DeepChromScorer
+from gps.scaler import Scaler
+from gps.scorer import XGBoostScorer
 
 
 def read_percolator_files(pin_file: str) -> List[Dict[str, Any]]:

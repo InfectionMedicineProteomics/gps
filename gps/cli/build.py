@@ -1,12 +1,12 @@
 import argparse
 from typing import Union, Any
 
-from gscore.fdr import GlobalDistribution
-from gscore.parsers import queries
-from gscore.parsers.osw import OSWFile
-from gscore.parsers.score_file import ScoreFile
-from gscore.peptides import Peptides
-from gscore.proteins import Proteins
+from gps.fdr import GlobalDistribution
+from gps.parsers import queries
+from gps.parsers.osw import OSWFile
+from gps.parsers.score_file import ScoreFile
+from gps.peptides import Peptides
+from gps.proteins import Proteins
 
 
 class Build:
@@ -32,15 +32,15 @@ class Build:
 
             if input_file.lower().endswith(".tsv"):
 
-                gscore_file = ScoreFile(input_file)
+                gps_file = ScoreFile(input_file)
 
                 if args.level == "protein":
 
-                    groups = gscore_file.parse_to_proteins()
+                    groups = gps_file.parse_to_proteins()
 
                 elif args.level == "peptide":
 
-                    groups = gscore_file.parse_to_peptides()
+                    groups = gps_file.parse_to_peptides()
 
             elif input_file.lower().endswith("osw"):
 

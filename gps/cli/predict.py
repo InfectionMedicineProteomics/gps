@@ -4,9 +4,9 @@ from typing import Any
 
 import numpy as np
 
-from gscore.parsers.osw import OSWFile
-from gscore.parsers.queries import SelectPeakGroups
-from gscore.precursors import Precursors
+from gps.parsers.osw import OSWFile
+from gps.parsers.queries import SelectPeakGroups
+from gps.precursors import Precursors
 
 
 class Predict:

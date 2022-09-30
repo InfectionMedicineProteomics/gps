@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from torch.utils.data import TensorDataset, DataLoader
 import torchvision.models as models
 
-from gscore.models.base_model import Scorer
+from gps.models.base_model import Scorer
 
 
 class DeepChromScorer(Scorer):

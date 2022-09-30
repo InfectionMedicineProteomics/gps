@@ -1,14 +1,14 @@
-from gscore.parsers.queries import CreateIndex
+from gps.parsers.queries import CreateIndex
 
-from gscore.peakgroups import PeakGroup
+from gps.peakgroups import PeakGroup
 
-from gscore.proteins import Protein, Proteins
-from gscore.peptides import Peptide, Peptides
-from gscore.precursors import Precursor, Precursors
+from gps.proteins import Protein, Proteins
+from gps.peptides import Peptide, Peptides
+from gps.precursors import Precursor, Precursors
 
-from gscore.parsers import queries
+from gps.parsers import queries
 
-from gscore.parsers.sqlite_file import SQLiteFile
+from gps.parsers.sqlite_file import SQLiteFile
 
 
 from typing import Dict, List, Any

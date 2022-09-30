@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pynumpress import decode_slof, decode_linear, decode_pic
 
-from gscore.chromatograms import Chromatogram, Chromatograms
+from gps.chromatograms import Chromatogram, Chromatograms
 import pyopenms
 
 # FETCH_PEPTIDE_CHROMATOGRAM = """

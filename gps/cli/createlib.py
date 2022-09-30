@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from gscore.parsers.pqp_file import PQPFile
+from gps.parsers.pqp_file import PQPFile
 
 
 def combine_predicted_peakgroups(predicted_peakgroup_files):

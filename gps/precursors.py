@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-
+import importlib.resources
 from csv import DictWriter
 from typing import List, Dict, Union, Tuple, Optional, Generator, KeysView, Any
 
@@ -9,18 +9,18 @@ import numpy as np
 from sklearn.metrics import precision_score, recall_score
 from sklearn.utils import shuffle, class_weight
 
-from gscore import preprocess
-from gscore.chromatograms import Chromatogram, Chromatograms
-from gscore.models.deep_chromatogram_classifier import DeepChromScorer
-from gscore.scaler import Scaler
-from gscore.denoiser import BaggedDenoiser
-from gscore.fdr import ScoreDistribution, DecoyCounter
-from gscore.models.base_model import Scorer
+from gps import preprocess
+from gps.chromatograms import Chromatogram, Chromatograms
+from gps.models.deep_chromatogram_classifier import DeepChromScorer
+from gps.scaler import Scaler
+from gps.denoiser import BaggedDenoiser
+from gps.fdr import ScoreDistribution, DecoyCounter
+from gps.models.base_model import Scorer
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from gscore.peakgroups import PeakGroup
+    from gps.peakgroups import PeakGroup
 
 
 class Precursor:
@@ -628,6 +628,11 @@ class Precursors:
         )
 
         scoring_model = Scorer()
+
+        if not model_path:
+
+            model_path = importlib.resources.path("gps.models.trained", "scoring.model")
+            scaler_path = importlib.resources.path("gps.models.trained", "scoring.scaler")
 
         scoring_model.load(model_path)
 

@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 import numba
 
 if TYPE_CHECKING:
-    from gscore.peptides import Peptide
-    from gscore.proteins import Protein
+    from gps.peptides import Peptide
+    from gps.proteins import Protein
 
 
 def _fast_distribution_q_value(target_values, decoy_values, pit):  # type: ignore

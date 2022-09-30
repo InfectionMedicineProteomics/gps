@@ -1,8 +1,8 @@
 import argparse
 from typing import Any
 
-from gscore.parsers.osw import OSWFile
-from gscore.parsers.queries import SelectPeakGroups
+from gps.parsers.osw import OSWFile
+from gps.parsers.queries import SelectPeakGroups
 
 
 class Denoise:

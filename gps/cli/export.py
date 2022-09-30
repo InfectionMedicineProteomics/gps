@@ -1,8 +1,8 @@
 import argparse
 from typing import Any
 
-from gscore.parsers import queries
-from gscore.parsers.osw import OSWFile
+from gps.parsers import queries
+from gps.parsers.osw import OSWFile
 
 
 class Export:

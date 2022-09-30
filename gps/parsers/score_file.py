@@ -1,9 +1,9 @@
 from csv import DictReader
 
-from gscore.peakgroups import PeakGroup
-from gscore.peptides import Peptides, Peptide
-from gscore.precursors import Precursors, Precursor
-from gscore.proteins import Proteins, Protein
+from gps.peakgroups import PeakGroup
+from gps.peptides import Peptides, Peptide
+from gps.precursors import Precursors, Precursor
+from gps.proteins import Proteins, Protein
 
 
 class ScoreFile:

@@ -1,0 +1,2 @@
+include gps/models/trained/scoring.model
+include gps/models/trained/scoring.scaler

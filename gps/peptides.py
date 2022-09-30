@@ -2,7 +2,7 @@ from typing import Dict, Generator
 
 import numpy as np
 
-from gscore.fdr import ScoreDistribution
+from gps.fdr import ScoreDistribution
 
 
 class Peptide:

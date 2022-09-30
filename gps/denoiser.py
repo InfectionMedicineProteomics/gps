@@ -6,7 +6,7 @@ from typing import Optional
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import BaggingClassifier
 
-from gscore.preprocess import *
+from gps.preprocess import *
 
 
 class BaggedDenoiser(BaggingClassifier):  # type: ignore

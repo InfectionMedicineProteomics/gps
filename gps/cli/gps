@@ -2,14 +2,14 @@
 import argparse
 import sys
 
-from gscore.cli.denoise import Denoise
-from gscore.cli.score import Score
-from gscore.cli.train import Train
-from gscore.cli.export import Export
-from gscore.cli.build import Build
-from gscore.cli.combine import Combine
-from gscore.cli.predict import Predict
-from gscore.cli.createlib import CreateLib
+from gps.cli.denoise import Denoise
+from gps.cli.score import Score
+from gps.cli.train import Train
+from gps.cli.export import Export
+from gps.cli.build import Build
+from gps.cli.combine import Combine
+from gps.cli.predict import Predict
+from gps.cli.createlib import CreateLib
 
 if __name__ == '__main__':
 
