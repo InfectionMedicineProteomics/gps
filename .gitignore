@@ -26,3 +26,6 @@ notebooks/*
 lightning_logs/
 debug/
 debug/*
+
+dist/*
+dist/
