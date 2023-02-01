@@ -26,23 +26,16 @@ class Scorer:
 
     def score(self, data: np.ndarray) -> np.ndarray:
 
-        predict_prob_method = getattr(self.model, "predict_proba", None)
+        loss = getattr(self.model, "loss", None)
 
-        if callable(predict_prob_method):
+        if loss:
 
-            return self.model.predict_proba(data)[:, 1]
+            return self.model.decision_function(data)
 
         else:
 
-            predict_prob_method = getattr(self.model, "decision_function", None)
+            return self.model.predict_proba(data)[:, 1]
 
-            if callable(predict_prob_method):
-
-                return self.model.decision_function(data)[:, 1]
-
-            else:
-
-                raise AttributeError("Scoring model does not have a function to provide a score.")
 
 
     def save(self, model_path: str) -> None:
