@@ -650,13 +650,13 @@ class Precursors:
 
             model_scores = np.exp(target_probabilities) * model_scores
 
-        model_probabilities = scoring_model.probability(all_scores)
+        # model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
             peakgroup.d_score = model_scores[idx].item()
 
-            peakgroup.probability = model_probabilities[idx].item()
+            # peakgroup.probability = model_probabilities[idx].item()
 
         return self
 
