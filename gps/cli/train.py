@@ -3,6 +3,8 @@ from collections import Counter
 from typing import Any, List, Dict
 from csv import DictReader, DictWriter
 
+from sklearn.utils.class_weight import compute_class_weight
+
 from concurrent.futures import ProcessPoolExecutor
 import itertools
 from subprocess import Popen, PIPE, STDOUT
@@ -15,9 +17,10 @@ import typing
 from sklearn.model_selection import train_test_split
 
 from gps import preprocess
+from gps.models.base_model import Scorer
 from gps.models.deep_chromatogram_classifier import DeepChromScorer
 from gps.scaler import Scaler
-from gps.scorer import XGBoostScorer
+from gps.scorer import XGBoostScorer, SGDScorer
 
 
 def read_percolator_files(pin_file: str) -> List[Dict[str, Any]]:
@@ -145,11 +148,13 @@ def train_model(
     combined_data: np.ndarray,
     combined_labels: np.ndarray,
     model_output: str,
+    model_type: str,
     scaler_output: str,
     no_split: bool = False,
 ) -> None:
 
     scaler = Scaler()
+    scorer = Scorer()
 
     if no_split:
 
@@ -162,10 +167,22 @@ def train_model(
             combined_data, combined_labels, test_size=0.2, shuffle=True
         )
 
-    counter: typing.Counter[int] = Counter(training_labels.ravel())
-    scale_pos_weight = counter[0] / counter[1]
+    if model_type == "xgboost":
 
-    scorer = XGBoostScorer(scale_pos_weight=scale_pos_weight)
+        counter: typing.Counter[int] = Counter(training_labels.ravel())
+        scale_pos_weight = counter[0] / counter[1]
+
+        scorer = XGBoostScorer(scale_pos_weight=scale_pos_weight)
+
+    elif model_type == "svm":
+
+        class_weights = compute_class_weight(
+            class_weight="balanced",
+            classes=np.unique(training_labels.ravel()),
+            y=training_labels.ravel()
+        )
+
+        scorer = SGDScorer(class_weights=class_weights)
 
     training_data = scaler.fit_transform(training_data)
 
@@ -221,6 +238,7 @@ def train_gps_model(args: argparse.Namespace) -> None:
         combined_data=combined_scores,
         combined_labels=combined_labels,
         model_output=args.model_output,
+        model_type=args.model_type,
         scaler_output=args.scaler_output,
         no_split=args.nosplit,
     )
@@ -260,6 +278,14 @@ class Train:
 
         self.parser.add_argument(
             "--model-output", dest="model_output", help="Output path for scoring model."
+        )
+
+        self.parser.add_argument(
+            "--model-type",
+            dest="model_type",
+            type=str,
+            help="Type of GPS model to train {xgboost, svm}",
+            default="xgboost",
         )
 
         self.parser.add_argument(
