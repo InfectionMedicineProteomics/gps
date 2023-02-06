@@ -99,7 +99,7 @@ class Export:
         self.parser.add_argument(
             "--exclude-rt",
             dest="exclude_rt",
-            type=bool,
+            help="Exclude RT subscores to train model only based on spectral scores.",
             action="store_true"
         )
 
