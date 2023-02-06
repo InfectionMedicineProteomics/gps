@@ -159,16 +159,10 @@ class PeakGroup:
 
         if use_only_spectra_scores:
 
-            print(list(self.scores.keys()))
-
-            columns = [col for col in self.scores.keys() if col != "var_norm_rt_score"]
-
-            print(columns)
-
             score_values = [
                 score
                 for column, score in self.scores.items()
-                if column.lower() in columns
+                if column.lower() != "var_norm_rt_score"
             ]
 
         else:
