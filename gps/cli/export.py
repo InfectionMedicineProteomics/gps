@@ -16,6 +16,10 @@ class Export:
 
     def __call__(self, args: argparse.Namespace) -> None:
 
+        if args.exclude_rt:
+
+            print("Excluding RT subscores.")
+
         print(f"Parsing {args.input}")
 
         osw_file = OSWFile(args.input)
@@ -40,7 +44,10 @@ class Export:
             if args.no_filter:
 
                 precursors.dump_training_data(
-                    args.output, filter_field="PROBABILITY", filter_value=0.0
+                    args.output,
+                    filter_field="PROBABILITY",
+                    filter_value=0.0,
+                    exclude_rt=args.exclude_rt
                 )
 
             else:
@@ -49,6 +56,7 @@ class Export:
                     args.output,
                     filter_field=args.filter_field,
                     filter_value=args.filter_value,
+                    exclude_rt=args.exclude_rt
                 )
 
         elif args.output_format == "nofilter":
@@ -86,6 +94,13 @@ class Export:
 
         self.parser.add_argument(
             "--output-format", dest="output_format", type=str, default="standard"
+        )
+
+        self.parser.add_argument(
+            "--exclude-rt",
+            dest="exclude_rt",
+            type=bool,
+            action="store_true"
         )
 
         self.parser.add_argument(
