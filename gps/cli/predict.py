@@ -34,6 +34,7 @@ class Predict:
             scaler_path=args.scaler,
             threads=args.threads,
             method=args.method,
+            use_only_spectra_scores=args.exclude_rt
         )
 
         labels = []
@@ -98,6 +99,14 @@ class Predict:
 
         self.parser.add_argument(
             "--method", dest="method", default="standard", type=str
+        )
+
+        self.parser.add_argument(
+            "--exclude-rt",
+            dest="exclude_rt",
+            help="Exclude RT subscores for spectra only scoring.",
+            action="store_true",
+            default=False
         )
 
         self.parser.add_argument(

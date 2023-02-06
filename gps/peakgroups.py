@@ -159,20 +159,11 @@ class PeakGroup:
 
         if use_only_spectra_scores:
 
-            columns = {
-                "var_library_dotprod",
-                "var_library_sangle",
-                "var_library_manhattan",
-                "var_library_rootmeansquare",
-                "var_library_rmsd",
-                "var_yseries_score",
-                "var_bseries_score",
-                "var_massdev_score_weighted",
-                "var_isotope_overlap_score",
-                "var_library_corr",
-                "var_isotope_correlation_score",
-                "var_massdev_score",
-            }
+            print(list(self.scores.keys()))
+
+            columns = [col for col in self.scores.keys() if col != "var_norm_rt_score"]
+
+            print(columns)
 
             score_values = [
                 score

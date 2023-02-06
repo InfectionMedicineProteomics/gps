@@ -698,6 +698,8 @@ class Precursors:
         method: str = "",
         threads: int = 10,
         gpus: int = 1,
+        use_only_spectra_scores: bool = False,
+
     ) -> Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
@@ -705,7 +707,7 @@ class Precursors:
         if method == "standard":
 
             (all_scores, all_data_labels, all_data_indices) = preprocess.reformat_data(
-                all_peakgroups
+                all_peakgroups, use_only_spectra_scores
             )
 
             scoring_model = Scorer()
@@ -734,7 +736,7 @@ class Precursors:
                 num_threads=threads,
                 vote_percentage=0.5,
                 verbose=True,
-                use_only_spectra_scores=True,
+                use_only_spectra_scores=use_only_spectra_scores,
             )
 
             for idx, peakgroup in enumerate(all_peakgroups):
