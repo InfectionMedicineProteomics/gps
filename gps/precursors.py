@@ -845,7 +845,7 @@ class Precursors:
         return q_values
 
     def dump_training_data(
-        self, file_path: str, filter_field: str, filter_value: float
+        self, file_path: str, filter_field: str, filter_value: float, exclude_rt: bool = False
     ) -> None:
 
         positive_labels = self.filter_target_peakgroups(
@@ -857,7 +857,7 @@ class Precursors:
         combined = positive_labels + negative_labels
 
         (all_scores, all_data_labels, all_data_indices) = preprocess.reformat_data(
-            combined
+            combined, use_only_spectra_scores=exclude_rt
         )
 
         with open(file_path, "wb") as npfh:
