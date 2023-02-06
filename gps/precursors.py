@@ -777,7 +777,7 @@ class Precursors:
         sort_key: str,
         decoy_free: bool = False,
         count_decoys: bool = True,
-        num_threads: int = 10,
+        num_threads: int = 1,
         pit: float = 1.0,
         debug: bool = False,
     ) -> np.ndarray:
