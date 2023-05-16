@@ -96,3 +96,5 @@ These models can be easily used to predict and score new data:
 gps predict --input extracted_peakgroups.osw --output extracted_peakgroups.predicted.tsv --scoring-model trained_model.model --scaler trained_scaler.scaler
 gps score --input extracted_peakgroups.osw --output extracted_peakgroups.scored.tsv --scoring-model trained_model.model --scaler trained_scaler.scaler
 ```
+
+The rest of the downstream analysis can be the same.
