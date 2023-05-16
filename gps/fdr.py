@@ -66,7 +66,7 @@ class ScoreDistribution:
     target_scores: np.ndarray
     decoy_scores: np.ndarray
 
-    def __init__(self, pit: float = 1.0, num_threads: int = 10):
+    def __init__(self, pit: float = 1.0, num_threads: int = 1):
 
         numba.set_num_threads(num_threads)
 
@@ -279,7 +279,7 @@ class DecoyCounter:
 
     pit: float
 
-    def __init__(self, num_threads: int = 10, pit: float = 1.0) -> None:
+    def __init__(self, num_threads: int = 1, pit: float = 1.0) -> None:
 
         numba.set_num_threads(num_threads)
 

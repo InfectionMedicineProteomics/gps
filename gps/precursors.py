@@ -650,13 +650,13 @@ class Precursors:
 
             model_scores = np.exp(target_probabilities) * model_scores
 
-        model_probabilities = scoring_model.probability(all_scores)
+        # model_probabilities = scoring_model.probability(all_scores)
 
         for idx, peakgroup in enumerate(all_peakgroups):
 
             peakgroup.d_score = model_scores[idx].item()
 
-            peakgroup.probability = model_probabilities[idx].item()
+            # peakgroup.probability = model_probabilities[idx].item()
 
         return self
 
@@ -698,6 +698,8 @@ class Precursors:
         method: str = "",
         threads: int = 10,
         gpus: int = 1,
+        use_only_spectra_scores: bool = False,
+
     ) -> Precursors:
 
         all_peakgroups = self.get_all_peakgroups()
@@ -705,7 +707,7 @@ class Precursors:
         if method == "standard":
 
             (all_scores, all_data_labels, all_data_indices) = preprocess.reformat_data(
-                all_peakgroups
+                all_peakgroups, use_only_spectra_scores
             )
 
             scoring_model = Scorer()
@@ -734,7 +736,7 @@ class Precursors:
                 num_threads=threads,
                 vote_percentage=0.5,
                 verbose=True,
-                use_only_spectra_scores=True,
+                use_only_spectra_scores=use_only_spectra_scores,
             )
 
             for idx, peakgroup in enumerate(all_peakgroups):
@@ -777,7 +779,7 @@ class Precursors:
         sort_key: str,
         decoy_free: bool = False,
         count_decoys: bool = True,
-        num_threads: int = 10,
+        num_threads: int = 1,
         pit: float = 1.0,
         debug: bool = False,
     ) -> np.ndarray:

@@ -26,7 +26,17 @@ class Scorer:
 
     def score(self, data: np.ndarray) -> np.ndarray:
 
-        return self.model.predict_proba(data)[:, 1]
+        loss = getattr(self.model, "loss", None)
+
+        if loss:
+
+            return self.model.decision_function(data)
+
+        else:
+
+            return self.model.predict_proba(data)[:, 1]
+
+
 
     def save(self, model_path: str) -> None:
 

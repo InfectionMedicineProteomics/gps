@@ -16,6 +16,10 @@ class Export:
 
     def __call__(self, args: argparse.Namespace) -> None:
 
+        if args.exclude_rt:
+
+            print("Excluding RT subscores.")
+
         print(f"Parsing {args.input}")
 
         osw_file = OSWFile(args.input)
@@ -95,6 +99,7 @@ class Export:
         self.parser.add_argument(
             "--exclude-rt",
             dest="exclude_rt",
+            help="Exclude RT subscores to train model only based on spectral scores.",
             type=bool,
             action="store_true"
         )

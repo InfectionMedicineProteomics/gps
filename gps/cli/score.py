@@ -234,6 +234,10 @@ class Score:
 
         print(f"Processing file {args.input}")
 
+        if args.exclude_rt:
+
+            print("Excluding RT subscores for spectra only scoring.")
+
         osw_file = OSWFile(args.input)
 
         precursors = osw_file.parse_to_precursors(
@@ -324,6 +328,7 @@ class Score:
                     scaler_path=args.scaler,
                     threads=args.threads,
                     weight_scores=args.weight_scores,
+                    use_only_spectra_scores=args.exclude_rt
                 )
 
                 print("Calculating Q Values")
@@ -437,6 +442,14 @@ class Score:
             help="Count decoys to calculate q-values for each peakgroup",
             action="store_true",
             default=False,
+        )
+
+        self.parser.add_argument(
+            "--exclude-rt",
+            dest="exclude_rt",
+            help="Exclude RT subscores for spectra only scoring.",
+            action="store_true",
+            default=False
         )
 
         self.parser.add_argument(
