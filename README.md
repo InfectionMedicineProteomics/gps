@@ -40,7 +40,7 @@ gps score --input extracted_peakgroups.osw --output extracted_peakgroups.scored.
 You can also make use of multiple cores using the ```--threads``` option
 
 ```commandline
-gps score --input extracted_peakgroups.osw --output extracted_peakgroups.scored.tsv --estimate-pit --threads 10
+gps score --input extracted_peakgroups.osw --output extracted_peakgroups.scored.tsv --threads 10
 ```
 
 ### Controlling global peptide and protein FDR
@@ -50,14 +50,14 @@ Once all individual files are scored using GPS, it is very straightforward to bu
 You can specify the level of the model to build using the ```--level``` cli option
 
 ```commandline
-gps build --level peptide --input *.scored.tsv --output peptide.model --estimate-pit
+gps build --level peptide --input *.scored.tsv --output peptide.model
 ```
 The above command will take all scored files in at once using wildcard command line options, build a peptide level model, and estimate the global PIT for q-value correction
 
 To build a protein level model, you only need to change the ```--level``` option.
 
 ```commandline
-gps build --level protein --input *.scored.tsv --output protein.model --estimate-pit
+gps build --level protein --input *.scored.tsv --output protein.model
 ```
 
 ### Combining scored files into a quantitative matrix for downstream analysis
@@ -69,3 +69,30 @@ gps combine --input-files *.scored.tsv --peptide-model peptide.model --protein-m
 ```
 
 The maximum q-value for the included precursors can be indicated if you would like to be more, or less, lenient on the identifications that you include in your final quantitative_matrix
+
+### Training your own model
+
+GPS can easily be used to train your own model using just 2 commands.
+
+First, we need to export data and perform any denoising to remove false target precursors from the dataset.
+
+```commandline
+gps export --input extracted_peakgroups_1.osw --output extracted_peakgroups_1_training_data.npz
+```
+
+This filters the data using the denoising algorithm and then exports it to the numpy .npz format.
+
+Next, we just need to train a model using the exported/filtered training data.
+
+```commandline
+gps train --input *_training_data.npz --model-output trained_model.model --scaler-output trained_scaler.scaler
+```
+
+This trains a model using your input data and outputs the model and associated scaler so that it can be applied to new data effectively.
+
+These models can be easily used to predict and score new data:
+
+```commandline
+gps predict --input extracted_peakgroups.osw --output extracted_peakgroups.predicted.tsv --scoring-model trained_model.model --scaler trained_scaler.scaler
+gps score --input extracted_peakgroups.osw --output extracted_peakgroups.scored.tsv --scoring-model trained_model.model --scaler trained_scaler.scaler
+```

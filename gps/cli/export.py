@@ -40,7 +40,10 @@ class Export:
             if args.no_filter:
 
                 precursors.dump_training_data(
-                    args.output, filter_field="PROBABILITY", filter_value=0.0
+                    args.output,
+                    filter_field="PROBABILITY",
+                    filter_value=0.0,
+                    spectra_only=args.spectra_only
                 )
 
             else:
@@ -49,6 +52,7 @@ class Export:
                     args.output,
                     filter_field=args.filter_field,
                     filter_value=args.filter_value,
+                    spectra_only=args.spectra_only
                 )
 
         elif args.output_format == "nofilter":
